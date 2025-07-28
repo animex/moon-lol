@@ -691,12 +691,12 @@ impl LeagueSkinnedMesh {
         // );
         // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights);
 
-        if let Some(colors_data) = colors {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors_data);
-        }
-        if let Some(tangents_data) = tangents {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents_data);
-        }
+        // if let Some(colors_data) = colors {
+        //     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors_data);
+        // }
+        // if let Some(tangents_data) = tangents {
+        //     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents_data);
+        // }
 
         // 9. 设置网格索引
         bevy_mesh.insert_indices(Indices::U16(local_indices));

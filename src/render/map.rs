@@ -8,6 +8,7 @@ use crate::render::{
 use bevy::color::palettes::css::RED;
 use bevy::math::vec3;
 use bevy::pbr::CubemapVisibleEntities;
+use bevy::render::render_resource::TextureFormat;
 use bevy::transform;
 use bevy::{color::palettes, prelude::*};
 use bevy_egui::{
@@ -19,6 +20,7 @@ use cdragon_hashes::bin::compute_binhash;
 use cdragon_prop::{
     BinEmbed, BinHash, BinHashKindMapping, BinList, BinMap, BinMatrix, BinString, BinStruct,
 };
+use image::{ImageBuffer, Rgba};
 
 pub struct PluginMap;
 
@@ -302,6 +304,7 @@ fn setup_map_placeble(
     mut commands: Commands,
     mut res_meshes: ResMut<Assets<Mesh>>,
     mut res_materials: ResMut<Assets<StandardMaterial>>,
+    mut res_image: ResMut<Assets<Image>>,
 ) {
     let objs: Vec<_> = res_wad
         .loader
@@ -335,18 +338,28 @@ fn setup_map_placeble(
 
         let skin_bin = res_wad.loader.get_prop_bin_by_path(&skin_path).unwrap();
 
-        let skin_mesh_properties: Vec<_> = skin_bin
+        let skin_mesh_properties = skin_bin
             .entries
             .iter()
-            .filter(|v| {
-                v.ctype.hash == LeagueLoader::compute_binhash("SkinCharacterDataProperties")
-            })
-            .filter_map(|v| {
-                v.getv::<BinEmbed>(LeagueLoader::compute_binhash("skinMeshProperties").into())
-            })
-            .filter_map(|v| v.getv::<BinString>(LeagueLoader::compute_binhash("simpleSkin").into()))
-            .collect();
-        let skin_mesh_path = &skin_mesh_properties.first().unwrap().0;
+            .find(|v| v.ctype.hash == LeagueLoader::compute_binhash("SkinCharacterDataProperties"))
+            .unwrap();
+
+        let skin_bin = skin_mesh_properties
+            .getv::<BinEmbed>(LeagueLoader::compute_binhash("skinMeshProperties").into())
+            .unwrap();
+        let skin_mesh_path = &skin_bin
+            .getv::<BinString>(LeagueLoader::compute_binhash("simpleSkin").into())
+            .unwrap()
+            .0;
+        let skin_texture = &skin_bin
+            .getv::<BinString>(LeagueLoader::compute_binhash("texture").into())
+            .unwrap()
+            .0;
+
+        let image = res_wad
+            .loader
+            .get_image_by_texture_path(&skin_texture)
+            .unwrap();
 
         let reader = res_wad
             .loader
@@ -366,15 +379,65 @@ fn setup_map_placeble(
 
         transform.translation.z = -transform.translation.z;
 
-        // println!("{:#?}", transform);
-
         commands.spawn((
             transform,
             Mesh3d(res_meshes.add(skinned_mesh)),
             MeshMaterial3d(res_materials.add(StandardMaterial {
-                base_color: RED.into(),
+                base_color_texture: Some(res_image.add(image)),
+                metallic: 0.0,
+                reflectance: 0.0,
+                alpha_mode: AlphaMode::Mask(0.3),
                 ..Default::default()
             })),
         ));
     });
 }
+
+// use thiserror::Error; // Assuming you're using thiserror
+// #[derive(Debug, Error)]
+// enum ImageSaveError {
+//     #[error("Image format not supported for saving: {0:?}")]
+//     UnsupportedFormat(TextureFormat),
+//     #[error("Image data is not available on the CPU")]
+//     ImageDataNotAvailable,
+//     #[error("Failed to create image buffer from raw data")]
+//     BufferCreation,
+//     #[error("Image crate error: {0}")]
+//     ImageError(#[from] image::ImageError),
+// }
+
+// fn save_image_to_disk(image: &Image, path: &str) -> Result<(), ImageSaveError> {
+//     let width = image.size().x;
+//     let height = image.size().y;
+
+//     // First, get the raw data out of the Option
+//     let Some(data) = &image.data else {
+//         // If data is None, we cannot proceed.
+//         return Err(ImageSaveError::ImageDataNotAvailable);
+//     };
+
+//     let buffer = match image.texture_descriptor.format {
+//         TextureFormat::Bc3RgbaUnormSrgb => {
+//             let format = texpresso::Format::Bc3;
+//             let mut decompressed_data = vec![0u8; (width * height * 4) as usize];
+
+//             // Now 'data' is correctly typed as &[u8]
+//             format.decompress(
+//                 data,
+//                 width as usize,
+//                 height as usize,
+//                 &mut decompressed_data,
+//             );
+
+//             ImageBuffer::<Rgba<u8>, _>::from_raw(width, height, decompressed_data)
+//                 .ok_or(ImageSaveError::BufferCreation)?
+//         }
+//         unsupported_format => {
+//             return Err(ImageSaveError::UnsupportedFormat(unsupported_format));
+//         }
+//     };
+
+//     buffer.save(path)?;
+
+//     Ok(())
+// }
