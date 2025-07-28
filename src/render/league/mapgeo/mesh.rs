@@ -10,6 +10,7 @@ use binrw::binread;
 use cdragon_prop::{BinEmbed, BinEntry, BinList, BinString, PropFile};
 use image::EncodableLayout;
 use std::collections::HashMap;
+use std::ops::Deref;
 
 #[binread]
 #[derive(Debug)]
@@ -435,6 +436,170 @@ pub struct LeagueSkinnedMesh {
     pub vertex_buffer: Vec<u8>,
 }
 
+impl LeagueSkinnedMesh {
+    /// 将此蒙皮网格中的特定子网格转换为 Bevy `Mesh`。
+    ///
+    /// # 参数
+    /// * `submesh_index` - 要转换的子网格在 `ranges` Vec 中的索引。
+    ///
+    /// # 返回
+    /// * `Some(Mesh)` - 如果成功创建了 Bevy 网格。
+    /// * `None` - 如果 `submesh_index` 无效或数据切片失败。
+    pub fn to_bevy_mesh(&self, submesh_index: usize) -> Option<Mesh> {
+        // 1. 根据索引获取对应的子网格范围
+        let range = self.ranges.get(submesh_index)?;
+
+        // 2. 确定顶点结构和大小
+        let vertex_size = self.vertex_declaration.get_vertex_size() as usize;
+        if vertex_size == 0 {
+            return None; // 无效的顶点大小
+        }
+
+        // 3. 获取此子网格对应的顶点数据切片
+        let vertex_start_byte = range.start_vertex as usize * vertex_size;
+        let vertex_end_byte = vertex_start_byte + (range.vertex_count as usize * vertex_size);
+        let vertex_data_slice = self.vertex_buffer.get(vertex_start_byte..vertex_end_byte)?;
+
+        // 4. 预分配用于存储解析后属性的 Vec
+        let capacity = range.vertex_count as usize;
+        let mut positions: Vec<[f32; 3]> = Vec::with_capacity(capacity);
+        let mut normals: Vec<[f32; 3]> = Vec::with_capacity(capacity);
+        let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(capacity);
+        let mut joint_indices: Vec<[u16; 4]> = Vec::with_capacity(capacity);
+        let mut joint_weights: Vec<[f32; 4]> = Vec::with_capacity(capacity);
+
+        // 可选的顶点属性
+        let mut colors: Option<Vec<[f32; 4]>> = None;
+        let mut tangents: Option<Vec<[f32; 4]>> = None;
+
+        if self.vertex_declaration != SkinnedMeshVertex::Basic {
+            colors = Some(Vec::with_capacity(capacity));
+            if self.vertex_declaration == SkinnedMeshVertex::Tangent {
+                tangents = Some(Vec::with_capacity(capacity));
+            }
+        }
+
+        // 5. 遍历并解析每个顶点
+        for v_chunk in vertex_data_slice.chunks_exact(vertex_size) {
+            let mut offset = 0;
+
+            // --- 修正点 1: 调整顶点属性的解析顺序以匹配实际布局 ---
+
+            // 位置 (12 bytes)
+            let x_pos = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
+            let y_pos = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
+            let z_pos = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
+            positions.push([x_pos, y_pos, -z_pos]); // 翻转Z轴以适应Bevy的右手坐标系
+            offset += 12;
+
+            // 骨骼索引 (4 bytes, u8 -> u16)
+            let j_indices_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
+            joint_indices.push([
+                j_indices_u8[0] as u16,
+                j_indices_u8[1] as u16,
+                j_indices_u8[2] as u16,
+                j_indices_u8[3] as u16,
+            ]);
+            offset += 4;
+
+            // 骨骼权重 (16 bytes)
+            let weights: [f32; 4] = [
+                f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap()),
+                f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap()),
+                f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap()),
+                f32::from_le_bytes(v_chunk[offset + 12..offset + 16].try_into().unwrap()),
+            ];
+            joint_weights.push(weights);
+            offset += 16;
+
+            // 法线 (12 bytes)
+            let x_norm = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
+            let y_norm = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
+            let z_norm = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
+            normals.push([x_norm, y_norm, -z_norm]); // 同样翻转Z轴
+            offset += 12;
+
+            // --- 修正点 2: UV坐标是两个f32 (8字节)，不是两个f16 (4字节) ---
+            let u = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
+            let v = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
+            uvs.push([u, v]); // UV的V坐标通常也需要翻转 (从上到下 -> 从下到上)
+            offset += 8;
+
+            // 解析可选属性
+            if let Some(colors_vec) = colors.as_mut() {
+                // 顶点颜色 (4 bytes, u8 -> f32 normalized)
+                let color_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
+                colors_vec.push([
+                    // BGRA -> RGBA 转换并归一化
+                    color_u8[2] as f32 / 255.0,
+                    color_u8[1] as f32 / 255.0,
+                    color_u8[0] as f32 / 255.0,
+                    color_u8[3] as f32 / 255.0,
+                ]);
+                offset += 4;
+            }
+
+            if let Some(tangents_vec) = tangents.as_mut() {
+                // 切线 (16 bytes)
+                let tan_x = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
+                let tan_y = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
+                let tan_z =
+                    f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
+                let tan_w =
+                    f32::from_le_bytes(v_chunk[offset + 12..offset + 16].try_into().unwrap());
+                // 同样翻转Z轴
+                tangents_vec.push([tan_x, tan_y, -tan_z, tan_w]);
+                // offset += 16; // 已是最后一个元素，无需增加offset
+            }
+        }
+
+        // 6. 获取、解析并调整索引
+        let index_start_byte = range.start_index as usize * 2; // u16 = 2 bytes
+        let index_end_byte = index_start_byte + (range.index_count as usize * 2);
+        let index_data_slice = self.index_buffer.get(index_start_byte..index_end_byte)?;
+
+        let mut local_indices: Vec<u16> = index_data_slice
+            .chunks_exact(2)
+            .map(|bytes| u16::from_le_bytes(bytes.try_into().unwrap()))
+            .map(|global_index| global_index - range.start_vertex as u16) // 将全局索引转换为局部索引
+            .collect();
+
+        // 7. 修正因Z轴翻转导致的三角形环绕顺序问题
+        for tri_indices in local_indices.chunks_exact_mut(3) {
+            tri_indices.swap(1, 2); // 从 [0, 1, 2] -> [0, 2, 1]
+        }
+
+        // 8. 创建 Bevy Mesh 并插入所有顶点属性
+        let mut bevy_mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+
+        // --- 修正点 3: 启用蒙皮和颜色属性 ---
+        // bevy_mesh.insert_attribute(
+        //     Mesh::ATTRIBUTE_JOINT_INDEX,
+        //     VertexAttributeValues::Uint16x4(joint_indices),
+        // );
+        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights);
+
+        if let Some(colors_data) = colors {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors_data);
+        }
+        if let Some(tangents_data) = tangents {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents_data);
+        }
+
+        // 9. 设置网格索引
+        bevy_mesh.insert_indices(Indices::U16(local_indices));
+
+        Some(bevy_mesh)
+    }
+}
+
 /// (内部使用) 用于直接从二进制文件解析的结构体。
 /// 它包含了所有复杂的条件解析逻辑。
 #[binread]
@@ -544,164 +709,5 @@ impl From<LeagueSkinnedMeshInternal> for LeagueSkinnedMesh {
             index_buffer: internal.index_buffer,
             vertex_buffer: internal.vertex_buffer,
         }
-    }
-}
-
-impl LeagueSkinnedMesh {
-    /// 将此蒙皮网格中的特定子网格转换为 Bevy `Mesh`。
-    ///
-    /// # 参数
-    /// * `submesh_index` - 要转换的子网格在 `ranges` Vec 中的索引。
-    ///
-    /// # 返回
-    /// * `Some(Mesh)` - 如果成功创建了 Bevy 网格。
-    /// * `None` - 如果 `submesh_index` 无效或数据切片失败。
-    pub fn to_bevy_mesh(&self, submesh_index: usize) -> Option<Mesh> {
-        // 1. 根据索引获取对应的子网格范围
-        let range = self.ranges.get(submesh_index)?;
-
-        // 2. 确定顶点结构和大小
-        let vertex_size = self.vertex_declaration.get_vertex_size() as usize;
-        if vertex_size == 0 {
-            return None; // 无效的顶点大小
-        }
-
-        // 3. 获取此子网格对应的顶点数据切片
-        let vertex_start_byte = range.start_vertex as usize * vertex_size;
-        let vertex_end_byte = vertex_start_byte + (range.vertex_count as usize * vertex_size);
-        let vertex_data_slice = self.vertex_buffer.get(vertex_start_byte..vertex_end_byte)?;
-
-        // 4. 预分配用于存储解析后属性的 Vec
-        let capacity = range.vertex_count as usize;
-        let mut positions: Vec<[f32; 3]> = Vec::with_capacity(capacity);
-        let mut normals: Vec<[f32; 3]> = Vec::with_capacity(capacity);
-        let mut uvs: Vec<[f32; 2]> = Vec::with_capacity(capacity);
-        let mut joint_indices: Vec<[u16; 4]> = Vec::with_capacity(capacity);
-        let mut joint_weights: Vec<[f32; 4]> = Vec::with_capacity(capacity);
-
-        // 可选的顶点属性
-        let mut colors: Option<Vec<[f32; 4]>> = None;
-        let mut tangents: Option<Vec<[f32; 4]>> = None;
-
-        if self.vertex_declaration != SkinnedMeshVertex::Basic {
-            colors = Some(Vec::with_capacity(capacity));
-            if self.vertex_declaration == SkinnedMeshVertex::Tangent {
-                tangents = Some(Vec::with_capacity(capacity));
-            }
-        }
-
-        // 5. 遍历并解析每个顶点
-        for v_chunk in vertex_data_slice.chunks_exact(vertex_size) {
-            let mut offset = 0;
-
-            // 位置 (12 bytes)
-            let x_pos = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
-            let y_pos = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
-            let z_pos = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
-            positions.push([x_pos, y_pos, z_pos]); // 翻转Z轴以适应Bevy的右手坐标系
-            offset += 12;
-
-            // 法线 (12 bytes)
-            let x_norm = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
-            let y_norm = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
-            let z_norm = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
-            normals.push([x_norm, y_norm, -z_norm]); // 同样翻转Z轴
-            offset += 12;
-
-            // UV坐标 (8 bytes)
-            let u = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
-            let v = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
-            uvs.push([u, v]);
-            offset += 8;
-
-            // 骨骼索引 (4 bytes, u8 -> u16)
-            let j_indices_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
-            joint_indices.push([
-                j_indices_u8[0] as u16,
-                j_indices_u8[1] as u16,
-                j_indices_u8[2] as u16,
-                j_indices_u8[3] as u16,
-            ]);
-            offset += 4;
-
-            // 骨骼权重 (16 bytes)
-            let weights: [f32; 4] = [
-                f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap()),
-                f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap()),
-                f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap()),
-                f32::from_le_bytes(v_chunk[offset + 12..offset + 16].try_into().unwrap()),
-            ];
-            joint_weights.push(weights);
-            offset += 16;
-
-            // 解析可选属性
-            if let Some(colors_vec) = colors.as_mut() {
-                // 顶点颜色 (4 bytes, u8 -> f32 normalized)
-                let color_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
-                colors_vec.push([
-                    color_u8[0] as f32 / 255.0,
-                    color_u8[1] as f32 / 255.0,
-                    color_u8[2] as f32 / 255.0,
-                    color_u8[3] as f32 / 255.0,
-                ]);
-                offset += 4;
-            }
-
-            if let Some(tangents_vec) = tangents.as_mut() {
-                // 切线 (16 bytes)
-                let tan_x = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
-                let tan_y = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
-                let tan_z =
-                    f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
-                let tan_w =
-                    f32::from_le_bytes(v_chunk[offset + 12..offset + 16].try_into().unwrap());
-                // 同样翻转Z轴
-                tangents_vec.push([tan_x, tan_y, -tan_z, tan_w]);
-                // offset += 16; // 已是最后一个元素，无需增加offset
-            }
-        }
-
-        // 6. 获取、解析并调整索引
-        let index_start_byte = range.start_index as usize * 2; // u16 = 2 bytes
-        let index_end_byte = index_start_byte + (range.index_count as usize * 2);
-        let index_data_slice = self.index_buffer.get(index_start_byte..index_end_byte)?;
-
-        let mut local_indices: Vec<u16> = index_data_slice
-            .chunks_exact(2)
-            .map(|bytes| u16::from_le_bytes(bytes.try_into().unwrap()))
-            .map(|global_index| global_index - range.start_vertex as u16) // 将全局索引转换为局部索引
-            .collect();
-
-        // 7. 修正因Z轴翻转导致的三角形环绕顺序问题
-        // for tri_indices in local_indices.chunks_exact_mut(3) {
-        //     tri_indices.swap(1, 2); // 从 [0, 1, 2] -> [0, 2, 1]
-        // }
-
-        // 8. 创建 Bevy Mesh 并插入所有顶点属性
-        let mut bevy_mesh = Mesh::new(
-            PrimitiveTopology::TriangleList,
-            RenderAssetUsages::default(),
-        );
-
-        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
-        // bevy_mesh.insert_attribute(
-        //     Mesh::ATTRIBUTE_JOINT_INDEX,
-        //     VertexAttributeValues::Uint16x4(joint_indices),
-        // );
-        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights);
-
-        // if let Some(colors_data) = colors {
-        //     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors_data);
-        // }
-        // if let Some(tangents_data) = tangents {
-        //     bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents_data);
-        // }
-
-        // 9. 设置网格索引
-        bevy_mesh.insert_indices(Indices::U16(local_indices[0..23].into()));
-
-        Some(bevy_mesh)
     }
 }

@@ -319,17 +319,16 @@ fn setup_map_placeble(
         .collect();
 
     objs.iter()
-        .filter(|v| {
-            let definition =
-                v.1.getv::<BinStruct>(LeagueLoader::compute_binhash("definition").into())
-                    .unwrap();
-
-            definition
-                .getv::<BinString>(LeagueLoader::compute_binhash("Skin").into())
-                .map(|v| v.0.contains("Nexus"))
-                .unwrap_or(false)
-        })
-        .take(1)
+        // .filter(|v| {
+        //     let definition =
+        //         v.1.getv::<BinStruct>(LeagueLoader::compute_binhash("definition").into())
+        //             .unwrap();
+        //     definition
+        //         .getv::<BinString>(LeagueLoader::compute_binhash("Skin").into())
+        //         .map(|v| v.0.contains("Nexus"))
+        //         .unwrap_or(false)
+        // })
+        // .take(1)
         .for_each(|v| {
             let transform =
                 v.1.getv::<BinMatrix>(LeagueLoader::compute_binhash("transform").into())
@@ -383,30 +382,34 @@ fn setup_map_placeble(
 
             let skinned_mesh = LeagueSkinnedMesh::from(
                 LeagueSkinnedMeshInternal::read(&mut NoSeek::new(reader)).unwrap(),
-            )
-            .to_bevy_mesh(0)
-            .unwrap();
+            );
 
-            // 使用提取出的列向量来构造 Mat4
-            let mat = Mat4::from_cols_array_2d(&transform);
+            let texu = res_image.add(image);
 
-            let mut transform = Transform::from_matrix(mat);
+            println!("len: {}", skinned_mesh.ranges.len());
 
-            transform.translation.z = -transform.translation.z;
+            for i in 0..skinned_mesh.ranges.len() {
+                let mesh = skinned_mesh.to_bevy_mesh(i).unwrap();
+                // 使用提取出的列向量来构造 Mat4
+                let mat = Mat4::from_cols_array_2d(&transform);
 
-            commands.spawn((
-                transform.with_scale(vec3(10.0, 10.0, 10.0)),
-                Focus,
-                // Mesh3d(res_meshes.add(skinned_mesh)),
-                Mesh3d(res_meshes.add(Sphere::new(100.0))),
-                MeshMaterial3d(res_materials.add(StandardMaterial {
-                    base_color_texture: Some(res_image.add(image)),
-                    unlit: true,
-                    cull_mode: None,
-                    alpha_mode: AlphaMode::Opaque,
-                    ..Default::default()
-                })),
-            ));
+                let mut transform = Transform::from_matrix(mat);
+
+                transform.translation.z = -transform.translation.z;
+                commands.spawn((
+                    transform,
+                    Focus,
+                    Mesh3d(res_meshes.add(mesh)),
+                    // Mesh3d(res_meshes.add(Sphere::new(100.0))),
+                    MeshMaterial3d(res_materials.add(StandardMaterial {
+                        base_color_texture: Some(texu.clone()),
+                        unlit: true,
+                        cull_mode: None,
+                        alpha_mode: AlphaMode::Opaque,
+                        ..Default::default()
+                    })),
+                ));
+            }
         });
 }
 

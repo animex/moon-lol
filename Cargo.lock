@@ -3558,6 +3558,7 @@ dependencies = [
  "cdragon-wad",
  "chrono",
  "ddsfile",
+ "half",
  "image",
  "rvo2",
  "texpresso",
