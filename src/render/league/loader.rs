@@ -1,10 +1,10 @@
 use crate::render::{LeagueMapGeo, LeagueTexture};
 use bevy::asset::RenderAssetUsages;
-use bevy::ecs::resource::{self, Resource};
+use bevy::ecs::resource::Resource;
 use bevy::image::{dds_buffer_to_image, CompressedImageFormats, Image};
 use binrw::{args, Endian};
 use binrw::{binread, io::NoSeek, BinRead};
-use cdragon_prop::{BinEntry, PropFile};
+use cdragon_prop::PropFile;
 use std::hash::Hasher;
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;

@@ -1,7 +1,7 @@
 use crate::render::BoundingBox;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
-use bevy::render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues};
+use bevy::render::mesh::{Indices, PrimitiveTopology};
 use binrw::binread;
 
 #[binread]

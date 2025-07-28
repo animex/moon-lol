@@ -1,11 +1,8 @@
-use super::types::Submesh;
-use crate::render::LeagueMapGeo;
 use bevy::asset::RenderAssetUsages;
 use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use std::collections::HashMap;
 
-use super::static_mesh::LeagueMapGeoMesh;
 
 /// 根据单个 submesh 的索引范围，从全局顶点数据中提取数据，
 /// 创建一个独立的、自包含的 Bevy Mesh。

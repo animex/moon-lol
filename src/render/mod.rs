@@ -14,7 +14,7 @@ pub use map::*;
 pub use resource::*;
 pub use ui::*;
 
-use bevy::{color::palettes, prelude::*};
+use bevy::prelude::*;
 
 pub struct PluginRender;
 

@@ -6,9 +6,7 @@ use bevy::render::render_resource::{
 use binrw::binread;
 use binrw::{BinRead, BinResult, Endian};
 use bitflags::bitflags;
-use image::{ImageBuffer, Rgba};
 use std::io::{Read, Seek};
-use texpresso::Format;
 
 #[binread]
 #[derive(Debug)]
@@ -158,14 +156,14 @@ impl BinRead for LeagueTextureFlags {
     }
 }
 
-fn league_format_to_texpresso_format(format: LeagueTextureFormat) -> Option<Format> {
+/* fn league_format_to_texpresso_format(format: LeagueTextureFormat) -> Option<Format> {
     match format {
         LeagueTextureFormat::Bc1 => Some(Format::Bc1),
 
         LeagueTextureFormat::Bc3 => Some(Format::Bc3),
         _ => None,
     }
-}
+} */
 
 const fn get_block_size(format: LeagueTextureFormat) -> usize {
     match format {
@@ -231,7 +229,7 @@ fn parse_mipmaps<R: Read>(
     Ok(mipmaps)
 }
 
-fn save_mipmap_as_png(
+/* fn save_mipmap_as_png(
     width: u32,
     height: u32,
     format: LeagueTextureFormat,
@@ -273,4 +271,4 @@ fn save_mipmap_as_png(
     }
 
     Ok(())
-}
+} */

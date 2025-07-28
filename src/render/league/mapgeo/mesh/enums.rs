@@ -1,4 +1,3 @@
-use binrw::binread;
 
 #[derive(Debug, PartialEq, Eq, Clone, Copy)]
 pub enum QualityFilter {

@@ -1,8 +1,5 @@
-use crate::render::{LeagueLoader, LeagueMapGeo};
+use crate::render::LeagueLoader;
 use bevy::prelude::*;
-use binrw::BinRead;
-use cdragon_prop::PropFile;
-use std::io::Cursor;
 
 #[derive(Resource)]
 pub struct WadRes {

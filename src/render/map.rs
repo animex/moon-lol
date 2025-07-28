@@ -1,26 +1,16 @@
-use std::ops::ControlFlow;
 
 use crate::combat::{AttackInfo, MoveDestination, Target};
 use crate::render::{
     process_map_geo_mesh, EnvironmentVisibility, Focus, LayerTransitionBehavior, LeagueLoader,
     LeagueSkinnedMesh, LeagueSkinnedMeshInternal, WadRes,
 };
-use bevy::color::palettes::css::RED;
-use bevy::math::vec3;
-use bevy::pbr::CubemapVisibleEntities;
-use bevy::render::render_resource::TextureFormat;
-use bevy::transform;
 use bevy::{color::palettes, prelude::*};
-use bevy_egui::{
-    egui, EguiContexts, EguiInputSet, EguiPlugin, EguiPreUpdateSet, EguiPrimaryContextPass,
-};
+use bevy_egui::EguiPlugin;
 use binrw::io::NoSeek;
 use binrw::BinRead;
-use cdragon_hashes::bin::compute_binhash;
 use cdragon_prop::{
-    BinEmbed, BinHash, BinHashKindMapping, BinList, BinMap, BinMatrix, BinString, BinStruct, BinU32,
+    BinEmbed, BinHash, BinMap, BinMatrix, BinString, BinStruct,
 };
-use image::{ImageBuffer, Rgba};
 
 pub struct PluginMap;
 
@@ -71,7 +61,7 @@ fn setup_map(
         );
 
         for (mesh, material_image) in bevy_meshes {
-            let format = material_image.texture_descriptor.format.clone();
+            let _format = material_image.texture_descriptor.format.clone();
 
             commands.spawn((
                 Mesh3d(res_mesh.add(mesh)),
@@ -109,7 +99,7 @@ fn setup_map(
 }
 
 // 根据全局选择更新地图网格的可见性
-fn update_map_visibility(
+/* fn update_map_visibility(
     // 监听资源变化，只有在选项改变时才执行逻辑
     layers_state: Res<CurrentVisibilityLayers>,
     // 查询所有带图层标记的地图实体
@@ -134,12 +124,12 @@ fn update_map_visibility(
             *visibility = Visibility::Hidden;
         }
     }
-}
+} */
 
 // use bevy_egui::{egui, EguiContexts};
 
 // UI 系统，用于显示和修改可见性图层
-fn visibility_ui_system(
+/* fn visibility_ui_system(
     mut contexts: EguiContexts,
     mut layers_state: ResMut<CurrentVisibilityLayers>,
 ) {
@@ -176,7 +166,7 @@ fn visibility_ui_system(
             layers_state.0 = EnvironmentVisibility::NoLayer;
         }
     });
-}
+} */
 
 // TODO: Fix picking system integration
 // pub fn on_click_map(
