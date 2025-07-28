@@ -2,8 +2,8 @@ use crate::{system_debug, system_info};
 use bevy::{input::mouse::MouseWheel, prelude::*, window::CursorGrabMode};
 
 pub const CAMERA_OFFSET_X: f32 = 0.0;
-pub const CAMERA_OFFSET_Y: f32 = 1911.85 * 0.1;
-pub const CAMERA_OFFSET_Z: f32 = 769.56 * 0.1;
+pub const CAMERA_OFFSET_Y: f32 = 1911.85;
+pub const CAMERA_OFFSET_Z: f32 = 769.56;
 
 pub const CAMERA_OFFSET: Vec3 = Vec3::new(CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z);
 pub const CAMERA_START_POSITION: Vec3 = Vec3::new(2500.0, 0.0, -2500.0);
@@ -19,7 +19,7 @@ impl Plugin for PluginCamera {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);
         app.add_systems(Startup, confine_cursor);
-        // app.add_systems(Update, camera_focus);
+        app.add_systems(Update, camera_focus);
         app.add_systems(Update, (camera_zoom, edge_scroll_camera));
     }
 }

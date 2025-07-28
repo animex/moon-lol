@@ -18,7 +18,7 @@ use binrw::io::NoSeek;
 use binrw::BinRead;
 use cdragon_hashes::bin::compute_binhash;
 use cdragon_prop::{
-    BinEmbed, BinHash, BinHashKindMapping, BinList, BinMap, BinMatrix, BinString, BinStruct,
+    BinEmbed, BinHash, BinHashKindMapping, BinList, BinMap, BinMatrix, BinString, BinStruct, BinU32,
 };
 use image::{ImageBuffer, Rgba};
 
@@ -31,7 +31,7 @@ impl Plugin for PluginMap {
         }
 
         app.insert_resource(CurrentVisibilityLayers(EnvironmentVisibility::Layer1));
-        // app.add_systems(Startup, setup_map);
+        app.add_systems(Startup, setup_map);
         app.add_systems(Startup, setup_map_placeble);
         // app.add_systems(Update, draw_attack);
         // app.add_systems(Update, update_map_visibility);
@@ -318,79 +318,95 @@ fn setup_map_placeble(
         .filter(|v| v.1.ctype.hash == 0x1e1cce2)
         .collect();
 
-    objs.iter().for_each(|v| {
-        let transform =
-            v.1.getv::<BinMatrix>(LeagueLoader::compute_binhash("transform").into())
+    objs.iter()
+        .filter(|v| {
+            let definition =
+                v.1.getv::<BinStruct>(LeagueLoader::compute_binhash("definition").into())
+                    .unwrap();
+
+            definition
+                .getv::<BinString>(LeagueLoader::compute_binhash("Skin").into())
+                .map(|v| v.0.contains("Nexus"))
+                .unwrap_or(false)
+        })
+        .take(1)
+        .for_each(|v| {
+            let transform =
+                v.1.getv::<BinMatrix>(LeagueLoader::compute_binhash("transform").into())
+                    .unwrap()
+                    .0;
+
+            let definition =
+                v.1.getv::<BinStruct>(LeagueLoader::compute_binhash("definition").into())
+                    .unwrap();
+
+            let skin_path = "data/".to_owned()
+                + &definition
+                    .getv::<BinString>(LeagueLoader::compute_binhash("Skin").into())
+                    .unwrap()
+                    .0
+                + ".bin";
+
+            println!("{}", skin_path);
+
+            let skin_bin = res_wad.loader.get_prop_bin_by_path(&skin_path).unwrap();
+
+            let skin_mesh_properties = skin_bin
+                .entries
+                .iter()
+                .find(|v| {
+                    v.ctype.hash == LeagueLoader::compute_binhash("SkinCharacterDataProperties")
+                })
+                .unwrap();
+
+            let skin_bin = skin_mesh_properties
+                .getv::<BinEmbed>(LeagueLoader::compute_binhash("skinMeshProperties").into())
+                .unwrap();
+            let skin_mesh_path = &skin_bin
+                .getv::<BinString>(LeagueLoader::compute_binhash("simpleSkin").into())
+                .unwrap()
+                .0;
+            let skin_texture = &skin_bin
+                .getv::<BinString>(LeagueLoader::compute_binhash("texture").into())
                 .unwrap()
                 .0;
 
-        let definition =
-            v.1.getv::<BinStruct>(LeagueLoader::compute_binhash("definition").into())
+            let image = res_wad
+                .loader
+                .get_image_by_texture_path(&skin_texture)
                 .unwrap();
 
-        let skin_path = "data/".to_owned()
-            + &definition
-                .getv::<BinString>(LeagueLoader::compute_binhash("Skin").into())
-                .unwrap()
-                .0
-            + ".bin";
+            let reader = res_wad
+                .loader
+                .get_wad_entry_reader_by_path(&skin_mesh_path)
+                .unwrap();
 
-        let skin_bin = res_wad.loader.get_prop_bin_by_path(&skin_path).unwrap();
-
-        let skin_mesh_properties = skin_bin
-            .entries
-            .iter()
-            .find(|v| v.ctype.hash == LeagueLoader::compute_binhash("SkinCharacterDataProperties"))
+            let skinned_mesh = LeagueSkinnedMesh::from(
+                LeagueSkinnedMeshInternal::read(&mut NoSeek::new(reader)).unwrap(),
+            )
+            .to_bevy_mesh(0)
             .unwrap();
 
-        let skin_bin = skin_mesh_properties
-            .getv::<BinEmbed>(LeagueLoader::compute_binhash("skinMeshProperties").into())
-            .unwrap();
-        let skin_mesh_path = &skin_bin
-            .getv::<BinString>(LeagueLoader::compute_binhash("simpleSkin").into())
-            .unwrap()
-            .0;
-        let skin_texture = &skin_bin
-            .getv::<BinString>(LeagueLoader::compute_binhash("texture").into())
-            .unwrap()
-            .0;
+            // 使用提取出的列向量来构造 Mat4
+            let mat = Mat4::from_cols_array_2d(&transform);
 
-        let image = res_wad
-            .loader
-            .get_image_by_texture_path(&skin_texture)
-            .unwrap();
+            let mut transform = Transform::from_matrix(mat);
 
-        let reader = res_wad
-            .loader
-            .get_wad_entry_reader_by_path(&skin_mesh_path)
-            .unwrap();
+            transform.translation.z = -transform.translation.z;
 
-        let skinned_mesh = LeagueSkinnedMesh::from(
-            LeagueSkinnedMeshInternal::read(&mut NoSeek::new(reader)).unwrap(),
-        )
-        .to_bevy_mesh(0)
-        .unwrap();
-
-        // 使用提取出的列向量来构造 Mat4
-        let mat = Mat4::from_cols_array_2d(&transform);
-
-        let mut transform = Transform::from_matrix(mat);
-
-        transform.translation.z = -transform.translation.z;
-
-        commands.spawn((
-            transform,
-            Focus,
-            Mesh3d(res_meshes.add(skinned_mesh)),
-            MeshMaterial3d(res_materials.add(StandardMaterial {
-                base_color_texture: Some(res_image.add(image)),
-                unlit: true,
-                cull_mode: None,
-                alpha_mode: AlphaMode::Opaque,
-                ..Default::default()
-            })),
-        ));
-    });
+            commands.spawn((
+                transform.with_scale(vec3(10.0, 10.0, 10.0)),
+                Focus,
+                Mesh3d(res_meshes.add(Capsule3d::default())),
+                MeshMaterial3d(res_materials.add(StandardMaterial {
+                    base_color_texture: Some(res_image.add(image)),
+                    unlit: true,
+                    cull_mode: None,
+                    alpha_mode: AlphaMode::Opaque,
+                    ..Default::default()
+                })),
+            ));
+        });
 }
 
 // use thiserror::Error; // Assuming you're using thiserror
