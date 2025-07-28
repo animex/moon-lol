@@ -2,8 +2,8 @@ use crate::{system_debug, system_info};
 use bevy::{input::mouse::MouseWheel, prelude::*, window::CursorGrabMode};
 
 pub const CAMERA_OFFSET_X: f32 = 0.0;
-pub const CAMERA_OFFSET_Y: f32 = 1911.85;
-pub const CAMERA_OFFSET_Z: f32 = 769.56;
+pub const CAMERA_OFFSET_Y: f32 = 1911.85 * 0.1;
+pub const CAMERA_OFFSET_Z: f32 = 769.56 * 0.1;
 
 pub const CAMERA_OFFSET: Vec3 = Vec3::new(CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z);
 pub const CAMERA_START_POSITION: Vec3 = Vec3::new(2500.0, 0.0, -2500.0);
@@ -43,18 +43,18 @@ fn setup(mut commands: Commands) {
     ));
 }
 
-// fn camera_focus(
-//     mut q_camera: Query<&mut Transform, With<Camera3d>>,
-//     q_focus: Query<&Transform, (With<Focus>, Without<Camera3d>)>,
-// ) {
-// if let Ok(transform) = q_focus.single() {
-//     if let Ok(mut camera_transform) = q_camera.single_mut() {
-//         let new_position =
-//             transform.translation + Vec3::new(0.0, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z);
-//         camera_transform.translation = new_position;
-//     }
-// }
-// }
+fn camera_focus(
+    mut q_camera: Query<&mut Transform, With<Camera3d>>,
+    q_focus: Query<&Transform, (With<Focus>, Without<Camera3d>)>,
+) {
+    if let Ok(transform) = q_focus.single() {
+        if let Ok(mut camera_transform) = q_camera.single_mut() {
+            let new_position =
+                transform.translation + Vec3::new(0.0, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z);
+            camera_transform.translation = new_position;
+        }
+    }
+}
 
 fn camera_zoom(
     mut mouse_wheel_events: EventReader<MouseWheel>,

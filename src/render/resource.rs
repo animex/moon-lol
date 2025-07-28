@@ -13,10 +13,20 @@ pub struct PluginResource;
 
 impl Plugin for PluginResource {
     fn build(&self, app: &mut App) {
+        #[cfg(unix)]
         app.insert_resource::<WadRes>(WadRes {
             loader: LeagueLoader::new(
                 r"/mnt/c/Program Files (x86)/WeGameApps/英雄联盟/game",
                 r"DATA/FINAL/Maps/Shipping/Map11.wad.client",
+                r"data/maps/mapgeometry/map11/bloom.mapgeo",
+            )
+            .unwrap(),
+        });
+        #[cfg(windows)]
+        app.insert_resource::<WadRes>(WadRes {
+            loader: LeagueLoader::new(
+                r"C:\Program Files (x86)\WeGameApps\英雄联盟\game",
+                r"DATA\FINAL\Maps\Shipping\Map11.wad.client",
                 r"data/maps/mapgeometry/map11/bloom.mapgeo",
             )
             .unwrap(),

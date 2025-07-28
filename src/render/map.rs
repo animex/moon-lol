@@ -2,7 +2,7 @@ use std::ops::ControlFlow;
 
 use crate::combat::{AttackInfo, MoveDestination, Target};
 use crate::render::{
-    process_map_geo_mesh, EnvironmentVisibility, LayerTransitionBehavior, LeagueLoader,
+    process_map_geo_mesh, EnvironmentVisibility, Focus, LayerTransitionBehavior, LeagueLoader,
     LeagueSkinnedMesh, LeagueSkinnedMeshInternal, WadRes,
 };
 use bevy::color::palettes::css::RED;
@@ -31,12 +31,12 @@ impl Plugin for PluginMap {
         }
 
         app.insert_resource(CurrentVisibilityLayers(EnvironmentVisibility::Layer1));
-        app.add_systems(Startup, setup_map);
+        // app.add_systems(Startup, setup_map);
         app.add_systems(Startup, setup_map_placeble);
-        app.add_systems(Update, draw_attack);
-        app.add_systems(Update, update_map_visibility);
+        // app.add_systems(Update, draw_attack);
+        // app.add_systems(Update, update_map_visibility);
 
-        app.add_systems(EguiPrimaryContextPass, visibility_ui_system);
+        // app.add_systems(EguiPrimaryContextPass, visibility_ui_system);
         // app.add_systems(Update, update_z);
     }
 }
@@ -77,8 +77,7 @@ fn setup_map(
                 Mesh3d(res_mesh.add(mesh)),
                 MeshMaterial3d(res_materials.add(StandardMaterial {
                     base_color_texture: Some(res_image.add(material_image)),
-                    metallic: 0.0,
-                    reflectance: 0.0,
+                    unlit: true,
                     alpha_mode: AlphaMode::Mask(0.3),
                     // alpha_mode: match format {
                     //     bevy::render::render_resource::TextureFormat::Bc1RgbaUnorm
@@ -97,14 +96,14 @@ fn setup_map(
 
     println!("Map loaded in {:?}", start_time.elapsed());
 
-    commands.spawn((
-        DirectionalLight {
-            ..Default::default()
-        },
-        Transform::default()
-            .with_translation(vec3(0.0, 1000.0, 100.0))
-            .looking_at(vec3(0.0, 0.0, 0.0), Dir3::Z),
-    ));
+    // commands.spawn((
+    //     DirectionalLight {
+    //         ..Default::default()
+    //     },
+    //     Transform::default()
+    //         .with_translation(vec3(0.0, 1000.0, 100.0))
+    //         .looking_at(vec3(0.0, 0.0, 0.0), Dir3::Z),
+    // ));
 
     commands.insert_resource(AmbientLight::default());
 }
@@ -381,12 +380,13 @@ fn setup_map_placeble(
 
         commands.spawn((
             transform,
+            Focus,
             Mesh3d(res_meshes.add(skinned_mesh)),
             MeshMaterial3d(res_materials.add(StandardMaterial {
                 base_color_texture: Some(res_image.add(image)),
-                metallic: 0.0,
-                reflectance: 0.0,
-                alpha_mode: AlphaMode::Mask(0.3),
+                unlit: true,
+                cull_mode: None,
+                alpha_mode: AlphaMode::Opaque,
                 ..Default::default()
             })),
         ));
