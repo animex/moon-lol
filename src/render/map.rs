@@ -31,7 +31,7 @@ impl Plugin for PluginMap {
         }
 
         app.insert_resource(CurrentVisibilityLayers(EnvironmentVisibility::Layer1));
-        // app.add_systems(Startup, setup_map);
+        app.add_systems(Startup, setup_map);
         app.add_systems(Startup, setup_map_placeble);
         // app.add_systems(Update, draw_attack);
         // app.add_systems(Update, update_map_visibility);
