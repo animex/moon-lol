@@ -8,6 +8,7 @@ use bevy::render::mesh::{Indices, PrimitiveTopology};
 use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use binrw::binread;
 use cdragon_prop::{BinEmbed, BinEntry, BinList, BinString, PropFile};
+use image::EncodableLayout;
 use std::collections::HashMap;
 
 #[binread]
@@ -597,7 +598,7 @@ impl LeagueSkinnedMesh {
             let x_pos = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
             let y_pos = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
             let z_pos = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
-            positions.push([x_pos, y_pos, -z_pos]); // 翻转Z轴以适应Bevy的右手坐标系
+            positions.push([x_pos, y_pos, z_pos]); // 翻转Z轴以适应Bevy的右手坐标系
             offset += 12;
 
             // 法线 (12 bytes)
@@ -672,9 +673,9 @@ impl LeagueSkinnedMesh {
             .collect();
 
         // 7. 修正因Z轴翻转导致的三角形环绕顺序问题
-        for tri_indices in local_indices.chunks_exact_mut(3) {
-            tri_indices.swap(1, 2); // 从 [0, 1, 2] -> [0, 2, 1]
-        }
+        // for tri_indices in local_indices.chunks_exact_mut(3) {
+        //     tri_indices.swap(1, 2); // 从 [0, 1, 2] -> [0, 2, 1]
+        // }
 
         // 8. 创建 Bevy Mesh 并插入所有顶点属性
         let mut bevy_mesh = Mesh::new(
@@ -683,8 +684,8 @@ impl LeagueSkinnedMesh {
         );
 
         bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, positions);
-        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
-        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
+        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals);
+        // bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs);
         // bevy_mesh.insert_attribute(
         //     Mesh::ATTRIBUTE_JOINT_INDEX,
         //     VertexAttributeValues::Uint16x4(joint_indices),
@@ -699,7 +700,7 @@ impl LeagueSkinnedMesh {
         // }
 
         // 9. 设置网格索引
-        bevy_mesh.insert_indices(Indices::U16(local_indices));
+        bevy_mesh.insert_indices(Indices::U16(local_indices[0..23].into()));
 
         Some(bevy_mesh)
     }

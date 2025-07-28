@@ -31,7 +31,7 @@ impl Plugin for PluginMap {
         }
 
         app.insert_resource(CurrentVisibilityLayers(EnvironmentVisibility::Layer1));
-        app.add_systems(Startup, setup_map);
+        // app.add_systems(Startup, setup_map);
         app.add_systems(Startup, setup_map_placeble);
         // app.add_systems(Update, draw_attack);
         // app.add_systems(Update, update_map_visibility);
@@ -397,7 +397,8 @@ fn setup_map_placeble(
             commands.spawn((
                 transform.with_scale(vec3(10.0, 10.0, 10.0)),
                 Focus,
-                Mesh3d(res_meshes.add(Capsule3d::default())),
+                // Mesh3d(res_meshes.add(skinned_mesh)),
+                Mesh3d(res_meshes.add(Sphere::new(100.0))),
                 MeshMaterial3d(res_materials.add(StandardMaterial {
                     base_color_texture: Some(res_image.add(image)),
                     unlit: true,
