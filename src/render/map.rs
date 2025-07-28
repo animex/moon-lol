@@ -1,4 +1,3 @@
-
 use crate::combat::{AttackInfo, MoveDestination, Target};
 use crate::render::{
     process_map_geo_mesh, EnvironmentVisibility, Focus, LayerTransitionBehavior, LeagueLoader,
@@ -8,9 +7,7 @@ use bevy::{color::palettes, prelude::*};
 use bevy_egui::EguiPlugin;
 use binrw::io::NoSeek;
 use binrw::BinRead;
-use cdragon_prop::{
-    BinEmbed, BinHash, BinMap, BinMatrix, BinString, BinStruct,
-};
+use cdragon_prop::{BinEmbed, BinHash, BinMap, BinMatrix, BinString, BinStruct};
 
 pub struct PluginMap;
 
