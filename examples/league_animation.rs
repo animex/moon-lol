@@ -8,7 +8,7 @@ use bevy::{
     prelude::*,
 };
 use binrw::BinRead;
-use moon_lol::render::{AnimationFile, LeagueLoader, LeagueSkeleton, UncompressedData};
+use moon_lol::render::{AnimationData, AnimationFile, LeagueLoader, LeagueSkeleton};
 use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::BufReader;
@@ -26,8 +26,8 @@ fn main() {
 struct AnimatedJoint {
     /// 对应动画轨道（joint hash）
     joint_hash: u32,
-    /// 整个 V5 数据的一份引用（Arc 避免复制）
-    anim: std::sync::Arc<moon_lol::render::UncompressedDataV5>,
+    /// 统一的动画数据引用（Arc 避免复制）
+    anim: std::sync::Arc<AnimationData>,
     /// 当前播放时间
     time: f32,
 }
@@ -58,25 +58,19 @@ fn setup(
         .map(|v| LeagueLoader::compute_joint_hash(&v.name))
         .for_each(|v| info!("{:x}", v));
 
-    // 2. 解析动画（这里假设是未压缩 V5）-------------------------------------
+    // 2. 解析动画（使用统一的动画数据结构）-------------------------------------
     info!("--- 开始加载动画 ---");
     let anm_path = "assets/respawn1.bloom_structure.anm";
-    let anim_v5 = {
+    let animation_data = {
         let file = File::open(anm_path).expect("cannot open .anm");
         let mut reader = BufReader::new(file);
         let anim_file = AnimationFile::read(&mut reader).expect("parse .anm failed");
-        match anim_file {
-            AnimationFile::Uncompressed(v5) => match v5.data {
-                UncompressedData::V5(uncompressed_data_v5) => uncompressed_data_v5,
-                _ => panic!("示例仅支持未压缩 V5 动画"),
-            },
-            _ => panic!("示例仅支持未压缩 V5 动画"),
-        }
+        anim_file.into_unified()
     };
     info!(
         "成功从 '{}' 解析到动画，包含 {} 个关节轨道。",
         anm_path,
-        anim_v5.joint_hashes.len()
+        animation_data.joint_hashes.len()
     );
 
     // [调试日志] 比较骨骼和动画的 Hashes
@@ -88,7 +82,7 @@ fn setup(
         })
         .collect();
 
-    let anm_hashes: HashSet<u32> = anim_v5.joint_hashes.iter().cloned().collect();
+    let anm_hashes: HashSet<u32> = animation_data.joint_hashes.iter().cloned().collect();
 
     info!("--- 哈希匹配检查 ---");
     info!("骨骼中的关节 Hashes ({} 个):", skl_hashes_with_names.len());
@@ -129,7 +123,7 @@ fn setup(
     let mat = materials.add(Color::srgb(1.0, 0.2, 0.2));
 
     let mut index_to_entity = vec![Entity::PLACEHOLDER; joints.len()];
-    let anim_v5_arc = std::sync::Arc::new(anim_v5);
+    let animation_data_arc = std::sync::Arc::new(animation_data);
 
     for (i, joint) in joints.iter().enumerate() {
         let hash = moon_lol::render::LeagueLoader::compute_joint_hash(&joint.name);
@@ -142,7 +136,7 @@ fn setup(
                 // 动画组件
                 AnimatedJoint {
                     joint_hash: hash,
-                    anim: anim_v5_arc.clone(),
+                    anim: animation_data_arc.clone(),
                     time: 0.0,
                 },
             ))
@@ -186,53 +180,99 @@ fn animate_joints(
         animated.time += time.delta_secs();
 
         let anim = &animated.anim;
-        let total_duration = anim.frame_count as f32 * anim.frame_duration;
+        let total_duration = anim.duration;
         let t = animated.time % total_duration;
-        let frame_idx = (t / anim.frame_duration) as usize;
-        let next_frame_idx = (frame_idx + 1) % anim.frame_count as usize;
 
-        // 找到该关节对应的 track
-        let track_index = anim
-            .joint_hashes
+        // 找到该关节的所有帧数据
+        let joint_frames: Vec<&_> = anim
+            .frames
             .iter()
-            .position(|&h| h == animated.joint_hash);
+            .filter(|frame| frame.joint_hash == animated.joint_hash)
+            .collect();
 
-        if track_index.is_none() {
-            // 这个关节没有动画数据，这是预期的，因为我们在 setup 中已经检查过了
+        if joint_frames.is_empty() {
+            // 这个关节没有动画数据，跳过
             continue;
         }
-        let track_index = track_index.unwrap();
-        let frames_per_track = anim.frames.len() / anim.joint_hashes.len();
-        let frame_offset = track_index * frames_per_track;
 
-        let frame = anim.frames[frame_offset + frame_idx];
-        let next_frame = anim.frames[frame_offset + next_frame_idx];
+        // 根据时间找到当前帧和下一帧
+        let mut current_frame = joint_frames[0];
+        let mut next_frame = joint_frames[0];
 
-        // 简单的线性插值
-        let factor = (t % anim.frame_duration) / anim.frame_duration;
-        let trans = Vec3::lerp(
-            anim.vector_palette[frame.translation_id as usize].0,
-            anim.vector_palette[next_frame.translation_id as usize].0,
-            factor,
-        );
-        let rot = Quat::slerp(
-            anim.quat_palette[frame.rotation_id as usize].0,
-            anim.quat_palette[next_frame.rotation_id as usize].0,
-            factor,
-        );
-        let scale = Vec3::lerp(
-            anim.vector_palette[frame.scale_id as usize].0,
-            anim.vector_palette[next_frame.scale_id as usize].0,
-            factor,
-        );
+        for i in 0..joint_frames.len() {
+            if joint_frames[i].time <= t {
+                current_frame = joint_frames[i];
+                next_frame = if i + 1 < joint_frames.len() {
+                    joint_frames[i + 1]
+                } else {
+                    joint_frames[0] // 循环到第一帧
+                };
+            } else {
+                break;
+            }
+        }
+
+        // 计算插值因子
+        let time_diff = if next_frame.time > current_frame.time {
+            next_frame.time - current_frame.time
+        } else {
+            // 处理循环情况（从最后一帧到第一帧）
+            (total_duration - current_frame.time) + next_frame.time
+        };
+
+        let factor = if time_diff > 0.0 {
+            let elapsed = if t >= current_frame.time {
+                t - current_frame.time
+            } else {
+                (total_duration - current_frame.time) + t
+            };
+            (elapsed / time_diff).clamp(0.0, 1.0)
+        } else {
+            0.0
+        };
+
+        // 从调色板中获取变换数据并进行插值
+        let trans = if current_frame.translation_id < anim.vector_palette.len() as u16
+            && next_frame.translation_id < anim.vector_palette.len() as u16
+        {
+            Vec3::lerp(
+                anim.vector_palette[current_frame.translation_id as usize].0,
+                anim.vector_palette[next_frame.translation_id as usize].0,
+                factor,
+            )
+        } else {
+            Vec3::ZERO
+        };
+
+        let rot = if current_frame.rotation_id < anim.quat_palette.len() as u16
+            && next_frame.rotation_id < anim.quat_palette.len() as u16
+        {
+            Quat::slerp(
+                anim.quat_palette[current_frame.rotation_id as usize].0,
+                anim.quat_palette[next_frame.rotation_id as usize].0,
+                factor,
+            )
+        } else {
+            Quat::IDENTITY
+        };
+
+        let scale = if current_frame.scale_id < anim.vector_palette.len() as u16
+            && next_frame.scale_id < anim.vector_palette.len() as u16
+        {
+            Vec3::lerp(
+                anim.vector_palette[current_frame.scale_id as usize].0,
+                anim.vector_palette[next_frame.scale_id as usize].0,
+                factor,
+            )
+        } else {
+            Vec3::ONE
+        };
 
         // [调试日志] 打印特定关节的详细信息，以防日志刷屏
-        // 修改 "Turret_Base_Better" 为你关心的任何一个关节名
-        if name.as_str() == "Turret_Base_Better" && (frame_idx % 10 == 0) {
-            // 每 10 帧打印一次
+        if name.as_str() == "Turret_Base_Better" && (animated.time as i32 % 1 == 0) {
             info!(
-                "关节: {}, hash: {}, t: {:.2}, frame: {}, factor: {:.2}",
-                name, animated.joint_hash, t, frame_idx, factor
+                "关节: {}, hash: {}, t: {:.2}, factor: {:.2}",
+                name, animated.joint_hash, t, factor
             );
             info!(
                 "  -> pos: ({:.2}, {:.2}, {:.2}), rot: ({:.2}, {:.2}, {:.2}, {:.2})",
