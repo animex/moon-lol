@@ -8,7 +8,7 @@ use std::f32::consts::SQRT_2;
 use std::fmt::Debug;
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedAnimationAsset {
     pub version: u32,
@@ -18,7 +18,7 @@ pub struct UncompressedAnimationAsset {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little, import { version: u32 })]
 pub enum UncompressedData {
     #[br(pre_assert(version == 3))]
@@ -31,7 +31,7 @@ pub enum UncompressedData {
 
 // ------------------- Version 5 -------------------
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedDataV5 {
     pub resource_size: u32,
@@ -83,7 +83,7 @@ pub struct UncompressedDataV5 {
 
 // ------------------- Version 4 -------------------
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedDataV4 {
     pub resource_size: u32,
@@ -128,7 +128,7 @@ pub struct UncompressedDataV4 {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedFrameV4 {
     pub joint_hash: u32,
@@ -150,7 +150,7 @@ fn group_v4_frames(frames: Vec<UncompressedFrameV4>) -> HashMap<u32, Vec<Uncompr
 
 // 用于V3解析的辅助结构体。它们使用宏来读取数据块。
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little, import { frame_count: i32 })]
 struct RawTrackV3 {
     track_name_bytes: [u8; 32],
@@ -160,7 +160,7 @@ struct RawTrackV3 {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 struct RawFrameV3 {
     rotation: BinQuat,
@@ -168,7 +168,7 @@ struct RawFrameV3 {
 }
 
 /// V3 数据的最终结构。它本身不派生 BinRead。
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct UncompressedDataV3 {
     pub skeleton_id: u32,
     pub track_count: i32,
@@ -180,7 +180,7 @@ pub struct UncompressedDataV3 {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 #[br(little)]
 struct RawDataV3 {
     skeleton_id: u32,
@@ -219,9 +219,11 @@ fn parse_uncompressed_data_v3<R: Read + Seek>(
             .trim_end_matches('\0')
             .to_string();
 
+        println!("track name: {}", track_name);
+
         // C# 代码使用 Elf.HashLower，我们在此模拟一个简单的小写哈希
         // 为了完美匹配，你需要实现确切的 Elf 哈希算法。
-        let joint_hash = LeagueLoader::compute_binhash(&track_name);
+        let joint_hash = LeagueLoader::compute_joint_hash(&track_name);
 
         let mut frames_for_joint = Vec::with_capacity(frame_count as usize);
 

@@ -102,9 +102,8 @@ impl CompressedFrame {
 #[derive(Debug)]
 #[br(little)]
 pub struct ErrorMetric {
-    pub average: f32,
-    pub max: f32,
-    pub total: f32,
+    pub error_margin: f32,
+    pub discontinuity_threshold: f32,
 }
 
 #[derive(Debug)]
