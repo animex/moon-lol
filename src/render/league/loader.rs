@@ -1,10 +1,12 @@
-use crate::render::{CharacterRecord, LeagueMapGeo, LeagueTexture};
+use crate::render::{LeagueBinCharacterRecord, LeagueMapGeo, LeagueTexture};
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::resource::Resource;
 use bevy::image::{dds_buffer_to_image, CompressedImageFormats, Image};
 use binrw::{args, binread, io::NoSeek, BinRead, Endian};
 use cdragon_hashes::wad::compute_wad_hash;
 use cdragon_prop::{BinFloat, BinString, PropFile};
+use image::buffer;
+use std::io::BufReader;
 use std::{
     collections::HashMap,
     fs::File,
@@ -126,7 +128,7 @@ pub struct LeagueLoader {
     pub map_geo: LeagueMapGeo,
     pub map_materials: LeagueProp,
 
-    pub character_map: HashMap<u32, CharacterRecord>,
+    pub character_map: HashMap<u32, LeagueBinCharacterRecord>,
 }
 
 pub struct ArcFileReader {
@@ -270,39 +272,11 @@ impl LeagueLoader {
     fn load_character_map(
         wad: &LeagueWad,
         file: &Arc<File>,
-    ) -> io::Result<HashMap<u32, CharacterRecord>> {
+    ) -> io::Result<HashMap<u32, LeagueBinCharacterRecord>> {
         const MAP11_PATH: &str = "data/maps/shipping/map11/map11.bin";
-        let character_hash = LeagueLoader::compute_binhash("Character");
-        let character_record_hash = LeagueLoader::compute_binhash("CharacterRecord");
-        let name_hash = LeagueLoader::compute_binhash("name");
-        let char_name_hash = LeagueLoader::compute_binhash("mCharacterName");
-
-        // Compute field hashes at runtime
-        let fallback_char_name_hash = Self::compute_binhash("mFallbackCharacterName");
-        let base_hp_hash = Self::compute_binhash("baseHP");
-        let base_static_hp_regen_hash = Self::compute_binhash("baseStaticHPRegen");
-        let health_bar_height_hash = Self::compute_binhash("healthBarHeight");
-        let base_damage_hash = Self::compute_binhash("baseDamage");
-        let base_armor_hash = Self::compute_binhash("baseArmor");
-        let base_spell_block_hash = Self::compute_binhash("baseSpellBlock");
-        let base_move_speed_hash = Self::compute_binhash("baseMoveSpeed");
-        let attack_range_hash = Self::compute_binhash("attackRange");
-        let attack_speed_hash = Self::compute_binhash("attackSpeed");
-        let attack_speed_ratio_hash = Self::compute_binhash("attackSpeedRatio");
-        let attack_speed_per_level_hash = Self::compute_binhash("attackSpeedPerLevel");
-        let exp_given_on_death_hash = Self::compute_binhash("expGivenOnDeath");
-        let gold_given_on_death_hash = Self::compute_binhash("goldGivenOnDeath");
-        let local_gold_given_on_death_hash = Self::compute_binhash("localGoldGivenOnDeath");
-        let global_gold_given_on_death_hash = Self::compute_binhash("globalGoldGivenOnDeath");
-        let display_name_hash = Self::compute_binhash("name");
-        let hit_fx_scale_hash = Self::compute_binhash("hitFxScale");
-        let selection_height_hash = Self::compute_binhash("selectionHeight");
-        let selection_radius_hash = Self::compute_binhash("selectionRadius");
-        let pathfinding_collision_radius_hash = Self::compute_binhash("pathfindingCollisionRadius");
-        let gameplay_collision_radius_hash =
-            Self::compute_binhash("overrideGameplayCollisionRadius");
-        let unit_tags_hash = Self::compute_binhash("unitTagsString");
-        let description_hash = Self::compute_binhash("description");
+        let character_hash = LeagueLoader::hash_bin("Character");
+        let character_record_hash = LeagueLoader::hash_bin("CharacterRecord");
+        let name_hash = LeagueLoader::hash_bin("name");
 
         let entry = Self::get_wad_entry(wad, Self::compute_wad_hash(MAP11_PATH));
         let mut reader = Self::get_wad_zstd_entry_reader(file, &entry)?;
@@ -313,7 +287,7 @@ impl LeagueLoader {
         let map_shipping = PropFile::from_slice(&data)
             .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
 
-        let character_map: HashMap<u32, CharacterRecord> = map_shipping
+        let character_map: HashMap<u32, LeagueBinCharacterRecord> = map_shipping
             .entries
             .iter()
             .filter(|v| v.ctype.hash == character_hash)
@@ -334,108 +308,7 @@ impl LeagueLoader {
                     .into_iter()
                     .filter(|v| v.ctype.hash == character_record_hash)
             })
-            .filter_map(|entry| {
-                let character_name = entry.getv::<BinString>(char_name_hash.into())?.0.clone();
-
-                // Extract additional fields
-                let fallback_character_name = entry
-                    .getv::<BinString>(fallback_char_name_hash.into())
-                    .map(|s| s.0.clone());
-                let base_hp = entry.getv::<BinFloat>(base_hp_hash.into()).map(|f| f.0);
-                let base_static_hp_regen = entry
-                    .getv::<BinFloat>(base_static_hp_regen_hash.into())
-                    .map(|f| f.0);
-                let health_bar_height = entry
-                    .getv::<BinFloat>(health_bar_height_hash.into())
-                    .map(|f| f.0);
-                let base_damage = entry.getv::<BinFloat>(base_damage_hash.into()).map(|f| f.0);
-                let base_armor = entry.getv::<BinFloat>(base_armor_hash.into()).map(|f| f.0);
-                let base_spell_block = entry
-                    .getv::<BinFloat>(base_spell_block_hash.into())
-                    .map(|f| f.0);
-                let base_move_speed = entry
-                    .getv::<BinFloat>(base_move_speed_hash.into())
-                    .map(|f| f.0);
-                let attack_range = entry
-                    .getv::<BinFloat>(attack_range_hash.into())
-                    .map(|f| f.0);
-                let attack_speed = entry
-                    .getv::<BinFloat>(attack_speed_hash.into())
-                    .map(|f| f.0);
-                let attack_speed_ratio = entry
-                    .getv::<BinFloat>(attack_speed_ratio_hash.into())
-                    .map(|f| f.0);
-                let attack_speed_per_level = entry
-                    .getv::<BinFloat>(attack_speed_per_level_hash.into())
-                    .map(|f| f.0);
-                let exp_given_on_death = entry
-                    .getv::<BinFloat>(exp_given_on_death_hash.into())
-                    .map(|f| f.0);
-                let gold_given_on_death = entry
-                    .getv::<BinFloat>(gold_given_on_death_hash.into())
-                    .map(|f| f.0);
-                let local_gold_given_on_death = entry
-                    .getv::<BinFloat>(local_gold_given_on_death_hash.into())
-                    .map(|f| f.0);
-                let global_gold_given_on_death = entry
-                    .getv::<BinFloat>(global_gold_given_on_death_hash.into())
-                    .map(|f| f.0);
-                let display_name = entry
-                    .getv::<BinString>(display_name_hash.into())
-                    .map(|s| s.0.clone());
-                let hit_fx_scale = entry
-                    .getv::<BinFloat>(hit_fx_scale_hash.into())
-                    .map(|f| f.0);
-                let selection_height = entry
-                    .getv::<BinFloat>(selection_height_hash.into())
-                    .map(|f| f.0);
-                let selection_radius = entry
-                    .getv::<BinFloat>(selection_radius_hash.into())
-                    .map(|f| f.0);
-                let pathfinding_collision_radius = entry
-                    .getv::<BinFloat>(pathfinding_collision_radius_hash.into())
-                    .map(|f| f.0);
-                let gameplay_collision_radius = entry
-                    .getv::<BinFloat>(gameplay_collision_radius_hash.into())
-                    .map(|f| f.0);
-                let unit_tags = entry
-                    .getv::<BinString>(unit_tags_hash.into())
-                    .map(|s| s.0.clone());
-                let description = entry
-                    .getv::<BinString>(description_hash.into())
-                    .map(|s| s.0.clone());
-
-                Some((
-                    entry.path.hash,
-                    CharacterRecord {
-                        character_name,
-                        fallback_character_name,
-                        base_hp,
-                        base_static_hp_regen,
-                        health_bar_height,
-                        base_damage,
-                        base_armor,
-                        base_spell_block,
-                        base_move_speed,
-                        attack_range,
-                        attack_speed,
-                        attack_speed_ratio,
-                        attack_speed_per_level,
-                        exp_given_on_death,
-                        gold_given_on_death,
-                        local_gold_given_on_death,
-                        global_gold_given_on_death,
-                        display_name,
-                        hit_fx_scale,
-                        selection_height,
-                        selection_radius,
-                        pathfinding_collision_radius,
-                        gameplay_collision_radius,
-                        unit_tags,
-                        description,
-                    },
-                ))
-            })
+            .filter_map(|entry| Some((entry.path.hash, entry.into())))
             .collect();
 
         Ok(character_map)
@@ -509,46 +382,64 @@ impl LeagueLoader {
         Ok(Box::new(Cursor::new(result)))
     }
 
-    pub fn get_wad_entry_reader_by_hash(&self, hash: u64) -> io::Result<Box<dyn Read + '_>> {
+    pub fn get_wad_entry_no_seek_reader_by_hash(
+        &self,
+        hash: u64,
+    ) -> io::Result<NoSeek<Box<dyn Read + '_>>> {
         let entry = self
             .get_wad_entry_by_hash(hash)
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "WAD entry not found"))?;
-        self.get_wad_entry_reader(&entry)
+        self.get_wad_entry_reader(&entry).map(|v| NoSeek::new(v))
     }
 
-    pub fn get_wad_entry_reader_by_path(&self, path: &str) -> io::Result<Box<dyn Read + '_>> {
+    pub fn get_wad_entry_no_seek_reader_by_path(
+        &self,
+        path: &str,
+    ) -> io::Result<NoSeek<Box<dyn Read + '_>>> {
+        self.get_wad_entry_no_seek_reader_by_hash(Self::compute_wad_hash(path))
+    }
+
+    pub fn get_wad_entry_reader_by_path(
+        &self,
+        path: &str,
+    ) -> io::Result<BufReader<Cursor<Vec<u8>>>> {
+        self.get_wad_entry_buffer_by_path(path)
+            .map(|v| BufReader::new(Cursor::new(v)))
+    }
+
+    pub fn get_wad_entry_buffer_by_path(&self, path: &str) -> io::Result<Vec<u8>> {
         let entry = self
             .get_wad_entry_by_path(path)
             .ok_or_else(|| io::Error::new(io::ErrorKind::NotFound, "WAD entry not found"))?;
-        self.get_wad_entry_reader(&entry)
+        let mut buf = Vec::new();
+        self.get_wad_entry_reader(&entry).map(|mut v| {
+            v.read_to_end(&mut buf).unwrap();
+            buf
+        })
     }
 
     pub fn get_texture_by_hash(&self, hash: u64) -> io::Result<LeagueTexture> {
-        let reader = self.get_wad_entry_reader_by_hash(hash)?;
-        LeagueTexture::read(&mut NoSeek::new(reader))
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        let mut reader = self.get_wad_entry_no_seek_reader_by_hash(hash)?;
+        LeagueTexture::read(&mut reader).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     pub fn get_texture_by_path(&self, path: &str) -> io::Result<LeagueTexture> {
-        let reader = self.get_wad_entry_reader_by_path(path)?;
-        LeagueTexture::read(&mut NoSeek::new(reader))
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
+        let mut reader = self.get_wad_entry_no_seek_reader_by_path(path)?;
+        LeagueTexture::read(&mut reader).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
     }
 
     pub fn get_image_by_texture_path(&self, path: &str) -> io::Result<Image> {
-        let mut reader = self.get_wad_entry_reader_by_path(path)?;
-
         match Path::new(path).extension().and_then(|ext| ext.to_str()) {
             Some("tex") => {
-                let texture = LeagueTexture::read(&mut NoSeek::new(reader))
+                let mut reader = self.get_wad_entry_no_seek_reader_by_path(path)?;
+                let texture = LeagueTexture::read(&mut reader)
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
                 texture
                     .to_bevy_image(RenderAssetUsages::default())
                     .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
             }
             Some("dds") => {
-                let mut buffer = Vec::new();
-                reader.read_to_end(&mut buffer)?;
+                let buffer = self.get_wad_entry_buffer_by_path(path)?;
                 dds_buffer_to_image(
                     #[cfg(debug_assertions)]
                     path.to_string(),
@@ -566,7 +457,7 @@ impl LeagueLoader {
     }
 
     pub fn get_prop_bin_by_path(&self, path: &str) -> io::Result<PropFile> {
-        let mut reader = self.get_wad_entry_reader_by_path(path)?;
+        let mut reader = self.get_wad_entry_no_seek_reader_by_path(path)?;
         let mut data = Vec::new();
         reader.read_to_end(&mut data)?;
         PropFile::from_slice(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
@@ -575,35 +466,16 @@ impl LeagueLoader {
     #[inline]
     pub fn compute_wad_hash(s: &str) -> u64 {
         let mut h = XxHash64::with_seed(0);
-        h.write(s.as_bytes());
+        h.write(s.to_ascii_lowercase().as_bytes());
         h.finish()
     }
 
     #[inline]
-    pub fn compute_binhash(s: &str) -> u32 {
+    pub fn hash_bin(s: &str) -> u32 {
         s.to_ascii_lowercase().bytes().fold(0x811c9dc5_u32, |h, b| {
             (h ^ b as u32).wrapping_mul(0x01000193)
         })
     }
-
-    // public static uint Hash(string toHash)
-    // {
-    //     uint hash = 0;
-    //     uint high = 0;
-    //     for (int i = 0; i < toHash.Length; i++)
-    //     {
-    //         hash = (hash << 4) + (byte)toHash[i];
-
-    //         if ((high = hash & 0xF0000000) != 0)
-    //         {
-    //             hash ^= high >> 24;
-    //         }
-
-    //         hash &= ~high;
-    //     }
-
-    //     return hash;
-    // }
 
     pub fn compute_joint_hash(s: &str) -> u32 {
         let mut hash = 0u32;

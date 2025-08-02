@@ -1,4 +1,4 @@
-use crate::render::{BinQuat, BinVec3, LeagueLoader};
+use crate::render::{decompress_quat, BinQuat, BinVec3, LeagueLoader};
 use bevy::math::{Quat, Vec3};
 use binrw::io::{Read, Seek, SeekFrom};
 use binrw::{binread, BinRead};
@@ -70,9 +70,9 @@ pub struct UncompressedDataV5 {
     #[br(
         seek_before = SeekFrom::Start(quat_palette_offset as u64 + 12),
         count = (joint_name_hashes_offset - quat_palette_offset) / 6,
-        map = |vals: Vec<[u8; 6]>| vals.into_iter().map(decompress_quat).map(|v| BinQuat(v)).collect()
+        map = |vals: Vec<[u16; 3]>| vals.iter().map(decompress_quat).collect()
     )]
-    pub quat_palette: Vec<BinQuat>,
+    pub quat_palette: Vec<Quat>,
 
     #[br(
         seek_before = SeekFrom::Start(frames_offset as u64 + 12),
@@ -261,52 +261,4 @@ pub struct UncompressedFrame {
     pub translation_id: u16,
     pub scale_id: u16,
     pub rotation_id: u16,
-}
-
-// **************************************************************************
-// * 辅助函数和类型
-// **************************************************************************
-
-// 修正后的函数
-fn decompress_quat(data: [u8; 6]) -> Quat {
-    // 1. 将6字节数据（3个u16）合并成一个u64，与C#逻辑保持一致
-    // C#的ReadOnlySpan<ushort>和位移操作表明数据是按小端（Little Endian）u16处理的
-    let d0 = u16::from_le_bytes([data[0], data[1]]);
-    let d1 = u16::from_le_bytes([data[2], data[3]]);
-    let d2 = u16::from_le_bytes([data[4], data[5]]);
-
-    // 使用 u64 来进行位操作，避免溢出
-    let bits: u64 = (d0 as u64) | ((d1 as u64) << 16) | ((d2 as u64) << 32);
-
-    // 2. 严格按照 C# 的位布局提取数据
-    let max_index = (bits >> 45) & 0x03; // 2-bit index
-    let v_a = (bits >> 30) & 0x7FFF; // 15-bit value
-    let v_b = (bits >> 15) & 0x7FFF; // 15-bit value
-    let v_c = bits & 0x7FFF; // 15-bit value
-
-    const ONE_OVER_SQRT_2: f32 = 0.70710678118; // 1.0 / SQRT_2
-                                                // 3. 应用与 C# 完全相同的反量化公式
-                                                // C# 中使用 double 进行除法和常量计算，这里用 f32 可能会有微小精度差异
-    let a = (v_a as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
-    let b = (v_b as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
-    let c = (v_c as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
-
-    // 4. 计算第四个分量，并加入安全检查
-    let sum_sq = a * a + b * b + c * c;
-    let d = (1.0 - sum_sq).max(0.0).sqrt();
-
-    // 5. 根据索引重构四元数
-    // 这里的 Quat::from_xyzw 是一个示例，请使用你实际的库函数
-    let quat = match max_index {
-        0 => Quat::from_xyzw(d, a, b, c), // x was omitted
-        1 => Quat::from_xyzw(a, d, b, c), // y was omitted
-        2 => Quat::from_xyzw(a, b, d, c), // z was omitted
-        _ => Quat::from_xyzw(a, b, c, d), // w was omitted
-    };
-
-    // C# 版本没有显式调用 normalize，因为计算结果理论上就是单位化的。
-    // 如果需要更高的精度保证，可以取消下面这行注释。
-    // return BinQuat(quat.normalize());
-
-    quat
 }

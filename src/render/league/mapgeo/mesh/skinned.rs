@@ -182,7 +182,7 @@ impl LeagueSkinnedMesh {
         let index_end_byte = index_start_byte + (range.index_count as usize * 2);
         let index_data_slice = self.index_buffer.get(index_start_byte..index_end_byte)?;
 
-        let mut local_indices: Vec<u16> = index_data_slice
+        let local_indices: Vec<u16> = index_data_slice
             .chunks_exact(2)
             .map(|bytes| u16::from_le_bytes(bytes.try_into().unwrap()))
             .map(|global_index| global_index - range.start_vertex as u16) // 将全局索引转换为局部索引

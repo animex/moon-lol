@@ -2,6 +2,8 @@ mod compressed;
 mod skeleton;
 mod uncompressed;
 
+use std::collections::HashMap;
+
 pub use compressed::*;
 pub use skeleton::*;
 pub use uncompressed::*;
@@ -89,9 +91,177 @@ impl From<AnimationFile> for AnimationData {
                     scales,
                 }
             }
-            AnimationFile::Uncompressed(_uncompressed_animation_asset) => {
+            AnimationFile::Uncompressed(uncompressed) => {
                 // 根据要求，未压缩动画的处理保留为 todo!()
-                todo!("Uncompressed animation parsing not implemented")
+                match uncompressed.data {
+                    UncompressedData::V3(data) => {
+                        let fps = data.fps as f32;
+                        let duration = if fps > 0.0 {
+                            (data.frame_count.saturating_sub(1)) as f32 / fps
+                        } else {
+                            0.0
+                        };
+
+                        // 为确保顺序确定性，对哈希进行排序
+                        let mut joint_hashes: Vec<u32> =
+                            data.joint_frames.keys().cloned().collect();
+                        joint_hashes.sort_unstable();
+
+                        let hash_to_idx: HashMap<u32, usize> = joint_hashes
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &h)| (h, i))
+                            .collect();
+
+                        let num_joints = joint_hashes.len();
+                        let mut translates = vec![Vec::new(); num_joints];
+                        let mut rotations = vec![Vec::new(); num_joints];
+                        let mut scales = vec![Vec::new(); num_joints];
+
+                        for (hash, frames) in data.joint_frames {
+                            if let Some(&joint_idx) = hash_to_idx.get(&hash) {
+                                for (time_idx, frame) in frames.iter().enumerate() {
+                                    let time = time_idx as f32 / fps;
+
+                                    // 假设 BinQuat 和 BinVec3 是元组结构，用 .0 访问
+                                    rotations[joint_idx].push((
+                                        time,
+                                        data.quat_palette[frame.rotation_id as usize].0,
+                                    ));
+                                    translates[joint_idx].push((
+                                        time,
+                                        data.vector_palette[frame.translation_id as usize].0,
+                                    ));
+                                    scales[joint_idx].push((
+                                        time,
+                                        data.vector_palette[frame.scale_id as usize].0,
+                                    ));
+                                }
+                            }
+                        }
+
+                        AnimationData {
+                            fps,
+                            duration,
+                            joint_hashes,
+                            translates,
+                            rotations,
+                            scales,
+                        }
+                    }
+                    UncompressedData::V4(data) => {
+                        let fps = if data.frame_duration > 0.0 {
+                            1.0 / data.frame_duration
+                        } else {
+                            0.0
+                        };
+                        let duration =
+                            data.frame_duration * (data.frame_count.saturating_sub(1)) as f32;
+
+                        // 为确保顺序确定性，对哈希进行排序
+                        let mut joint_hashes: Vec<u32> =
+                            data.joint_frames.keys().cloned().collect();
+                        joint_hashes.sort_unstable();
+
+                        let hash_to_idx: HashMap<u32, usize> = joint_hashes
+                            .iter()
+                            .enumerate()
+                            .map(|(i, &h)| (h, i))
+                            .collect();
+
+                        let num_joints = joint_hashes.len();
+                        let mut translates = vec![Vec::new(); num_joints];
+                        let mut rotations = vec![Vec::new(); num_joints];
+                        let mut scales = vec![Vec::new(); num_joints];
+
+                        for (hash, frames) in data.joint_frames {
+                            if let Some(&joint_idx) = hash_to_idx.get(&hash) {
+                                for (time_idx, frame) in frames.iter().enumerate() {
+                                    let time = time_idx as f32 * data.frame_duration;
+
+                                    // 假设 BinQuat 和 BinVec3 是元组结构，用 .0 访问
+                                    rotations[joint_idx].push((
+                                        time,
+                                        data.quat_palette[frame.rotation_id as usize].0,
+                                    ));
+                                    translates[joint_idx].push((
+                                        time,
+                                        data.vector_palette[frame.translation_id as usize].0,
+                                    ));
+                                    scales[joint_idx].push((
+                                        time,
+                                        data.vector_palette[frame.scale_id as usize].0,
+                                    ));
+                                }
+                            }
+                        }
+
+                        AnimationData {
+                            fps,
+                            duration,
+                            joint_hashes,
+                            translates,
+                            rotations,
+                            scales,
+                        }
+                    }
+                    UncompressedData::V5(data) => {
+                        let joint_count = data.track_count as usize;
+                        let frame_count = data.frame_count as usize;
+                        let fps = if data.frame_duration > 0.0 {
+                            1.0 / data.frame_duration
+                        } else {
+                            0.0
+                        };
+                        let duration = data.frame_duration * (frame_count.saturating_sub(1)) as f32;
+
+                        let joint_hashes = data.joint_hashes;
+                        assert_eq!(
+                            joint_hashes.len(),
+                            joint_count,
+                            "V5中关节哈希数量与轨道数量不匹配"
+                        );
+
+                        let mut translates = vec![Vec::with_capacity(frame_count); joint_count];
+                        let mut rotations = vec![Vec::with_capacity(frame_count); joint_count];
+                        let mut scales = vec![Vec::with_capacity(frame_count); joint_count];
+
+                        for time_idx in 0..frame_count {
+                            let time = time_idx as f32 * data.frame_duration;
+                            for joint_idx in 0..joint_count {
+                                let frame_idx = time_idx * joint_count + joint_idx;
+                                if let Some(frame) = data.frames.get(frame_idx) {
+                                    // V5的quat_palette已经是Vec<Quat>
+                                    if let Some(rot_quat) =
+                                        data.quat_palette.get(frame.rotation_id as usize)
+                                    {
+                                        rotations[joint_idx].push((time, *rot_quat));
+                                    }
+                                    // 假设 BinVec3 是元组结构，用 .0 访问
+                                    if let Some(trans_bvec) =
+                                        data.vector_palette.get(frame.translation_id as usize)
+                                    {
+                                        translates[joint_idx].push((time, trans_bvec.0));
+                                    }
+                                    if let Some(scale_bvec) =
+                                        data.vector_palette.get(frame.scale_id as usize)
+                                    {
+                                        scales[joint_idx].push((time, scale_bvec.0));
+                                    }
+                                }
+                            }
+                        }
+
+                        AnimationData {
+                            fps,
+                            duration,
+                            joint_hashes,
+                            translates,
+                            rotations,
+                            scales,
+                        }
+                    }
+                }
             }
         }
     }
