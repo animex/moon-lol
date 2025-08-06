@@ -33,6 +33,18 @@ impl Plugin for PluginAttack {
     }
 }
 
+#[derive(Component, Default)]
+#[require(Health)]
+pub struct Attackable;
+
+#[derive(Component)]
+pub struct AttackStateData {
+    pub lock_time: f32,
+    pub attack_time: f32,
+    pub recover_time: f32,
+    pub target: Option<Entity>,
+}
+
 #[derive(Component, PartialEq, Debug, Default)]
 pub enum AttackState {
     #[default]
@@ -42,9 +54,47 @@ pub enum AttackState {
     Recovering,
 }
 
-#[derive(Component, Default)]
-#[require(Health)]
-pub struct Attackable;
+#[derive(Component)]
+pub struct AttackRange(pub f32);
+
+impl Default for AttackStateData {
+    fn default() -> Self {
+        Self {
+            lock_time: f32::MAX,
+            attack_time: f32::MAX,
+            recover_time: f32::MAX,
+            target: None,
+        }
+    }
+}
+
+impl AttackStateData {
+    pub fn set_lock_time(&mut self, target: Entity, time: f32) {
+        self.lock_time = time;
+        self.attack_time = f32::MAX;
+        self.recover_time = f32::MAX;
+        self.target = Some(target);
+    }
+
+    pub fn set_attack_time(&mut self, time: f32) {
+        self.attack_time = time;
+        self.lock_time = f32::MAX;
+        self.recover_time = f32::MAX;
+    }
+
+    pub fn set_recover_time(&mut self, time: f32) {
+        self.recover_time = time;
+        self.lock_time = f32::MAX;
+        self.attack_time = f32::MAX;
+    }
+
+    pub fn reset(&mut self) {
+        self.lock_time = f32::MAX;
+        self.attack_time = f32::MAX;
+        self.recover_time = f32::MAX;
+        self.target = None;
+    }
+}
 
 #[derive(Event, Debug)]
 pub struct ActionSetAttackTime;
@@ -76,56 +126,6 @@ pub struct ActionSetRecoverTime;
 #[derive(Event, Debug)]
 pub struct CommandAttack {
     pub target: Entity,
-}
-
-#[derive(Component)]
-pub struct AttackInfo {
-    pub lock_time: f32,
-    pub attack_time: f32,
-    pub recover_time: f32,
-    pub target: Option<Entity>,
-}
-
-#[derive(Component)]
-pub struct AttackRange(pub f32);
-
-impl Default for AttackInfo {
-    fn default() -> Self {
-        Self {
-            lock_time: f32::MAX,
-            attack_time: f32::MAX,
-            recover_time: f32::MAX,
-            target: None,
-        }
-    }
-}
-
-impl AttackInfo {
-    pub fn set_lock_time(&mut self, target: Entity, time: f32) {
-        self.lock_time = time;
-        self.attack_time = f32::MAX;
-        self.recover_time = f32::MAX;
-        self.target = Some(target);
-    }
-
-    pub fn set_attack_time(&mut self, time: f32) {
-        self.attack_time = time;
-        self.lock_time = f32::MAX;
-        self.recover_time = f32::MAX;
-    }
-
-    pub fn set_recover_time(&mut self, time: f32) {
-        self.recover_time = time;
-        self.lock_time = f32::MAX;
-        self.attack_time = f32::MAX;
-    }
-
-    pub fn reset(&mut self) {
-        self.lock_time = f32::MAX;
-        self.attack_time = f32::MAX;
-        self.recover_time = f32::MAX;
-        self.target = None;
-    }
 }
 
 pub fn attack_range_check(
@@ -179,7 +179,7 @@ pub fn attack_range_check(
 
 pub fn trigger_lock(
     mut commands: Commands,
-    q_attack_info: Query<(Entity, &AttackInfo)>,
+    q_attack_info: Query<(Entity, &AttackStateData)>,
     time: Res<Time<Fixed>>,
 ) {
     let current_time = time.elapsed_secs();
@@ -210,7 +210,7 @@ pub fn trigger_lock(
 
 pub fn trigger_attack(
     mut commands: Commands,
-    q_attack_info: Query<(Entity, &AttackInfo)>,
+    q_attack_info: Query<(Entity, &AttackStateData)>,
     time: Res<Time<Fixed>>,
 ) {
     let current_time = time.elapsed_secs();
@@ -246,7 +246,7 @@ pub fn trigger_attack(
 
 pub fn trigger_recover(
     mut commands: Commands,
-    q_attack_info: Query<(Entity, &AttackInfo)>,
+    q_attack_info: Query<(Entity, &AttackStateData)>,
     time: Res<Time<Fixed>>,
 ) {
     let current_time = time.elapsed_secs();
@@ -277,7 +277,7 @@ pub fn trigger_recover(
 
 pub fn action_set_lock_time(
     trigger: Trigger<ActionSetLockTime>,
-    mut q_attack_info: Query<&mut AttackInfo>,
+    mut q_attack_info: Query<&mut AttackStateData>,
     time: Res<Time<Fixed>>,
 ) {
     let Ok(mut attack_info) = q_attack_info.get_mut(trigger.target()) else {
@@ -289,7 +289,7 @@ pub fn action_set_lock_time(
 pub fn action_set_attack_time(
     trigger: Trigger<ActionSetAttackTime>,
     time: Res<Time<Fixed>>,
-    mut q_attack_info: Query<&mut AttackInfo>,
+    mut q_attack_info: Query<&mut AttackStateData>,
 ) {
     let Ok(mut attack_info) = q_attack_info.get_mut(trigger.target()) else {
         return;
@@ -300,7 +300,7 @@ pub fn action_set_attack_time(
 pub fn action_attack_damage(
     trigger: Trigger<ActionAttackDamage>,
     mut commands: Commands,
-    q_attack_info: Query<&AttackInfo>,
+    q_attack_info: Query<&AttackStateData>,
 ) {
     let entity = trigger.target();
     system_debug!(
@@ -349,7 +349,7 @@ pub fn action_attack_damage(
 
 pub fn action_attack_reset(
     trigger: Trigger<ActionAttackReset>,
-    mut q_attack_info: Query<&mut AttackInfo>,
+    mut q_attack_info: Query<&mut AttackStateData>,
 ) {
     let Ok(mut attack_info) = q_attack_info.get_mut(trigger.target()) else {
         return;
@@ -359,7 +359,7 @@ pub fn action_attack_reset(
 
 pub fn action_set_recover_time(
     trigger: Trigger<ActionSetRecoverTime>,
-    mut q_attack_info: Query<&mut AttackInfo>,
+    mut q_attack_info: Query<&mut AttackStateData>,
     time: Res<Time<Fixed>>,
 ) {
     let Ok(mut attack_info) = q_attack_info.get_mut(trigger.target()) else {
@@ -405,7 +405,7 @@ fn on_command_attack(
 fn on_attack_lock(
     trigger: Trigger<AttackLock>,
     mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackState>,
+    mut q_attack_state: Query<&mut AttackStateData>,
 ) {
     let entity = trigger.target();
     let event = trigger.event();
@@ -433,20 +433,20 @@ fn on_attack_lock(
 fn on_attack_attack(
     trigger: Trigger<AttackAttack>,
     mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackState>,
+    mut q_attack_state: Query<&mut AttackStateData>,
 ) {
     let entity = trigger.target();
     let event = trigger.event();
 
     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
         match *attack_state {
-            AttackState::Attacking => {
-                *attack_state = AttackState::Recovering;
+            AttackStateData::Attacking => {
+                *attack_state = AttackStateData::Recovering;
                 println!(
                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
                     entity,
-                    AttackState::Attacking,
-                    AttackState::Recovering,
+                    AttackStateData::Attacking,
+                    AttackStateData::Recovering,
                     event
                 );
                 let action = ActionAttackDamage;
@@ -462,19 +462,22 @@ fn on_attack_attack(
     }
 }
 
-fn on_attack_recover(trigger: Trigger<AttackRecover>, mut q_attack_state: Query<&mut AttackState>) {
+fn on_attack_recover(
+    trigger: Trigger<AttackRecover>,
+    mut q_attack_state: Query<&mut AttackStateData>,
+) {
     let entity = trigger.target();
     let event = trigger.event();
 
     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
         match *attack_state {
-            AttackState::Recovering => {
-                *attack_state = AttackState::Idle;
+            AttackStateData::Recovering => {
+                *attack_state = AttackStateData::Idle;
                 println!(
                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
                     entity,
-                    AttackState::Recovering,
-                    AttackState::Idle,
+                    AttackStateData::Recovering,
+                    AttackStateData::Idle,
                     event
                 );
             }
@@ -483,16 +486,16 @@ fn on_attack_recover(trigger: Trigger<AttackRecover>, mut q_attack_state: Query<
     }
 }
 
-fn on_move(trigger: Trigger<ActionSetMoveTarget>, mut q_attack_state: Query<&mut AttackState>) {
+fn on_move(trigger: Trigger<ActionSetMoveTarget>, mut q_attack_state: Query<&mut AttackStateData>) {
     let entity = trigger.target();
 
     let Ok(mut attack_state) = q_attack_state.get_mut(entity) else {
         return;
     };
 
-    if *attack_state != AttackState::Locking {
+    if *attack_state != AttackStateData::Locking {
         return;
     };
 
-    *attack_state = AttackState::Idle;
+    *attack_state = AttackStateData::Idle;
 }

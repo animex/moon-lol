@@ -1,7 +1,8 @@
 use crate::{
     combat::{Lane, Team},
     entities::{
-        Barrack, BarracksMinionConfig, MinionUpgradeConfig, TimedWaveBehaviorInfo, WaveBehavior,
+        Barrack, BarracksMinionConfig, Minion, MinionUpgradeConfig, TimedWaveBehaviorInfo,
+        WaveBehavior,
     },
     render::{u16_to_lane, u32_option_to_team, LeagueLoader},
 };
@@ -156,7 +157,13 @@ impl From<&BinEmbed> for BarracksMinionConfig {
             .unwrap();
 
         Self {
-            minion_type,
+            minion_type: match minion_type {
+                4 => Minion::Melee,
+                6 => Minion::Siege,
+                5 => Minion::Ranged,
+                7 => Minion::Super,
+                _ => panic!("unknown minion type"),
+            },
             wave_behavior,
             minion_upgrade_stats,
         }

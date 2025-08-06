@@ -1,6 +1,9 @@
-use crate::combat::*;
-use bevy::{app::Plugin, prelude::*, time::common_conditions::on_timer};
-use std::time::Duration;
+use crate::combat::{
+    ActionAttackDamage, ActionAttackReset, ActionRemoveTarget, ActionSetLockTime,
+    ActionSetMoveTarget, ActionSetTarget, AttackInfo, AttackInfo, AttackRange, Attackable,
+    Bounding, Dead, Health, Lane, Move, MoveEnd, MoveVelocity, Navigator, Obstacle, Target, Team,
+};
+use bevy::{app::Plugin, prelude::*};
 
 #[derive(Component, Default)]
 pub struct AggroInfo {
@@ -35,13 +38,10 @@ pub struct SystemMoveByPath {
 
 #[derive(Event, Debug)]
 pub struct ChasingTooMuch;
-#[derive(Component, Clone, Copy)]
+#[derive(Component, Debug, Clone, Copy)]
 #[require(
-    Transform,
     Navigator,
-    MoveSpeed = MoveSpeed(365.0),
     MoveVelocity,
-    AttackState,
     AttackInfo,
     MinionState,
     Lane,
@@ -54,9 +54,8 @@ pub enum Minion {
     Siege,
     Melee,
     Ranged,
+    Super,
 }
-
-impl Minion {}
 
 pub const AGGRO_RANGE: f32 = 500.0;
 
@@ -68,16 +67,7 @@ impl Plugin for PluginMinion {
         app.add_event::<ChasingTimeOut>();
         app.add_event::<ChasingTooMuch>();
         app.add_event::<SystemMoveByPath>();
-        app.init_resource::<SpawnTimer>()
-            .add_systems(
-                FixedUpdate,
-                setup.run_if(on_timer(Duration::from_secs(10000))),
-            )
-            .add_systems(
-                FixedUpdate,
-                spawn_next_minion.run_if(on_timer(Duration::from_secs(1))),
-            )
-            .add_systems(FixedPostUpdate, minion_aggro);
+        app.add_systems(FixedPostUpdate, minion_aggro);
         app.add_systems(FixedUpdate, on_spawn);
         app.add_observer(action_continue_minion_path);
         app.add_observer(on_system_move_by_path);
@@ -85,53 +75,6 @@ impl Plugin for PluginMinion {
         app.add_observer(on_target_dead);
     }
 }
-
-#[derive(Resource, Default)]
-struct SpawnTimer {
-    minion_type_index: usize,
-}
-
-fn spawn_next_minion(commands: Commands, mut spawn_timer: ResMut<SpawnTimer>) {
-    let lanes = [Lane::Mid];
-    let teams = [Team::Order, Team::Chaos];
-    let minion_types = [
-        Minion::Melee,
-        Minion::Melee,
-        Minion::Melee,
-        Minion::Siege,
-        Minion::Ranged,
-        Minion::Ranged,
-        Minion::Ranged,
-    ];
-
-    // let lanes = [Lane::Top, Lane::Mid, Lane::Bottom];
-    // let teams = [Team::Blue, Team::Red];
-    // let minion_types = [Minion::Siege];
-
-    if spawn_timer.minion_type_index < minion_types.len() {
-        let minion_type = minion_types[spawn_timer.minion_type_index];
-
-        // for &team in teams.iter() {
-        //     for &lane in lanes.iter() {
-        //         commands.spawn(Minion::bundle(minion_type, team, lane));
-        //     }
-        // }
-
-        spawn_timer.minion_type_index += 1;
-    }
-}
-
-fn setup(mut spawn_timer: ResMut<SpawnTimer>) {
-    // 重置生成计时器
-    *spawn_timer = SpawnTimer::default();
-}
-
-// fn get_mirror_spawn_position(team: &Team, lane: &Lane) -> Vec3 {
-//     match team {
-//         Team::Blue => get_spawn_position(&Team::Red, &lane),
-//         Team::Red => get_spawn_position(&Team::Blue, &lane),
-//     }
-// }
 
 pub fn minion_aggro(
     mut commands: Commands,
@@ -234,7 +177,7 @@ fn get_is_in_attack_range_in_found_aggro_target(
 fn on_found_aggro_target(
     trigger: Trigger<FoundAggroTarget>,
     mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackState>,
+    mut q_attack_state: Query<&mut AttackInfo>,
     mut q_minion_state: Query<&mut MinionState>,
 
     q_attack_range: Query<&AttackRange>,
@@ -265,13 +208,13 @@ fn on_found_aggro_target(
 
     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
         match *attack_state {
-            AttackState::Idle => {
-                *attack_state = AttackState::Locking;
+            AttackInfo::Idle => {
+                *attack_state = AttackInfo::Locking;
                 println!(
                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
                     entity,
-                    AttackState::Idle,
-                    AttackState::Locking,
+                    AttackInfo::Idle,
+                    AttackInfo::Locking,
                     event
                 );
                 let action = ActionAttackReset;

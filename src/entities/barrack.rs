@@ -2,6 +2,8 @@ use std::{collections::VecDeque, time::Duration};
 
 use bevy::prelude::*;
 
+use crate::entities::Minion;
+
 #[derive(Component, Debug)]
 pub struct Barrack {
     pub initial_spawn_time_secs: f32,
@@ -20,7 +22,7 @@ pub struct Barrack {
 
 #[derive(Debug)]
 pub struct BarracksMinionConfig {
-    pub minion_type: u8,
+    pub minion_type: Minion,
     pub wave_behavior: WaveBehavior,
     pub minion_upgrade_stats: MinionUpgradeConfig,
 }
@@ -63,15 +65,15 @@ pub struct MinionUpgradeConfig {
 // --- 新增的组件和资源 ---
 
 /// 代表一个被生成的小兵，包含其最终计算出的属性
-#[derive(Component, Debug)]
-pub struct Minion {
-    pub minion_type: u8,
-    pub current_hp: f32,
-    pub max_hp: f32,
-    pub damage: f32,
-    pub armor: f32,
-    pub move_speed: i32,
-}
+// #[derive(Component, Debug)]
+// pub struct Minion {
+//     pub minion_type: u8,
+//     pub current_hp: f32,
+//     pub max_hp: f32,
+//     pub damage: f32,
+//     pub armor: f32,
+//     pub move_speed: i32,
+// }
 
 /// 兵营的动态状态，用于跟踪计时器和生成队列
 #[derive(Component)]
@@ -266,14 +268,15 @@ fn barracks_spawning_system(
                     // --- 生成小兵实体 ---
                     commands
                         .spawn((
-                            Minion {
-                                minion_type: minion_config.minion_type,
-                                current_hp: final_max_hp,
-                                max_hp: final_max_hp,
-                                damage: final_damage,
-                                armor: final_armor,
-                                move_speed: final_move_speed,
-                            },
+                            minion_config.minion_type,
+                            // Minion {
+                            //     minion_type: minion_config.minion_type,
+                            //     current_hp: final_max_hp,
+                            //     max_hp: final_max_hp,
+                            //     damage: final_damage,
+                            //     armor: final_armor,
+                            //     move_speed: final_move_speed,
+                            // },
                             // 在兵营的位置生成
                             transform.compute_transform(),
                         ))

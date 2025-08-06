@@ -6,13 +6,13 @@ use vleue_navigator::{
 };
 
 use crate::{
-    combat::movement::{MoveDestination, MoveSpeed, MoveVelocity},
+    combat::movement::{Move, MoveDestination, MoveVelocity},
     game::GameState,
     map::{MAP_HEIGHT, MAP_WIDTH},
 };
 
 #[derive(Component, Default)]
-#[require(MoveSpeed, MoveVelocity)]
+#[require(Move, MoveVelocity)]
 pub struct Navigator;
 
 #[derive(Component, Default)]

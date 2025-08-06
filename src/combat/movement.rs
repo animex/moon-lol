@@ -27,7 +27,7 @@ pub struct MoveDestination(pub Vec2);
 
 /// 移动速度组件
 #[derive(Component, Default)]
-pub struct MoveSpeed(pub f32);
+pub struct Move(pub f32);
 
 /// 移动速度向量组件
 #[derive(Component, Default)]
@@ -87,7 +87,7 @@ fn update_move_rvo(
     mut query: Query<(
         Entity,
         &mut MoveDestination,
-        &MoveSpeed,
+        &Move,
         &mut MoveVelocity,
         &Bounding,
     )>,
