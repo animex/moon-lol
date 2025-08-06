@@ -1,6 +1,5 @@
 mod animation;
 mod camera;
-mod entities;
 mod league;
 mod map;
 mod resource;
@@ -8,7 +7,6 @@ mod ui;
 
 pub use animation::*;
 pub use camera::*;
-pub use entities::*;
 pub use league::*;
 pub use map::*;
 pub use resource::*;

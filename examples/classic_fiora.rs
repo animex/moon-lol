@@ -5,7 +5,7 @@ use bevy::{
         RenderPlugin,
     },
 };
-use moon_lol::render::PluginRender;
+use moon_lol::{combat::PluginCombat, entities::PluginEntities, render::PluginRender};
 
 fn main() {
     App::new()
@@ -29,10 +29,9 @@ fn main() {
                     }),
                     ..default()
                 }),
-            // PluginCombat,
-            // PluginEntities,
+            PluginCombat,
+            PluginEntities,
             PluginRender,
-            // PluginClassic,
         ))
         .run();
 }

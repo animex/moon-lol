@@ -120,7 +120,7 @@ pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transf
 
     (
         Barrack {
-            initial_spawn_time_secs,
+            initial_spawn_time_secs: 3.0,
             wave_spawn_interval_secs,
             minion_spawn_interval_secs,
             upgrade_interval_secs,

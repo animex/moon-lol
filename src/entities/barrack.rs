@@ -111,9 +111,9 @@ pub struct InhibitorState {
 
 // --- Bevy 插件和系统 ---
 
-pub struct BarracksPlugin;
+pub struct PluginBarrack;
 
-impl Plugin for BarracksPlugin {
+impl Plugin for PluginBarrack {
     fn build(&self, app: &mut App) {
         app.init_resource::<InhibitorState>().add_systems(
             Update,

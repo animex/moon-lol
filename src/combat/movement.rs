@@ -1,6 +1,5 @@
 use crate::{
     combat::{navigation::Obstacle, *},
-    game::GameState,
     system_debug,
 };
 use bevy::prelude::*;
@@ -42,7 +41,7 @@ impl Plugin for PluginMove {
     fn build(&self, app: &mut App) {
         app.add_event::<CommandMove>();
         app.add_event::<MoveEnd>();
-        app.add_systems(OnEnter(GameState::Playing), setup);
+        app.add_systems(Startup, setup);
         app.add_systems(FixedUpdate, update_move_rvo);
         app.add_observer(action_set_move_target);
         app.add_observer(on_command_move);

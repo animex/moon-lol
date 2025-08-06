@@ -13,3 +13,13 @@ pub use inhibitor::*;
 pub use minion::*;
 pub use nexus::*;
 pub use turret::*;
+
+use bevy::app::{App, Plugin};
+
+pub struct PluginEntities;
+
+impl Plugin for PluginEntities {
+    fn build(&self, app: &mut App) {
+        app.add_plugins((PluginMinion, PluginBarrack));
+    }
+}

@@ -7,7 +7,6 @@ use vleue_navigator::{
 
 use crate::{
     combat::movement::{MoveDestination, MoveVelocity, Movement},
-    game::GameState,
     map::{MAP_HEIGHT, MAP_WIDTH},
 };
 
@@ -25,7 +24,7 @@ pub struct PluginNavigaton;
 
 impl Plugin for PluginNavigaton {
     fn build(&self, app: &mut App) {
-        app.add_systems(OnExit(GameState::Setup), setup);
+        app.add_systems(Startup, setup);
         app.add_systems(FixedPreUpdate, update_navigator);
     }
 }
