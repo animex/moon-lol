@@ -1,8 +1,10 @@
+use crate::{
+    combat::Team,
+    entities::Minion,
+    render::{spawn_character, WadRes},
+};
+use bevy::{prelude::*, render::mesh::skinning::SkinnedMeshInverseBindposes};
 use std::{collections::VecDeque, time::Duration};
-
-use bevy::prelude::*;
-
-use crate::entities::Minion;
 
 #[derive(Component, Debug)]
 pub struct Barrack {
@@ -21,8 +23,16 @@ pub struct Barrack {
 }
 
 #[derive(Debug)]
+pub struct MinionRecord {
+    pub team: Team,
+    pub character_record: String,
+    pub skin: String,
+}
+
+#[derive(Debug)]
 pub struct BarracksMinionConfig {
     pub minion_type: Minion,
+    pub minion_record: MinionRecord,
     pub wave_behavior: WaveBehavior,
     pub minion_upgrade_stats: MinionUpgradeConfig,
 }
@@ -61,19 +71,6 @@ pub struct MinionUpgradeConfig {
     pub damage_upgrade: f32,
     pub damage_upgrade_late: f32,
 }
-
-// --- 新增的组件和资源 ---
-
-/// 代表一个被生成的小兵，包含其最终计算出的属性
-// #[derive(Component, Debug)]
-// pub struct Minion {
-//     pub minion_type: u8,
-//     pub current_hp: f32,
-//     pub max_hp: f32,
-//     pub damage: f32,
-//     pub armor: f32,
-//     pub move_speed: i32,
-// }
 
 /// 兵营的动态状态，用于跟踪计时器和生成队列
 #[derive(Component)]
@@ -165,6 +162,13 @@ fn setup_barracks_state(mut commands: Commands, query: Query<(Entity, &Barrack),
 /// 核心系统：处理兵营的计时、升级和生成逻辑
 fn barracks_spawning_system(
     mut commands: Commands,
+    mut res_animation_clips: ResMut<Assets<AnimationClip>>,
+    mut res_animation_graphs: ResMut<Assets<AnimationGraph>>,
+    mut res_image: ResMut<Assets<Image>>,
+    mut res_materials: ResMut<Assets<StandardMaterial>>,
+    mut res_meshes: ResMut<Assets<Mesh>>,
+    mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
+    res_wad: Res<WadRes>,
     time: Res<Time>,
     game_time: Res<Time<Virtual>>, // 使用 Virtual 时间可以更好地控制游戏进程，如果不用可以换回 Res<Time>
     inhibitor_state: Res<InhibitorState>,
@@ -265,22 +269,32 @@ fn barracks_spawning_system(
                     let final_move_speed =
                         barrack.move_speed_increase_increment * move_speed_upgrade_count;
 
-                    // --- 生成小兵实体 ---
-                    commands
-                        .spawn((
-                            minion_config.minion_type,
-                            // Minion {
-                            //     minion_type: minion_config.minion_type,
-                            //     current_hp: final_max_hp,
-                            //     max_hp: final_max_hp,
-                            //     damage: final_damage,
-                            //     armor: final_armor,
-                            //     move_speed: final_move_speed,
-                            // },
-                            // 在兵营的位置生成
-                            transform.compute_transform(),
-                        ))
-                        .log_components(); // 打印生成的组件信息，方便调试
+                    spawn_character(
+                        &mut commands,
+                        &mut res_animation_clips,
+                        &mut res_animation_graphs,
+                        &mut res_image,
+                        &mut res_materials,
+                        &mut res_meshes,
+                        &mut res_skinned_mesh_inverse_bindposes,
+                        &res_wad.loader,
+                        transform.compute_matrix(),
+                        &minion_config.minion_record.skin,
+                    );
+
+                    // // --- 生成小兵实体 ---
+                    // commands
+                    //     .spawn((
+                    //         minion_config.minion_type,
+                    //         Health {
+                    //             value: final_max_hp,
+                    //             max: final_max_hp,
+                    //         },
+                    //         Movement {
+                    //             speed: final_move_speed as f32,
+                    //         },
+                    //     ))
+                    //     .log_components(); // 打印生成的组件信息，方便调试
 
                     // 更新队列
                     current_spawn.count -= 1;

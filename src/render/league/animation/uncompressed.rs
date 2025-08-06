@@ -218,8 +218,6 @@ fn parse_uncompressed_data_v3<R: Read + Seek>(
             .trim_end_matches('\0')
             .to_string();
 
-        println!("track name: {}", track_name);
-
         // C# 代码使用 Elf.HashLower，我们在此模拟一个简单的小写哈希
         // 为了完美匹配，你需要实现确切的 Elf 哈希算法。
         let joint_hash = LeagueLoader::compute_joint_hash(&track_name);

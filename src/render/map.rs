@@ -1,7 +1,8 @@
-use crate::combat::{Attack, AttackStateData, MoveDestination, Target};
+use crate::combat::{Attack, AttackState, MoveDestination, Target};
 use crate::render::{
-    get_barrack_by_bin, load_character, process_map_geo_mesh, EnvironmentVisibility,
-    LayerTransitionBehavior, LeagueLoader, LeagueMinionPath, WadRes,
+    get_barrack_by_bin, process_map_geo_mesh, spawn_character, EnvironmentVisibility,
+    LayerTransitionBehavior, LeagueBinMaybeCharacterMapRecord, LeagueLoader, LeagueMinionPath,
+    WadRes,
 };
 use bevy::animation::{animated_field, AnimationTarget, AnimationTargetId};
 use bevy::asset::RenderAssetUsages;
@@ -193,7 +194,7 @@ fn setup_map(
 
 pub fn draw_attack(
     mut gizmos: Gizmos,
-    q_attack: Query<(&Transform, &AttackStateData)>,
+    q_attack: Query<(&Transform, &AttackState)>,
     q_move_destination: Query<(&Transform, &MoveDestination)>,
     q_target: Query<(&Transform, &Target)>,
     q_transform: Query<&Transform>,
@@ -290,12 +291,12 @@ pub fn draw_attack(
 fn setup_map_placeble(
     res_wad: Res<WadRes>,
     mut commands: Commands,
-    mut res_meshes: ResMut<Assets<Mesh>>,
-    mut res_materials: ResMut<Assets<StandardMaterial>>,
+    mut res_animation_clips: ResMut<Assets<AnimationClip>>,
+    mut res_animation_graphs: ResMut<Assets<AnimationGraph>>,
     mut res_image: ResMut<Assets<Image>>,
-    mut skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
-    mut animation_clips: ResMut<Assets<AnimationClip>>,
-    mut animation_graphs: ResMut<Assets<AnimationGraph>>,
+    mut res_materials: ResMut<Assets<StandardMaterial>>,
+    mut res_meshes: ResMut<Assets<Mesh>>,
+    mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
 ) {
     let start_time = std::time::Instant::now();
     let bin = &res_wad.loader.map_materials.0;
@@ -308,174 +309,23 @@ fn setup_map_placeble(
         .flatten()
         .for_each(|v| match v.1.ctype.hash {
             0x1e1cce2 => {
-                {
-                    let (
-                        league_bin_maybe_character_map_record,
-                        league_bin_character_record,
-                        image,
-                        league_skinned_mesh,
-                        league_skeleton,
-                        animation_data,
-                    ) = load_character(&res_wad.loader, &v.1);
+                let character_map_record = LeagueBinMaybeCharacterMapRecord::from(&v.1);
 
-                    let mut clip = AnimationClip::default();
-
-                    let mut index_to_entity =
-                        vec![Entity::PLACEHOLDER; league_skeleton.modern_data.joints.len()];
-                    let mut joint_inverse_matrix =
-                        vec![Mat4::default(); league_skeleton.modern_data.joints.len()];
-
-                    let mut transform =
-                        Transform::from_matrix(league_bin_maybe_character_map_record.transform);
-
-                    transform.translation.z = -transform.translation.z;
-
-                    let player_entity = commands.spawn(transform).id();
-
-                    let sphere = res_meshes.add(Sphere::new(50.0));
-
-                    let mat = res_materials.add(Color::srgb(1.0, 0.2, 0.2));
-
-                    for (i, joint) in league_skeleton.modern_data.joints.iter().enumerate() {
-                        let joint_name_str = joint.name.clone();
-                        let name = Name::new(joint_name_str.clone());
-                        let hash = LeagueLoader::compute_joint_hash(&joint.name);
-
-                        let target_id = AnimationTargetId::from_name(&name);
-
-                        match animation_data {
-                            Some(ref animation_data) => {
-                                if let Some(anim_track_index) =
-                                    animation_data.joint_hashes.iter().position(|v| *v == hash)
-                                {
-                                    if let Some(data) =
-                                        animation_data.translates.get(anim_track_index)
-                                    {
-                                        clip.add_curve_to_target(
-                                            target_id,
-                                            AnimatableCurve::new(
-                                                animated_field!(Transform::translation),
-                                                AnimatableKeyframeCurve::new(
-                                                    data.clone().into_iter(),
-                                                )
-                                                .unwrap(),
-                                            ),
-                                        );
-                                    }
-
-                                    if let Some(data) =
-                                        animation_data.rotations.get(anim_track_index)
-                                    {
-                                        clip.add_curve_to_target(
-                                            target_id,
-                                            AnimatableCurve::new(
-                                                animated_field!(Transform::rotation),
-                                                AnimatableKeyframeCurve::new(
-                                                    data.clone().into_iter(),
-                                                )
-                                                .unwrap(),
-                                            ),
-                                        );
-                                    }
-
-                                    if let Some(data) = animation_data.scales.get(anim_track_index)
-                                    {
-                                        clip.add_curve_to_target(
-                                            target_id,
-                                            AnimatableCurve::new(
-                                                animated_field!(Transform::scale),
-                                                AnimatableKeyframeCurve::new(
-                                                    data.clone().into_iter(),
-                                                )
-                                                .unwrap(),
-                                            ),
-                                        );
-                                    }
-                                }
-                            }
-                            None => {}
-                        }
-
-                        let ent = commands
-                            .spawn((
-                                // Mesh3d(sphere.clone()),
-                                // MeshMaterial3d(mat.clone()),
-                                Transform::from_matrix(joint.local_transform),
-                                name,
-                                AnimationTarget {
-                                    id: target_id,
-                                    player: player_entity,
-                                },
-                            ))
-                            .id();
-                        index_to_entity[i] = ent;
-                        joint_inverse_matrix[i] = joint.inverse_bind_transform;
-                    }
-
-                    for (i, joint) in league_skeleton.modern_data.joints.iter().enumerate() {
-                        if joint.parent_id >= 0 {
-                            let parent_entity = index_to_entity[joint.parent_id as usize];
-                            commands.entity(parent_entity).add_child(index_to_entity[i]);
-                        } else {
-                            commands.entity(player_entity).add_child(index_to_entity[i]);
-                        }
-                    }
-
-                    let texu = res_image.add(image);
-
-                    let clip_handle = animation_clips.add(clip);
-
-                    let (graph, animation_node_index) = AnimationGraph::from_clip(clip_handle);
-                    let graph_handle = animation_graphs.add(graph);
-
-                    let mut player = AnimationPlayer::default();
-                    player.play(animation_node_index).repeat();
-
-                    commands
-                        .entity(player_entity)
-                        .insert((player, AnimationGraphHandle(graph_handle)));
-
-                    for i in 0..league_skinned_mesh.ranges.len() {
-                        let mesh = league_skinned_mesh.to_bevy_mesh(i).unwrap();
-
-                        let child = commands
-                            .spawn((
-                                Transform::default(),
-                                Mesh3d(res_meshes.add(mesh)),
-                                MeshMaterial3d(res_materials.add(StandardMaterial {
-                                    base_color_texture: Some(texu.clone()),
-                                    unlit: true,
-                                    cull_mode: None,
-                                    alpha_mode: AlphaMode::Opaque,
-                                    ..Default::default()
-                                })),
-                                SkinnedMesh {
-                                    inverse_bindposes: skinned_mesh_inverse_bindposes.add(
-                                        SkinnedMeshInverseBindposes::from(
-                                            league_skeleton
-                                                .modern_data
-                                                .influences
-                                                .iter()
-                                                .map(|v| joint_inverse_matrix[*v as usize])
-                                                .collect::<Vec<_>>(),
-                                        ),
-                                    ),
-                                    joints: league_skeleton
-                                        .modern_data
-                                        .influences
-                                        .iter()
-                                        .map(|v| index_to_entity[*v as usize])
-                                        .collect::<Vec<_>>(),
-                                },
-                            ))
-                            .id();
-                        commands.entity(player_entity).add_child(child);
-                    }
-                }
+                spawn_character(
+                    &mut commands,
+                    &mut res_animation_clips,
+                    &mut res_animation_graphs,
+                    &mut res_image,
+                    &mut res_materials,
+                    &mut res_meshes,
+                    &mut res_skinned_mesh_inverse_bindposes,
+                    &res_wad.loader,
+                    character_map_record.transform,
+                    &character_map_record.definition.skin,
+                );
             }
             0x3c995caf => {
                 let v: LeagueMinionPath = (&v.1).into();
-                println!("{:#?}", v);
 
                 let mut transform = Transform::from_matrix(v.transform);
 

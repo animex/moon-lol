@@ -1,7 +1,7 @@
 use crate::combat::{
-    ActionAttackDamage, ActionAttackReset, ActionRemoveTarget, ActionSetLockTime,
-    ActionSetMoveTarget, ActionSetTarget, Attack, AttackMachineState, AttackStateData, Attackable,
-    Bounding, Dead, Health, Lane, Move, MoveEnd, MoveVelocity, Navigator, Obstacle, Target, Team,
+    ActionSetMoveTarget, Attack, AttackMachineState, AttackState, Bounding, CommandTargetRemove,
+    CommandTargetSet, Dead, EventAttackAttack, Health, Lane, MoveEnd, MoveVelocity, Navigator,
+    Obstacle, Target, Team,
 };
 use bevy::{app::Plugin, prelude::*};
 
@@ -29,7 +29,7 @@ pub struct FoundAggroTarget {
 pub struct ChasingTimeOut;
 
 #[derive(Event, Debug)]
-pub struct ActionContinueMinionPath;
+pub struct CommandMinionContinuePath;
 
 #[derive(Event, Debug)]
 pub struct SystemMoveByPath {
@@ -42,12 +42,11 @@ pub struct ChasingTooMuch;
 #[require(
     Navigator,
     MoveVelocity,
-    AttackStateData,
+    AttackState,
     MinionState,
     Lane,
     Team,
     Obstacle,
-    Attackable,
     AggroInfo
 )]
 pub enum Minion {
@@ -79,7 +78,7 @@ impl Plugin for PluginMinion {
 pub fn minion_aggro(
     mut commands: Commands,
     q_minion: Query<(Entity, &Team, &Transform, &AggroInfo), With<Minion>>,
-    q_attackable: Query<(Entity, &Team, &Transform), With<Attackable>>,
+    q_attackable: Query<(Entity, &Team, &Transform)>,
 ) {
     for (minion_entity, minion_team, minion_transform, aggro_info) in q_minion.iter() {
         let mut best_aggro = 0.0;
@@ -129,7 +128,7 @@ pub fn minion_aggro(
 }
 
 pub fn action_continue_minion_path(
-    trigger: Trigger<ActionContinueMinionPath>,
+    trigger: Trigger<CommandMinionContinuePath>,
     q_minion_path: Query<&MinionPath>,
     mut commands: Commands,
 ) {
@@ -177,9 +176,9 @@ fn get_is_in_attack_range_in_found_aggro_target(
 fn on_found_aggro_target(
     trigger: Trigger<FoundAggroTarget>,
     mut commands: Commands,
-    q_attack_state: Query<&AttackStateData>,
     mut q_minion_state: Query<&mut MinionState>,
 
+    q_attack_state: Query<&AttackState>,
     q_attack: Query<&Attack>,
     q_transform: Query<&Transform>,
     q_bounding: Query<&Bounding>,
@@ -208,22 +207,7 @@ fn on_found_aggro_target(
 
     if let Ok(attack_state) = q_attack_state.get(entity) {
         match attack_state.get_state() {
-            AttackMachineState::Idle => {
-                println!(
-                    "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    AttackMachineState::Idle,
-                    AttackMachineState::Locking,
-                    event
-                );
-                let action = ActionAttackReset;
-                commands.trigger_targets(action, trigger.target());
-
-                let action = ActionSetLockTime {
-                    target: event.target,
-                };
-                commands.trigger_targets(action, trigger.target());
-            }
+            AttackMachineState::Idle => {}
             _ => (),
         }
     }
@@ -232,14 +216,7 @@ fn on_found_aggro_target(
         match *minion_state {
             MinionState::MovingOnPath => {
                 *minion_state = MinionState::AttackingTarget;
-                println!(
-                    "entity: {:?}, minion_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    MinionState::MovingOnPath,
-                    MinionState::AttackingTarget,
-                    event
-                );
-                let action = ActionSetTarget {
+                let action = CommandTargetSet {
                     target: event.target,
                 };
                 commands.trigger_targets(action, trigger.target());
@@ -250,8 +227,8 @@ fn on_found_aggro_target(
 }
 
 pub fn action_attack_damage(
-    trigger: Trigger<ActionAttackDamage>,
-    mut q_attack_info: Query<&mut AttackStateData>,
+    trigger: Trigger<EventAttackAttack>,
+    mut q_attack_info: Query<&mut AttackState>,
     mut q_health: Query<&mut Health>,
     mut q_minion: Query<(Entity, &Team, &Transform, &mut AggroInfo), With<Minion>>,
     q_transform: Query<&Transform>,
@@ -305,8 +282,8 @@ fn on_target_dead(
         match *minion_state {
             MinionState::AttackingTarget => {
                 *minion_state = MinionState::MovingOnPath;
-                commands.trigger_targets(ActionRemoveTarget, trigger.target());
-                commands.trigger_targets(ActionContinueMinionPath, trigger.target());
+                commands.trigger_targets(CommandTargetRemove, trigger.target());
+                commands.trigger_targets(CommandMinionContinuePath, trigger.target());
             }
             _ => (),
         }
@@ -318,7 +295,7 @@ fn on_spawn(mut commands: Commands, mut q_minion_state: Query<(Entity, &mut Mini
         match *minion_state {
             MinionState::MovingOnPath => {
                 *minion_state = MinionState::MovingOnPath;
-                let action = ActionContinueMinionPath;
+                let action = CommandMinionContinuePath;
                 commands.trigger_targets(action, entity);
             }
             _ => (),

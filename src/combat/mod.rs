@@ -4,7 +4,6 @@ mod damage;
 mod life;
 mod movement;
 mod navigation;
-mod target;
 
 pub use attack::*;
 pub use base::*;
@@ -12,7 +11,6 @@ pub use damage::*;
 pub use life::*;
 pub use movement::*;
 pub use navigation::*;
-pub use target::*;
 
 pub struct PluginCombat;
 

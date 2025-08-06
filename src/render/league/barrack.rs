@@ -1,15 +1,15 @@
 use crate::{
     combat::{Lane, Team},
     entities::{
-        Barrack, BarracksMinionConfig, Minion, MinionUpgradeConfig, TimedWaveBehaviorInfo,
-        WaveBehavior,
+        Barrack, BarracksMinionConfig, Minion, MinionRecord, MinionUpgradeConfig,
+        TimedWaveBehaviorInfo, WaveBehavior,
     },
     render::{u16_to_lane, u32_option_to_team, LeagueLoader},
 };
 use bevy::{math::Mat4, transform::components::Transform};
 use cdragon_prop::{
-    BinEmbed, BinFloat, BinLink, BinList, BinMatrix, BinS32, BinStruct, BinU16, BinU32, BinU8,
-    PropFile,
+    BinEmbed, BinEntry, BinFloat, BinLink, BinList, BinMatrix, BinS32, BinString, BinStruct,
+    BinU16, BinU32, BinU8, PropFile,
 };
 
 pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transform, Team, Lane) {
@@ -113,7 +113,7 @@ pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transf
             list.downcast::<BinEmbed>()
                 .unwrap()
                 .iter()
-                .map(|embed| BarracksMinionConfig::from(embed))
+                .map(|embed| BarracksMinionConfig::from_embed(bin, embed))
                 .collect()
         })
         .unwrap();
@@ -139,8 +139,8 @@ pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transf
     )
 }
 
-impl From<&BinEmbed> for BarracksMinionConfig {
-    fn from(value: &BinEmbed) -> Self {
+impl BarracksMinionConfig {
+    fn from_embed(file: &PropFile, value: &BinEmbed) -> Self {
         let minion_type = value
             .getv::<BinU8>(LeagueLoader::hash_bin("MinionType").into())
             .map(|u| u.0)
@@ -156,6 +156,17 @@ impl From<&BinEmbed> for BarracksMinionConfig {
             .map(|e| MinionUpgradeConfig::from(e))
             .unwrap();
 
+        let character_record = value
+            .getv::<BinLink>(0x8a3fc6eb.into())
+            .map(|v| v.0.hash)
+            .unwrap();
+
+        let character_record = file
+            .entries
+            .iter()
+            .find(|v| v.path.hash == character_record)
+            .unwrap();
+
         Self {
             minion_type: match minion_type {
                 4 => Minion::Melee,
@@ -164,8 +175,33 @@ impl From<&BinEmbed> for BarracksMinionConfig {
                 7 => Minion::Super,
                 _ => panic!("unknown minion type"),
             },
+            minion_record: MinionRecord::from(character_record),
             wave_behavior,
             minion_upgrade_stats,
+        }
+    }
+}
+
+impl From<&BinEntry> for MinionRecord {
+    fn from(value: &BinEntry) -> Self {
+        let team = value
+            .getv::<BinU32>(LeagueLoader::hash_bin("Team").into())
+            .map(|i| i.0);
+
+        let character_record = value
+            .getv::<BinString>(LeagueLoader::hash_bin("CharacterRecord").into())
+            .map(|i| i.0.clone())
+            .unwrap();
+
+        let skin = value
+            .getv::<BinString>(LeagueLoader::hash_bin("Skin").into())
+            .map(|i| i.0.clone())
+            .unwrap();
+
+        Self {
+            team: u32_option_to_team(team),
+            character_record,
+            skin,
         }
     }
 }
@@ -261,12 +297,12 @@ impl From<&BinEmbed> for MinionUpgradeConfig {
         let armor_max = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("ArmorMax").into())
             .map(|f| f.0)
-            .unwrap();
+            .unwrap_or(f32::MAX);
 
         let armor_upgrade_growth = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("ArmorUpgradeGrowth").into())
             .map(|f| f.0)
-            .unwrap();
+            .unwrap_or(0.0);
 
         let hp_max_bonus = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("HpMaxBonus").into())
@@ -281,7 +317,7 @@ impl From<&BinEmbed> for MinionUpgradeConfig {
         let hp_upgrade_late = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("HPUpgradeLate").into())
             .map(|f| f.0)
-            .unwrap();
+            .unwrap_or(hp_upgrade);
 
         let damage_max = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("DamageMax").into())
@@ -291,12 +327,12 @@ impl From<&BinEmbed> for MinionUpgradeConfig {
         let damage_upgrade = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("DamageUpgrade").into())
             .map(|f| f.0)
-            .unwrap();
+            .unwrap_or(0.0);
 
         let damage_upgrade_late = value
             .getv::<BinFloat>(LeagueLoader::hash_bin("DamageUpgradeLate").into())
             .map(|f| f.0)
-            .unwrap();
+            .unwrap_or(damage_upgrade);
 
         Self {
             armor_max,

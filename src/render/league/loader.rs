@@ -125,8 +125,6 @@ pub struct LeagueLoader {
     pub wad: LeagueWad,
     pub map_geo: LeagueMapGeo,
     pub map_materials: LeagueProp,
-
-    pub character_map: HashMap<u32, LeagueBinCharacterRecord>,
 }
 
 pub struct ArcFileReader {
@@ -206,7 +204,7 @@ impl LeagueLoader {
         let map_materials = Self::load_map_materials(&wad, &file, map_geo_path)?;
 
         // Load character map
-        let character_map = Self::load_character_map(&wad, &file)?;
+        // let character_map = Self::load_character_map(&wad, &file)?;
 
         Ok(LeagueLoader {
             root_dir: root_dir.to_path_buf(),
@@ -216,7 +214,6 @@ impl LeagueLoader {
             wad,
             map_geo,
             map_materials: LeagueProp(map_materials),
-            character_map,
         })
     }
 
@@ -306,7 +303,7 @@ impl LeagueLoader {
                     .into_iter()
                     .filter(|v| v.ctype.hash == character_record_hash)
             })
-            .filter_map(|entry| Some((entry.path.hash, entry.into())))
+            .filter_map(|entry| Some((entry.path.hash, (&entry).into())))
             .collect();
 
         Ok(character_map)

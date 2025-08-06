@@ -2,7 +2,9 @@ use crate::render::{
     AnimationData, AnimationFile, LeagueLoader, LeagueSkeleton, LeagueSkinnedMesh,
     LeagueSkinnedMeshInternal,
 };
+use bevy::animation::{animated_field, AnimationTarget, AnimationTargetId};
 use bevy::prelude::*;
+use bevy::render::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
 use bevy::{image::Image, math::Mat4};
 use binrw::BinRead;
 use cdragon_prop::{
@@ -39,8 +41,8 @@ pub struct LeagueBinCharacterRecord {
     pub description: Option<String>,
 }
 
-impl From<BinEntry> for LeagueBinCharacterRecord {
-    fn from(value: BinEntry) -> Self {
+impl From<&BinEntry> for LeagueBinCharacterRecord {
+    fn from(value: &BinEntry) -> Self {
         let character_name = value
             .getv::<BinString>(LeagueLoader::hash_bin("mCharacterName").into())
             .map(|s| s.0.clone());
@@ -273,28 +275,30 @@ impl From<&BinEmbed> for SkinAnimationProperties {
     }
 }
 
-pub fn load_character(
+pub fn load_character_record(
     loader: &LeagueLoader,
-    character_map_record: &BinStruct,
-) -> (
-    LeagueBinMaybeCharacterMapRecord,
-    LeagueBinCharacterRecord,
-    Image,
-    LeagueSkinnedMesh,
-    LeagueSkeleton,
-    Option<AnimationData>,
-) {
-    let character_map_record = LeagueBinMaybeCharacterMapRecord::from(character_map_record);
+    character_record: &str,
+) -> LeagueBinCharacterRecord {
+    let name = character_record.split("/").nth(1).unwrap();
 
-    let character_record = loader
-        .character_map
-        .get(&LeagueLoader::hash_bin(
-            &character_map_record.definition.character_record,
-        ))
-        .unwrap()
-        .clone();
+    let path = format!("data/characters/{0}/{0}.bin", name);
 
-    let skin_path = format!("data/{}.bin", character_map_record.definition.skin);
+    let character_bin = loader.get_prop_bin_by_path(&path).unwrap();
+
+    let character_record = character_bin
+        .entries
+        .iter()
+        .find(|v| v.path.hash == LeagueLoader::hash_bin(character_record))
+        .unwrap();
+
+    return character_record.into();
+}
+
+pub fn load_character_skin(
+    loader: &LeagueLoader,
+    skin: &str,
+) -> (SkinCharacterDataProperties, HashMap<u32, BinEntry>) {
+    let skin_path = format!("data/{}.bin", skin);
 
     let skin_bin = loader.get_prop_bin_by_path(&skin_path).unwrap();
 
@@ -304,7 +308,31 @@ pub fn load_character(
         .find(|v| v.ctype.hash == LeagueLoader::hash_bin("SkinCharacterDataProperties"))
         .unwrap();
 
-    let skin_character_data_properties = SkinCharacterDataProperties::from(skin_mesh_properties);
+    let flat_map: HashMap<_, _> = skin_bin
+        .linked_files
+        .iter()
+        .map(|v| loader.get_prop_bin_by_path(v).unwrap())
+        .flat_map(|v| v.entries)
+        .map(|v| (v.path.hash, v))
+        .collect();
+
+    (skin_mesh_properties.into(), flat_map)
+}
+
+pub fn spawn_character(
+    commands: &mut Commands,
+    res_animation_clips: &mut ResMut<Assets<AnimationClip>>,
+    res_animation_graphs: &mut ResMut<Assets<AnimationGraph>>,
+    res_image: &mut ResMut<Assets<Image>>,
+    res_materials: &mut ResMut<Assets<StandardMaterial>>,
+    res_meshes: &mut ResMut<Assets<Mesh>>,
+    res_skinned_mesh_inverse_bindposes: &mut ResMut<Assets<SkinnedMeshInverseBindposes>>,
+
+    loader: &LeagueLoader,
+    transform: Mat4,
+    skin: &str,
+) {
+    let (skin_character_data_properties, flat_map) = load_character_skin(loader, &skin);
 
     let texture = loader
         .get_image_by_texture_path(&skin_character_data_properties.skin_mesh_properties.texture)
@@ -318,16 +346,8 @@ pub fn load_character(
         )
         .unwrap();
 
-    let skinned_mesh =
+    let league_skinned_mesh =
         LeagueSkinnedMesh::from(LeagueSkinnedMeshInternal::read(&mut reader).unwrap());
-
-    let flat_map: HashMap<_, _> = skin_bin
-        .linked_files
-        .iter()
-        .map(|v| loader.get_prop_bin_by_path(v).unwrap())
-        .flat_map(|v| v.entries)
-        .map(|v| (v.path.hash, v))
-        .collect();
 
     let league_skeleton = loader
         .get_wad_entry_reader_by_path(&skin_character_data_properties.skin_mesh_properties.skeleton)
@@ -356,23 +376,149 @@ pub fn load_character(
         .collect::<Vec<_>>();
     let idle_path = idle_path.first();
 
-    println!("{:?}", idle_path);
-
     let animation_data = idle_path.map(|v| {
         loader
             .get_wad_entry_reader_by_path(v)
-            .map(|mut v| AnimationFile::read(&mut v).unwrap().into())
+            .map(|mut v| AnimationData::from(AnimationFile::read(&mut v).unwrap()))
             .unwrap()
     });
 
-    return (
-        character_map_record,
-        character_record,
-        texture,
-        skinned_mesh,
-        league_skeleton,
-        animation_data,
-    );
+    let mut clip = AnimationClip::default();
+
+    let mut index_to_entity = vec![Entity::PLACEHOLDER; league_skeleton.modern_data.joints.len()];
+    let mut joint_inverse_matrix = vec![Mat4::default(); league_skeleton.modern_data.joints.len()];
+
+    let mut transform = Transform::from_matrix(transform);
+
+    transform.translation.z = -transform.translation.z;
+
+    let player_entity = commands.spawn(transform).id();
+
+    let sphere = res_meshes.add(Sphere::new(50.0));
+
+    let mat = res_materials.add(Color::srgb(1.0, 0.2, 0.2));
+
+    for (i, joint) in league_skeleton.modern_data.joints.iter().enumerate() {
+        let joint_name_str = joint.name.clone();
+        let name = Name::new(joint_name_str.clone());
+        let hash = LeagueLoader::compute_joint_hash(&joint.name);
+
+        let target_id = AnimationTargetId::from_name(&name);
+
+        match animation_data {
+            Some(ref animation_data) => {
+                if let Some(anim_track_index) =
+                    animation_data.joint_hashes.iter().position(|v| *v == hash)
+                {
+                    if let Some(data) = animation_data.translates.get(anim_track_index) {
+                        clip.add_curve_to_target(
+                            target_id,
+                            AnimatableCurve::new(
+                                animated_field!(Transform::translation),
+                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
+                            ),
+                        );
+                    }
+
+                    if let Some(data) = animation_data.rotations.get(anim_track_index) {
+                        clip.add_curve_to_target(
+                            target_id,
+                            AnimatableCurve::new(
+                                animated_field!(Transform::rotation),
+                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
+                            ),
+                        );
+                    }
+
+                    if let Some(data) = animation_data.scales.get(anim_track_index) {
+                        clip.add_curve_to_target(
+                            target_id,
+                            AnimatableCurve::new(
+                                animated_field!(Transform::scale),
+                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
+                            ),
+                        );
+                    }
+                }
+            }
+            None => {}
+        }
+
+        let ent = commands
+            .spawn((
+                // Mesh3d(sphere.clone()),
+                // MeshMaterial3d(mat.clone()),
+                Transform::from_matrix(joint.local_transform),
+                name,
+                AnimationTarget {
+                    id: target_id,
+                    player: player_entity,
+                },
+            ))
+            .id();
+        index_to_entity[i] = ent;
+        joint_inverse_matrix[i] = joint.inverse_bind_transform;
+    }
+
+    for (i, joint) in league_skeleton.modern_data.joints.iter().enumerate() {
+        if joint.parent_id >= 0 {
+            let parent_entity = index_to_entity[joint.parent_id as usize];
+            commands.entity(parent_entity).add_child(index_to_entity[i]);
+        } else {
+            commands.entity(player_entity).add_child(index_to_entity[i]);
+        }
+    }
+
+    let texu = res_image.add(texture);
+
+    let clip_handle = res_animation_clips.add(clip);
+
+    let (graph, animation_node_index) = AnimationGraph::from_clip(clip_handle);
+    let graph_handle = res_animation_graphs.add(graph);
+
+    let mut player = AnimationPlayer::default();
+    player.play(animation_node_index).repeat();
+
+    commands
+        .entity(player_entity)
+        .insert((player, AnimationGraphHandle(graph_handle)));
+
+    for i in 0..league_skinned_mesh.ranges.len() {
+        let mesh = league_skinned_mesh.to_bevy_mesh(i).unwrap();
+
+        let child = commands
+            .spawn((
+                Transform::default(),
+                Mesh3d(res_meshes.add(mesh)),
+                MeshMaterial3d(res_materials.add(StandardMaterial {
+                    base_color_texture: Some(texu.clone()),
+                    unlit: true,
+                    cull_mode: None,
+                    alpha_mode: AlphaMode::Opaque,
+                    ..Default::default()
+                })),
+                SkinnedMesh {
+                    inverse_bindposes: res_skinned_mesh_inverse_bindposes.add(
+                        SkinnedMeshInverseBindposes::from(
+                            league_skeleton
+                                .modern_data
+                                .influences
+                                .iter()
+                                .map(|v| joint_inverse_matrix[*v as usize])
+                                .collect::<Vec<_>>(),
+                        ),
+                    ),
+                    joints: league_skeleton
+                        .modern_data
+                        .influences
+                        .iter()
+                        .map(|v| index_to_entity[*v as usize])
+                        .collect::<Vec<_>>(),
+                },
+            ))
+            .id();
+        commands.entity(player_entity).add_child(child);
+    }
 }
 
 #[derive(Debug)]

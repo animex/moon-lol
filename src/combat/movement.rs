@@ -1,14 +1,26 @@
-use std::time::Instant;
-
-use bevy::prelude::*;
-use rvo2::RVOSimulatorWrapper;
-use vleue_navigator::prelude::*;
-
 use crate::{
     combat::{navigation::Obstacle, *},
     game::GameState,
     system_debug,
 };
+use bevy::prelude::*;
+use rvo2::RVOSimulatorWrapper;
+use std::time::Instant;
+use vleue_navigator::prelude::*;
+
+/// 移动目标位置组件
+#[derive(Component)]
+pub struct MoveDestination(pub Vec2);
+
+/// 移动速度组件
+#[derive(Component, Default)]
+pub struct Movement {
+    pub speed: f32,
+}
+
+/// 移动速度向量组件
+#[derive(Component, Default)]
+pub struct MoveVelocity(pub Option<Vec2>);
 
 #[derive(Event, Debug)]
 pub struct CommandMove {
@@ -20,18 +32,6 @@ pub struct MoveEnd;
 
 #[derive(Event, Debug)]
 pub struct ActionSetMoveTarget(pub Vec2);
-
-/// 移动目标位置组件
-#[derive(Component)]
-pub struct MoveDestination(pub Vec2);
-
-/// 移动速度组件
-#[derive(Component, Default)]
-pub struct Move(pub f32);
-
-/// 移动速度向量组件
-#[derive(Component, Default)]
-pub struct MoveVelocity(pub Option<Vec2>);
 
 pub struct PluginMove;
 
@@ -87,7 +87,7 @@ fn update_move_rvo(
     mut query: Query<(
         Entity,
         &mut MoveDestination,
-        &Move,
+        &Movement,
         &mut MoveVelocity,
         &Bounding,
     )>,
@@ -118,7 +118,7 @@ fn update_move_rvo(
             let target = move_destination.0;
             let direction = target - position;
             let velocity = if direction.length() > 0.0 {
-                direction.normalize() * move_speed.0
+                direction.normalize() * move_speed.speed
             } else {
                 Vec2::ZERO
             };
@@ -132,7 +132,7 @@ fn update_move_rvo(
         let time_horizon = 10.0;
         let time_horizon_obst = 3.0;
         let radius = 35.0;
-        let max_speed = move_speed.0;
+        let max_speed = move_speed.speed;
         let index = simulator.add_agent(
             &[position.x, position.y],
             neighbor_dist,
