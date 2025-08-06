@@ -25,17 +25,19 @@ impl Plugin for PluginAttack {
         app.add_observer(action_attack_damage);
         app.add_observer(action_attack_reset);
         app.add_observer(action_set_recover_time);
-        app.add_observer(on_command_attack);
-        app.add_observer(on_attack_lock);
-        app.add_observer(on_attack_attack);
-        app.add_observer(on_attack_recover);
-        app.add_observer(on_move);
+        // app.add_observer(on_command_attack);
+        // app.add_observer(on_attack_lock);
+        // app.add_observer(on_attack_attack);
+        // app.add_observer(on_attack_recover);
+        // app.add_observer(on_move);
     }
 }
 
-#[derive(Component, Default)]
-#[require(Health)]
-pub struct Attackable;
+#[derive(Component)]
+pub struct Attack {
+    pub range: f32,
+    pub speed: f32,
+}
 
 #[derive(Component)]
 pub struct AttackStateData {
@@ -44,18 +46,6 @@ pub struct AttackStateData {
     pub recover_time: f32,
     pub target: Option<Entity>,
 }
-
-#[derive(Component, PartialEq, Debug, Default)]
-pub enum AttackState {
-    #[default]
-    Idle,
-    Locking,
-    Attacking,
-    Recovering,
-}
-
-#[derive(Component)]
-pub struct AttackRange(pub f32);
 
 impl Default for AttackStateData {
     fn default() -> Self {
@@ -69,6 +59,18 @@ impl Default for AttackStateData {
 }
 
 impl AttackStateData {
+    pub fn get_state(&self) -> AttackMachineState {
+        if self.lock_time < f32::MAX {
+            AttackMachineState::Locking
+        } else if self.attack_time < f32::MAX {
+            AttackMachineState::Attacking
+        } else if self.recover_time < f32::MAX {
+            AttackMachineState::Recovering
+        } else {
+            AttackMachineState::Idle
+        }
+    }
+
     pub fn set_lock_time(&mut self, target: Entity, time: f32) {
         self.lock_time = time;
         self.attack_time = f32::MAX;
@@ -95,6 +97,18 @@ impl AttackStateData {
         self.target = None;
     }
 }
+
+#[derive(Debug)]
+pub enum AttackMachineState {
+    Idle,
+    Locking,
+    Attacking,
+    Recovering,
+}
+
+#[derive(Component, Default)]
+#[require(Health)]
+pub struct Attackable;
 
 #[derive(Event, Debug)]
 pub struct ActionSetAttackTime;
@@ -130,7 +144,7 @@ pub struct CommandAttack {
 
 pub fn attack_range_check(
     mut commands: Commands,
-    q_attacker: Query<(Entity, &Transform, &Target, &AttackRange)>,
+    q_attacker: Query<(Entity, &Transform, &Target, &Attack)>,
     q_attackable: Query<&Transform, With<Attackable>>,
 ) {
     let attacker_count = q_attacker.iter().count();
@@ -160,17 +174,17 @@ pub fn attack_range_check(
             attacker,
             target.0,
             distance,
-            attack_range.0
+            attack_range.range
         );
 
-        if distance <= attack_range.0 {
+        if distance <= attack_range.range {
             system_info!(
                 "attack_range_check",
                 "Target {:?} is in range of attacker {:?} (distance={:.1} <= range={:.1})",
                 target.0,
                 attacker,
                 distance,
-                attack_range.0
+                attack_range.range
             );
             commands.trigger_targets(TargetInAttackRange { target: target.0 }, attacker);
         }
@@ -368,134 +382,134 @@ pub fn action_set_recover_time(
     attack_info.set_recover_time(time.elapsed_secs() + 0.3);
 }
 
-fn on_command_attack(
-    trigger: Trigger<CommandAttack>,
-    mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackState>,
-) {
-    let entity = trigger.target();
-    let event = trigger.event();
+// fn on_command_attack(
+//     trigger: Trigger<CommandAttack>,
+//     mut commands: Commands,
+//     mut q_attack_state: Query<&mut AttackMachineState>,
+// ) {
+//     let entity = trigger.target();
+//     let event = trigger.event();
 
-    if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
-        match *attack_state {
-            AttackState::Idle => {
-                *attack_state = AttackState::Locking;
-                println!(
-                    "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    AttackState::Idle,
-                    AttackState::Locking,
-                    event
-                );
-                let action = ActionAttackReset;
-                println!("entity: {:?}, action: {:?}", entity, action);
-                commands.trigger_targets(action, trigger.target());
+//     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
+//         match *attack_state {
+//             AttackMachineState::Idle => {
+//                 *attack_state = AttackMachineState::Locking;
+//                 println!(
+//                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
+//                     entity,
+//                     AttackMachineState::Idle,
+//                     AttackMachineState::Locking,
+//                     event
+//                 );
+//                 let action = ActionAttackReset;
+//                 println!("entity: {:?}, action: {:?}", entity, action);
+//                 commands.trigger_targets(action, trigger.target());
 
-                let action = ActionSetLockTime {
-                    target: event.target,
-                };
-                println!("entity: {:?}, action: {:?}", entity, action);
-                commands.trigger_targets(action, trigger.target());
-            }
-            _ => (),
-        }
-    }
-}
+//                 let action = ActionSetLockTime {
+//                     target: event.target,
+//                 };
+//                 println!("entity: {:?}, action: {:?}", entity, action);
+//                 commands.trigger_targets(action, trigger.target());
+//             }
+//             _ => (),
+//         }
+//     }
+// }
 
-fn on_attack_lock(
-    trigger: Trigger<AttackLock>,
-    mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackStateData>,
-) {
-    let entity = trigger.target();
-    let event = trigger.event();
+// fn on_attack_lock(
+//     trigger: Trigger<AttackLock>,
+//     mut commands: Commands,
+//     mut q_attack_state: Query<&mut AttackStateData>,
+// ) {
+//     let entity = trigger.target();
+//     let event = trigger.event();
 
-    if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
-        match *attack_state {
-            AttackState::Locking => {
-                *attack_state = AttackState::Attacking;
-                println!(
-                    "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    AttackState::Locking,
-                    AttackState::Attacking,
-                    event
-                );
-                let action = ActionSetAttackTime;
-                println!("entity: {:?}, action: {:?}", entity, action);
-                commands.trigger_targets(action, trigger.target());
-            }
-            _ => (),
-        }
-    }
-}
+//     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
+//         match *attack_state {
+//             AttackMachineState::Locking => {
+//                 *attack_state = AttackMachineState::Attacking;
+//                 println!(
+//                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
+//                     entity,
+//                     AttackMachineState::Locking,
+//                     AttackMachineState::Attacking,
+//                     event
+//                 );
+//                 let action = ActionSetAttackTime;
+//                 println!("entity: {:?}, action: {:?}", entity, action);
+//                 commands.trigger_targets(action, trigger.target());
+//             }
+//             _ => (),
+//         }
+//     }
+// }
 
-fn on_attack_attack(
-    trigger: Trigger<AttackAttack>,
-    mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackStateData>,
-) {
-    let entity = trigger.target();
-    let event = trigger.event();
+// fn on_attack_attack(
+//     trigger: Trigger<AttackAttack>,
+//     mut commands: Commands,
+//     mut q_attack_state: Query<&mut AttackStateData>,
+// ) {
+//     let entity = trigger.target();
+//     let event = trigger.event();
 
-    if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
-        match *attack_state {
-            AttackStateData::Attacking => {
-                *attack_state = AttackStateData::Recovering;
-                println!(
-                    "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    AttackStateData::Attacking,
-                    AttackStateData::Recovering,
-                    event
-                );
-                let action = ActionAttackDamage;
-                println!("entity: {:?}, action: {:?}", entity, action);
-                commands.trigger_targets(action, trigger.target());
+//     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
+//         match *attack_state {
+//             AttackStateData::Attacking => {
+//                 *attack_state = AttackStateData::Recovering;
+//                 println!(
+//                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
+//                     entity,
+//                     AttackStateData::Attacking,
+//                     AttackStateData::Recovering,
+//                     event
+//                 );
+//                 let action = ActionAttackDamage;
+//                 println!("entity: {:?}, action: {:?}", entity, action);
+//                 commands.trigger_targets(action, trigger.target());
 
-                let action = ActionSetRecoverTime;
-                println!("entity: {:?}, action: {:?}", entity, action);
-                commands.trigger_targets(action, trigger.target());
-            }
-            _ => (),
-        }
-    }
-}
+//                 let action = ActionSetRecoverTime;
+//                 println!("entity: {:?}, action: {:?}", entity, action);
+//                 commands.trigger_targets(action, trigger.target());
+//             }
+//             _ => (),
+//         }
+//     }
+// }
 
-fn on_attack_recover(
-    trigger: Trigger<AttackRecover>,
-    mut q_attack_state: Query<&mut AttackStateData>,
-) {
-    let entity = trigger.target();
-    let event = trigger.event();
+// fn on_attack_recover(
+//     trigger: Trigger<AttackRecover>,
+//     mut q_attack_state: Query<&mut AttackStateData>,
+// ) {
+//     let entity = trigger.target();
+//     let event = trigger.event();
 
-    if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
-        match *attack_state {
-            AttackStateData::Recovering => {
-                *attack_state = AttackStateData::Idle;
-                println!(
-                    "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
-                    entity,
-                    AttackStateData::Recovering,
-                    AttackStateData::Idle,
-                    event
-                );
-            }
-            _ => (),
-        }
-    }
-}
+//     if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
+//         match *attack_state {
+//             AttackStateData::Recovering => {
+//                 *attack_state = AttackStateData::Idle;
+//                 println!(
+//                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
+//                     entity,
+//                     AttackStateData::Recovering,
+//                     AttackStateData::Idle,
+//                     event
+//                 );
+//             }
+//             _ => (),
+//         }
+//     }
+// }
 
-fn on_move(trigger: Trigger<ActionSetMoveTarget>, mut q_attack_state: Query<&mut AttackStateData>) {
-    let entity = trigger.target();
+// fn on_move(trigger: Trigger<ActionSetMoveTarget>, mut q_attack_state: Query<&mut AttackStateData>) {
+//     let entity = trigger.target();
 
-    let Ok(mut attack_state) = q_attack_state.get_mut(entity) else {
-        return;
-    };
+//     let Ok(mut attack_state) = q_attack_state.get_mut(entity) else {
+//         return;
+//     };
 
-    if *attack_state != AttackStateData::Locking {
-        return;
-    };
+//     if *attack_state != AttackStateData::Locking {
+//         return;
+//     };
 
-    *attack_state = AttackStateData::Idle;
-}
+//     *attack_state = AttackStateData::Idle;
+// }

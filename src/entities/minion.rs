@@ -1,6 +1,6 @@
 use crate::combat::{
     ActionAttackDamage, ActionAttackReset, ActionRemoveTarget, ActionSetLockTime,
-    ActionSetMoveTarget, ActionSetTarget, AttackInfo, AttackInfo, AttackRange, Attackable,
+    ActionSetMoveTarget, ActionSetTarget, Attack, AttackMachineState, AttackStateData, Attackable,
     Bounding, Dead, Health, Lane, Move, MoveEnd, MoveVelocity, Navigator, Obstacle, Target, Team,
 };
 use bevy::{app::Plugin, prelude::*};
@@ -42,7 +42,7 @@ pub struct ChasingTooMuch;
 #[require(
     Navigator,
     MoveVelocity,
-    AttackInfo,
+    AttackStateData,
     MinionState,
     Lane,
     Team,
@@ -155,11 +155,11 @@ fn on_system_move_by_path(trigger: Trigger<SystemMoveByPath>, mut commands: Comm
 
 fn get_is_in_attack_range_in_found_aggro_target(
     trigger: &Trigger<FoundAggroTarget>,
-    q_attack_range: &Query<&AttackRange>,
+    q_attack: &Query<&Attack>,
     q_transform: &Query<&Transform>,
     q_bounding: &Query<&Bounding>,
 ) -> bool {
-    let Ok(attack_range) = q_attack_range.get(trigger.target()) else {
+    let Ok(attack) = q_attack.get(trigger.target()) else {
         return false;
     };
     let Ok(transform) = q_transform.get(trigger.target()) else {
@@ -171,16 +171,16 @@ fn get_is_in_attack_range_in_found_aggro_target(
     let Ok(bounding) = q_bounding.get(trigger.target) else {
         return false;
     };
-    transform.translation.distance(target_transform.translation) <= attack_range.0 + bounding.radius
+    transform.translation.distance(target_transform.translation) <= attack.range + bounding.radius
 }
 
 fn on_found_aggro_target(
     trigger: Trigger<FoundAggroTarget>,
     mut commands: Commands,
-    mut q_attack_state: Query<&mut AttackInfo>,
+    q_attack_state: Query<&AttackStateData>,
     mut q_minion_state: Query<&mut MinionState>,
 
-    q_attack_range: Query<&AttackRange>,
+    q_attack: Query<&Attack>,
     q_transform: Query<&Transform>,
     q_bounding: Query<&Bounding>,
 ) {
@@ -189,7 +189,7 @@ fn on_found_aggro_target(
 
     let is_in_attack_range = get_is_in_attack_range_in_found_aggro_target(
         &trigger,
-        &q_attack_range,
+        &q_attack,
         &q_transform,
         &q_bounding,
     );
@@ -206,15 +206,14 @@ fn on_found_aggro_target(
         }
     }
 
-    if let Ok(mut attack_state) = q_attack_state.get_mut(entity) {
-        match *attack_state {
-            AttackInfo::Idle => {
-                *attack_state = AttackInfo::Locking;
+    if let Ok(attack_state) = q_attack_state.get(entity) {
+        match attack_state.get_state() {
+            AttackMachineState::Idle => {
                 println!(
                     "entity: {:?}, attack_state: {:?} -> {:?} event: {:?}",
                     entity,
-                    AttackInfo::Idle,
-                    AttackInfo::Locking,
+                    AttackMachineState::Idle,
+                    AttackMachineState::Locking,
                     event
                 );
                 let action = ActionAttackReset;
@@ -252,7 +251,7 @@ fn on_found_aggro_target(
 
 pub fn action_attack_damage(
     trigger: Trigger<ActionAttackDamage>,
-    mut q_attack_info: Query<&mut AttackInfo>,
+    mut q_attack_info: Query<&mut AttackStateData>,
     mut q_health: Query<&mut Health>,
     mut q_minion: Query<(Entity, &Team, &Transform, &mut AggroInfo), With<Minion>>,
     q_transform: Query<&Transform>,

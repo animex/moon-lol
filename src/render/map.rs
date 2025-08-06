@@ -1,4 +1,4 @@
-use crate::combat::{AttackInfo, MoveDestination, Target};
+use crate::combat::{Attack, AttackStateData, MoveDestination, Target};
 use crate::render::{
     get_barrack_by_bin, load_character, process_map_geo_mesh, EnvironmentVisibility,
     LayerTransitionBehavior, LeagueLoader, LeagueMinionPath, WadRes,
@@ -193,7 +193,7 @@ fn setup_map(
 
 pub fn draw_attack(
     mut gizmos: Gizmos,
-    q_attack: Query<(&Transform, &AttackInfo)>,
+    q_attack: Query<(&Transform, &AttackStateData)>,
     q_move_destination: Query<(&Transform, &MoveDestination)>,
     q_target: Query<(&Transform, &Target)>,
     q_transform: Query<&Transform>,
