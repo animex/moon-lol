@@ -52,10 +52,11 @@ pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transf
         .find(|v| v.path.hash == barracks_config)
         .unwrap();
 
-    let initial_spawn_time_secs = value
-        .getv::<BinFloat>(LeagueLoader::hash_bin("InitialSpawnTimeSecs").into())
-        .map(|f| f.0)
-        .unwrap();
+    // let initial_spawn_time_secs = value
+    //     .getv::<BinFloat>(LeagueLoader::hash_bin("InitialSpawnTimeSecs").into())
+    //     .map(|f| f.0)
+    //     .unwrap();
+    let initial_spawn_time_secs = 10.0;
 
     let wave_spawn_interval_secs = value
         .getv::<BinFloat>(LeagueLoader::hash_bin("WaveSpawnIntervalSecs").into())
@@ -120,7 +121,7 @@ pub fn get_barrack_by_bin(bin: &PropFile, value: &BinStruct) -> (Barrack, Transf
 
     (
         Barrack {
-            initial_spawn_time_secs: 3.0,
+            initial_spawn_time_secs,
             wave_spawn_interval_secs,
             minion_spawn_interval_secs,
             upgrade_interval_secs,

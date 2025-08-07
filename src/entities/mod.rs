@@ -20,6 +20,7 @@ pub struct PluginEntities;
 
 impl Plugin for PluginEntities {
     fn build(&self, app: &mut App) {
-        app.add_plugins((PluginMinion, PluginBarrack));
+        app.add_plugins(PluginMinion);
+        app.add_plugins(PluginBarrack);
     }
 }

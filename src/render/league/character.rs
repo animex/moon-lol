@@ -331,7 +331,7 @@ pub fn spawn_character(
     loader: &LeagueLoader,
     transform: Mat4,
     skin: &str,
-) {
+) -> Entity {
     let (skin_character_data_properties, flat_map) = load_character_skin(loader, &skin);
 
     let texture = loader
@@ -354,7 +354,7 @@ pub fn spawn_character(
         .map(|mut v| LeagueSkeleton::read(&mut v).unwrap())
         .unwrap();
 
-    let gr_da: AnimationGraphData = flat_map
+    let animation_graph_data: AnimationGraphData = flat_map
         .get(
             &skin_character_data_properties
                 .skin_animation_properties
@@ -363,7 +363,7 @@ pub fn spawn_character(
         .unwrap()
         .into();
 
-    let idle_path = gr_da
+    let idle_path = animation_graph_data
         .clip_data_map
         .get(&0x35f43992)
         .iter()
@@ -388,15 +388,9 @@ pub fn spawn_character(
     let mut index_to_entity = vec![Entity::PLACEHOLDER; league_skeleton.modern_data.joints.len()];
     let mut joint_inverse_matrix = vec![Mat4::default(); league_skeleton.modern_data.joints.len()];
 
-    let mut transform = Transform::from_matrix(transform);
-
-    transform.translation.z = -transform.translation.z;
+    let transform = Transform::from_matrix(transform);
 
     let player_entity = commands.spawn(transform).id();
-
-    let sphere = res_meshes.add(Sphere::new(50.0));
-
-    let mat = res_materials.add(Color::srgb(1.0, 0.2, 0.2));
 
     for (i, joint) in league_skeleton.modern_data.joints.iter().enumerate() {
         let joint_name_str = joint.name.clone();
@@ -519,6 +513,8 @@ pub fn spawn_character(
             .id();
         commands.entity(player_entity).add_child(child);
     }
+
+    player_entity
 }
 
 #[derive(Debug)]

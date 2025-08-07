@@ -7,6 +7,7 @@ mod mapgeo;
 mod minion;
 mod team;
 mod texture;
+mod utils;
 
 pub use animation::*;
 pub use barrack::*;
@@ -17,3 +18,4 @@ pub use mapgeo::*;
 pub use minion::*;
 pub use team::*;
 pub use texture::*;
+pub use utils::*;

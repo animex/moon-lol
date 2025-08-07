@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, Default)]
+#[derive(Component, Debug)]
 pub enum Lane {
-    #[default]
     Top,
     Mid,
     Bot,

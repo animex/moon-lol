@@ -1,3 +1,7 @@
+use crate::{
+    combat::{movement::Movement, MovementState},
+    map::{MAP_HEIGHT, MAP_WIDTH},
+};
 use crate::{system_debug, system_info, system_warn};
 use bevy::{app::App, math::vec2, prelude::*};
 use vleue_navigator::{
@@ -5,13 +9,7 @@ use vleue_navigator::{
     NavMesh,
 };
 
-use crate::{
-    combat::movement::{MoveDestination, MoveVelocity, Movement},
-    map::{MAP_HEIGHT, MAP_WIDTH},
-};
-
 #[derive(Component, Default)]
-#[require(Movement, MoveVelocity)]
 pub struct Navigator;
 
 #[derive(Component, Default)]
@@ -25,7 +23,7 @@ pub struct PluginNavigaton;
 impl Plugin for PluginNavigaton {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, setup);
-        app.add_systems(FixedPreUpdate, update_navigator);
+        app.add_systems(FixedPreUpdate, update);
     }
 }
 
@@ -33,7 +31,7 @@ fn setup(
     mut commands: Commands,
     cachable_obstacles: Query<
         (&GlobalTransform, &PrimitiveObstacle),
-        (With<Obstacle>, Without<MoveDestination>),
+        (With<Obstacle>, Without<Movement>),
     >,
 ) {
     let obstacle_count = cachable_obstacles.iter().count();
@@ -79,8 +77,8 @@ fn setup(
     commands.insert_resource(GlobalNavMesh(navmesh));
 }
 
-fn update_navigator(
-    mut query_navigator: Query<(&mut MoveDestination, &mut Transform), With<Navigator>>,
+fn update(
+    mut query_navigator: Query<(&mut MovementState, &mut Transform), With<Navigator>>,
     navmeshes: Res<GlobalNavMesh>,
 ) {
     let navmesh = &navmeshes.0;
@@ -97,9 +95,11 @@ fn update_navigator(
     let mut path_found_count = 0;
     let mut path_failed_count = 0;
 
-    for (mut move_destination, transform) in query_navigator.iter_mut() {
-        let target = move_destination.0;
-        let start = transform.translation.xy();
+    for (mut movement_state, transform) in query_navigator.iter_mut() {
+        let Some(target) = movement_state.destination else {
+            continue;
+        };
+        let start = transform.translation.xz();
 
         if start == target {
             continue;
@@ -137,7 +137,7 @@ fn update_navigator(
                 next_waypoint.x,
                 next_waypoint.y
             );
-            move_destination.0 = next_waypoint;
+            movement_state.destination = Some(next_waypoint);
             path_found_count += 1;
         }
     }

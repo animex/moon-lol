@@ -14,6 +14,7 @@ impl Plugin for PluginAttack {
 }
 
 #[derive(Component)]
+#[require(AttackState)]
 pub struct Attack {
     pub range: f32,
     pub speed: f32,

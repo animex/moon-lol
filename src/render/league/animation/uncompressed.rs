@@ -44,9 +44,9 @@ pub struct UncompressedDataV5 {
     #[br(temp)]
     joint_name_hashes_offset: i32,
     #[br(temp)]
-    asset_name_offset: i32,
+    _asset_name_offset: i32,
     #[br(temp)]
-    time_offset: i32,
+    _time_offset: i32,
     #[br(temp)]
     vector_palette_offset: i32,
     #[br(temp)]
@@ -94,11 +94,11 @@ pub struct UncompressedDataV4 {
     pub frame_duration: f32,
 
     #[br(temp)]
-    joint_name_hashes_offset: i32,
+    _joint_name_hashes_offset: i32,
     #[br(temp)]
-    asset_name_offset: i32,
+    _asset_name_offset: i32,
     #[br(temp)]
-    time_offset: i32,
+    _time_offset: i32,
     #[br(temp)]
     vector_palette_offset: i32,
     #[br(temp)]

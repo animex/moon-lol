@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-#[derive(Component, Debug, Default, PartialEq)]
+#[derive(Component, Debug, Default, PartialEq, Clone)]
 pub enum Team {
     #[default]
     Order,

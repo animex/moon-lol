@@ -1,10 +1,9 @@
-use crate::render::{LeagueBinCharacterRecord, LeagueMapGeo, LeagueTexture};
+use crate::render::{LeagueMapGeo, LeagueTexture};
 use bevy::asset::RenderAssetUsages;
 use bevy::ecs::resource::Resource;
 use bevy::image::{dds_buffer_to_image, CompressedImageFormats, Image};
 use binrw::{args, binread, io::NoSeek, BinRead, Endian};
-use cdragon_hashes::wad::compute_wad_hash;
-use cdragon_prop::{BinString, PropFile};
+use cdragon_prop::PropFile;
 use std::io::BufReader;
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;
@@ -262,51 +261,6 @@ impl LeagueLoader {
         reader.read_to_end(&mut data)?;
 
         PropFile::from_slice(&data).map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))
-    }
-
-    fn load_character_map(
-        wad: &LeagueWad,
-        file: &Arc<File>,
-    ) -> io::Result<HashMap<u32, LeagueBinCharacterRecord>> {
-        const MAP11_PATH: &str = "data/maps/shipping/map11/map11.bin";
-        let character_hash = LeagueLoader::hash_bin("Character");
-        let character_record_hash = LeagueLoader::hash_bin("CharacterRecord");
-        let name_hash = LeagueLoader::hash_bin("name");
-
-        let entry = Self::get_wad_entry(wad, Self::compute_wad_hash(MAP11_PATH));
-        let mut reader = Self::get_wad_zstd_entry_reader(file, &entry)?;
-
-        let mut data = Vec::with_capacity(entry.target_size as usize);
-        reader.read_to_end(&mut data)?;
-
-        let map_shipping = PropFile::from_slice(&data)
-            .map_err(|e| io::Error::new(io::ErrorKind::InvalidData, e))?;
-
-        let character_map: HashMap<u32, LeagueBinCharacterRecord> = map_shipping
-            .entries
-            .iter()
-            .filter(|v| v.ctype.hash == character_hash)
-            .filter_map(|v| v.getv::<BinString>(name_hash.into()))
-            .filter_map(|v| {
-                let char_path = format!("data/characters/{0}/{0}.bin", v.0.to_lowercase());
-                let entry = Self::get_wad_entry(wad, compute_wad_hash(&char_path));
-                Self::get_wad_zstd_entry_reader(file, &entry).ok()
-            })
-            .filter_map(|mut reader| {
-                let mut data = Vec::new();
-                reader.read_to_end(&mut data).ok()?;
-                PropFile::from_slice(&data).ok()
-            })
-            .flat_map(|prop_file| {
-                prop_file
-                    .entries
-                    .into_iter()
-                    .filter(|v| v.ctype.hash == character_record_hash)
-            })
-            .filter_map(|entry| Some((entry.path.hash, (&entry).into())))
-            .collect();
-
-        Ok(character_map)
     }
 
     #[inline]

@@ -1,7 +1,7 @@
 use crate::{
-    combat::Team,
+    combat::{Armor, Bounding, CommandMovementMoveTo, Damage, Health, Movement, Team},
     entities::Minion,
-    render::{spawn_character, WadRes},
+    render::{load_character_record, spawn_character, WadRes},
 };
 use bevy::{prelude::*, render::mesh::skinning::SkinnedMeshInverseBindposes};
 use std::{collections::VecDeque, time::Duration};
@@ -172,9 +172,9 @@ fn barracks_spawning_system(
     time: Res<Time>,
     game_time: Res<Time<Virtual>>, // 使用 Virtual 时间可以更好地控制游戏进程，如果不用可以换回 Res<Time>
     inhibitor_state: Res<InhibitorState>,
-    mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState)>,
+    mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState, &Team)>,
 ) {
-    for (transform, barrack, mut state) in query.iter_mut() {
+    for (transform, barrack, mut state, team) in query.iter_mut() {
         // --- 1. 更新所有计时器 ---
         state.wave_timer.tick(time.delta());
 
@@ -207,8 +207,6 @@ fn barracks_spawning_system(
             state
                 .wave_timer
                 .set_duration(Duration::from_secs_f32(barrack.wave_spawn_interval_secs));
-
-            println!("Wave {} spawning for barrack.", state.wave_count);
 
             // 遍历兵营配置中的所有小兵类型
             for (index, minion_config) in barrack.units.iter().enumerate() {
@@ -245,31 +243,39 @@ fn barracks_spawning_system(
                     // --- 计算小兵最终属性 ---
                     let is_late_game = upgrade_count >= barrack.upgrades_before_late_game_scaling;
 
+                    let record = load_character_record(
+                        &res_wad.loader,
+                        &minion_config.minion_record.character_record,
+                    );
+
                     let hp_upgrade = if is_late_game {
                         upgrade_config.hp_upgrade_late
                     } else {
                         upgrade_config.hp_upgrade
                     };
-                    let final_max_hp =
-                        upgrade_config.hp_max_bonus + hp_upgrade * upgrade_count as f32;
+
+                    let final_max_hp = record.base_hp.unwrap()
+                        + upgrade_config.hp_max_bonus
+                        + hp_upgrade * upgrade_count as f32;
 
                     let damage_upgrade = if is_late_game {
                         upgrade_config.damage_upgrade_late
                     } else {
                         upgrade_config.damage_upgrade
                     };
-                    let final_damage = (upgrade_config.damage_max
-                        + damage_upgrade * upgrade_count as f32)
-                        .min(upgrade_config.damage_max);
 
-                    let final_armor = (upgrade_config.armor_max
-                        + upgrade_config.armor_upgrade_growth * upgrade_count as f32)
-                        .min(upgrade_config.armor_max);
+                    let final_damage = record.base_damage.unwrap()
+                        + upgrade_config.damage_max
+                        + damage_upgrade * upgrade_count as f32;
 
-                    let final_move_speed =
-                        barrack.move_speed_increase_increment * move_speed_upgrade_count;
+                    let final_armor = record.base_armor.unwrap()
+                        + upgrade_config.armor_max
+                        + upgrade_config.armor_upgrade_growth * upgrade_count as f32;
 
-                    spawn_character(
+                    let final_move_speed = record.base_move_speed.unwrap()
+                        + (barrack.move_speed_increase_increment * move_speed_upgrade_count) as f32;
+
+                    let entity = spawn_character(
                         &mut commands,
                         &mut res_animation_clips,
                         &mut res_animation_graphs,
@@ -282,19 +288,27 @@ fn barracks_spawning_system(
                         &minion_config.minion_record.skin,
                     );
 
-                    // // --- 生成小兵实体 ---
-                    // commands
-                    //     .spawn((
-                    //         minion_config.minion_type,
-                    //         Health {
-                    //             value: final_max_hp,
-                    //             max: final_max_hp,
-                    //         },
-                    //         Movement {
-                    //             speed: final_move_speed as f32,
-                    //         },
-                    //     ))
-                    //     .log_components(); // 打印生成的组件信息，方便调试
+                    commands.entity(entity).insert((
+                        minion_config.minion_type,
+                        Health {
+                            value: final_max_hp,
+                            max: final_max_hp,
+                        },
+                        Movement {
+                            speed: final_move_speed,
+                        },
+                        Damage(final_damage),
+                        Armor(final_armor),
+                        Bounding {
+                            radius: 10.0,
+                            sides: 10,
+                            height: 10.0,
+                        },
+                        team.clone(),
+                    ));
+
+                    commands
+                        .trigger_targets(CommandMovementMoveTo(Vec2::new(5000.0, -5000.0)), entity);
 
                     // 更新队列
                     current_spawn.count -= 1;

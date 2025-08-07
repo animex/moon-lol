@@ -21,8 +21,8 @@ impl bevy::app::Plugin for PluginCombat {
             PluginDamage,
             PluginLife,
             PluginTarget,
-            PluginMove,
-            PluginNavigaton,
+            PluginMovement,
+            // PluginNavigaton,
         ));
     }
 }

@@ -1,59 +1,58 @@
 use crate::{
-    combat::{navigation::Obstacle, *},
-    system_debug,
+    combat::{navigation::Obstacle, Bounding},
+    system_debug, system_info,
 };
 use bevy::prelude::*;
 use rvo2::RVOSimulatorWrapper;
-use std::time::Instant;
+use std::{collections::HashMap, time::Instant};
 use vleue_navigator::prelude::*;
 
-/// 移动目标位置组件
-#[derive(Component)]
-pub struct MoveDestination(pub Vec2);
+pub struct PluginMovement;
 
-/// 移动速度组件
-#[derive(Component, Default)]
+impl Plugin for PluginMovement {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup);
+        app.add_systems(FixedUpdate, update);
+
+        app.add_event::<CommandMovementMoveTo>();
+        app.add_observer(command_movement_move_to);
+
+        app.add_event::<EventMovementMoveEnd>();
+    }
+}
+
+#[derive(Component)]
+#[require(MovementState)]
 pub struct Movement {
     pub speed: f32,
 }
 
-/// 移动速度向量组件
-#[derive(Component, Default)]
-pub struct MoveVelocity(pub Option<Vec2>);
+impl Movement {
+    pub fn get_speed_in_a_frame(&self) -> f32 {
+        self.speed
+    }
+}
 
-#[derive(Event, Debug)]
-pub struct CommandMove {
-    pub target: Vec3,
+#[derive(Component, Default)]
+pub struct MovementState {
+    pub destination: Option<Vec2>,
+    pub velocity: Option<Vec2>,
 }
 
 #[derive(Event, Debug)]
-pub struct MoveEnd;
+pub struct EventMovementMoveEnd;
 
 #[derive(Event, Debug)]
-pub struct ActionSetMoveTarget(pub Vec2);
-
-pub struct PluginMove;
+pub struct CommandMovementMoveTo(pub Vec2);
 
 #[derive(Resource)]
 pub struct ObstacleVerticesArray(pub Vec<Vec<[f32; 2]>>);
-
-impl Plugin for PluginMove {
-    fn build(&self, app: &mut App) {
-        app.add_event::<CommandMove>();
-        app.add_event::<MoveEnd>();
-        app.add_systems(Startup, setup);
-        app.add_systems(FixedUpdate, update_move_rvo);
-        app.add_observer(action_set_move_target);
-        app.add_observer(on_command_move);
-        app.add_observer(on_move_end);
-    }
-}
 
 fn setup(
     mut commands: Commands,
     cachable_obstacles: Query<
         (&GlobalTransform, &PrimitiveObstacle),
-        (With<Obstacle>, Without<MoveDestination>),
+        (With<Obstacle>, Without<Movement>),
     >,
 ) {
     let start = Instant::now();
@@ -81,15 +80,9 @@ fn setup(
     debug!("init_obstacle: {:?}", start.elapsed());
 }
 
-fn update_move_rvo(
+fn update(
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &mut MoveDestination,
-        &Movement,
-        &mut MoveVelocity,
-        &Bounding,
-    )>,
+    mut query: Query<(Entity, &Movement, &mut MovementState)>,
     mut q_transform: Query<&mut Transform>,
     timer: Res<Time<Fixed>>,
     obstacle_vertices_array: Res<ObstacleVerticesArray>,
@@ -103,35 +96,36 @@ fn update_move_rvo(
 
     simulator.process_obstacles();
 
-    for (entity, move_destination, move_speed, move_velocity, bounding) in query.iter_mut() {
-        let transform = match q_transform.get(entity) {
-            Ok(transform) => transform,
-            Err(_) => {
-                warn!("Entity {:?} missing Transform component", entity);
-                continue;
-            }
+    let mut entity_to_index: HashMap<Entity, usize> = HashMap::new();
+
+    for (entity, movement, movement_state) in query.iter_mut() {
+        let Some(destination) = movement_state.destination else {
+            continue;
         };
-        let position = transform.translation.xy();
+
+        let transform = q_transform.get(entity).unwrap();
+
+        let position = transform.translation.xz();
 
         let (old_velocity, pref_velocity) = {
-            let target = move_destination.0;
+            let target = destination;
             let direction = target - position;
             let velocity = if direction.length() > 0.0 {
-                direction.normalize() * move_speed.speed
+                direction.normalize() * movement.get_speed_in_a_frame()
             } else {
                 Vec2::ZERO
             };
 
-            let old_velocity = move_velocity.0.unwrap_or(velocity);
+            let old_velocity = movement_state.velocity.unwrap_or(velocity);
             (old_velocity, velocity)
         };
 
-        let neighbor_dist = bounding.radius * 2.0;
+        let neighbor_dist = 70.0;
         let max_neighbors = 25;
         let time_horizon = 10.0;
         let time_horizon_obst = 3.0;
         let radius = 35.0;
-        let max_speed = move_speed.speed;
+        let max_speed = movement.get_speed_in_a_frame();
         let index = simulator.add_agent(
             &[position.x, position.y],
             neighbor_dist,
@@ -143,43 +137,42 @@ fn update_move_rvo(
             &[old_velocity.x, old_velocity.y],
         );
 
+        entity_to_index.insert(entity, index);
+
         simulator.set_agent_pref_velocity(index, &[pref_velocity.x, pref_velocity.y]);
     }
 
     simulator.do_step();
 
-    for (index, (entity, move_destination, _move_speed, mut move_velocity, _bounding)) in
-        query.iter_mut().enumerate()
-    {
-        let target = move_destination.0;
-
-        // 第二阶段：处理可变查询
-        let mut transform = match q_transform.get_mut(entity) {
-            Ok(transform) => transform,
-            Err(_) => {
-                warn!("Entity {:?} missing Transform during update", entity);
-                continue;
-            }
+    for (entity, _, mut movement_state) in query.iter_mut() {
+        let Some(target) = movement_state.destination else {
+            continue;
         };
+
+        let mut transform = q_transform.get_mut(entity).unwrap();
+
+        let index = *entity_to_index.get(&entity).unwrap(); // 使用正确的索引
+
         let current_pos = simulator.get_agent_position(index);
         let current_velocity = simulator.get_agent_velocity(index);
 
-        // 更新位置
-        transform.translation = Vec3::new(current_pos[0], current_pos[1], transform.translation.z);
+        transform.translation = Vec3::new(current_pos[0], transform.translation.y, current_pos[1]);
 
-        // 判断是否接近目标点
         if target.distance(Vec2::new(current_pos[0], current_pos[1])) < 10.0 {
-            transform.translation = Vec3::new(target.x, target.y, transform.translation.z);
-            commands.trigger_targets(MoveEnd, entity);
+            transform.translation = Vec3::new(target.x, transform.translation.y, target.y);
+            movement_state.destination = None;
+            commands.trigger_targets(EventMovementMoveEnd, entity);
         }
 
-        // 更新旋转和速度
-        transform.rotation = Quat::from_rotation_z(-current_velocity[0].atan2(current_velocity[1]));
-        move_velocity.0 = Some(Vec2::new(current_velocity[0], current_velocity[1]));
+        transform.rotation = Quat::from_rotation_y(-current_velocity[0].atan2(current_velocity[1]));
+        movement_state.velocity = Some(Vec2::new(current_velocity[0], current_velocity[1]));
     }
 }
 
-fn action_set_move_target(trigger: Trigger<ActionSetMoveTarget>, mut commands: Commands) {
+fn command_movement_move_to(
+    trigger: Trigger<CommandMovementMoveTo>,
+    mut query: Query<&mut MovementState>,
+) {
     let entity = trigger.target();
     let destination = trigger.event().0;
 
@@ -190,26 +183,5 @@ fn action_set_move_target(trigger: Trigger<ActionSetMoveTarget>, mut commands: C
         destination,
     );
 
-    commands.entity(entity).insert(MoveDestination(destination));
-}
-
-fn on_command_move(trigger: Trigger<CommandMove>, mut commands: Commands) {
-    system_debug!(
-        "on_command_move",
-        "Entity {:?} received move command to {:?}",
-        trigger.target(),
-        trigger.target.xy(),
-    );
-    commands.trigger_targets(ActionSetMoveTarget(trigger.target.xy()), trigger.target());
-}
-
-fn on_move_end(trigger: Trigger<MoveEnd>, mut commands: Commands) {
-    system_debug!(
-        "on_move_end",
-        "Entity {:?} reached move destination",
-        trigger.target()
-    );
-    commands
-        .entity(trigger.target())
-        .remove::<MoveDestination>();
+    query.get_mut(entity).unwrap().destination = Some(destination);
 }

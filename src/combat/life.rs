@@ -23,8 +23,8 @@ impl Plugin for PluginLife {
     }
 }
 
-pub fn spawn_event(mut commands: Commands, q_minion: Query<Entity, Added<Health>>) {
-    let spawn_count = q_minion.iter().count();
+pub fn spawn_event(mut commands: Commands, q_alive: Query<Entity, Added<Health>>) {
+    let spawn_count = q_alive.iter().count();
     if spawn_count > 0 {
         system_info!(
             "spawn_event",
@@ -33,7 +33,7 @@ pub fn spawn_event(mut commands: Commands, q_minion: Query<Entity, Added<Health>
         );
     }
 
-    for entity in q_minion.iter() {
+    for entity in q_alive.iter() {
         system_debug!(
             "spawn_event",
             "Triggering spawn event for entity {:?}",

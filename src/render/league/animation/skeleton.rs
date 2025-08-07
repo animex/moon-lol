@@ -58,7 +58,6 @@ pub struct Joint {
 
 /// 这是一个中间枚举，用于根据 `format_token` 进行条件解析。
 #[binread]
-#[derive(Debug)]
 #[br(import(format_token: u32))]
 enum SkeletonDataKind {
     /// 如果 format_token 匹配，则解析为现代骨骼
@@ -112,27 +111,32 @@ impl From<SkeletonDataKind> for SkeletonData {
 // ~~~~~~~~~~~~~~~~~~~~~~~~~ 现代格式解析 (Modern Format) ~~~~~~~~~~~~~~~~~~~~~~~~~
 
 #[binread]
-#[derive(Debug)]
 #[br(little)]
 struct ModernSkeletonData {
+    #[br(temp)]
     version: u32,
     #[br(assert(version == 0, "Invalid skeleton version: {}", version))]
     pub flags: u16,
+    #[br(temp)]
     joint_count: u16,
+    #[br(temp)]
     influences_count: u32,
 
     // Offsets
+    #[br(temp)]
     joints_offset: i32,
     _joint_indices_offset: i32,
+    #[br(temp)]
     influences_offset: i32,
+    #[br(temp)]
     name_offset: i32,
+    #[br(temp)]
     asset_name_offset: i32,
     _bone_names_offset: i32,
 
     #[br(count = 5)]
     _reserved: Vec<i32>,
 
-    // Data blocks parsed from offsets
     #[br(
         seek_before = SeekFrom::Start(name_offset as u64),
         if(name_offset > 0),
@@ -178,11 +182,17 @@ struct RigResourceJoint {
     pub radius: f32,
 
     // Transform components
+    #[br(temp)]
     local_translation: BinVec3,
+    #[br(temp)]
     local_scale: BinVec3,
+    #[br(temp)]
     local_rotation: BinQuat,
+    #[br(temp)]
     inverse_bind_translation: BinVec3,
+    #[br(temp)]
     inverse_bind_scale: BinVec3,
+    #[br(temp)]
     inverse_bind_rotation: BinQuat,
 
     // 使用自定义的 RelativeString 类型来处理相对偏移
@@ -206,18 +216,20 @@ struct LegacySkeletonData {
     #[br(seek_before = SeekFrom::Start(0), magic = b"r3d2sklt")]
     _magic: (),
 
+    #[br(temp)]
     version: u32,
     #[br(assert(version == 1 || version == 2, "Invalid legacy skeleton version: {}", version))]
     _skeleton_id: u32,
+    #[br(temp)]
     joint_count: u32,
 
+    #[br(temp)]
     #[br(count = joint_count)]
     legacy_joints: Vec<RigResourceLegacyJoint>,
 
-    #[br(
-        if(version == 2),
-        parse_with = parse_legacy_influences
-    )]
+    #[br(temp)]
+    #[br(if(version == 2))]
+    #[br(parse_with = parse_legacy_influences)]
     influences_v2: Vec<i16>,
 
     // 使用 calc 在解析后计算最终的 joints 和 influences

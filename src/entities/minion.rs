@@ -1,9 +1,18 @@
 use crate::combat::{
-    ActionSetMoveTarget, Attack, AttackMachineState, AttackState, Bounding, CommandTargetRemove,
-    CommandTargetSet, Dead, EventAttackAttack, Health, Lane, MoveEnd, MoveVelocity, Navigator,
-    Obstacle, Target, Team,
+    Attack, AttackMachineState, AttackState, Bounding, CommandMovementMoveTo, CommandTargetRemove,
+    CommandTargetSet, Dead, EventAttackAttack, EventMovementMoveEnd, Health, Navigator, Obstacle,
+    Target, Team,
 };
 use bevy::{app::Plugin, prelude::*};
+
+#[derive(Component, Debug, Clone, Copy)]
+#[require(MinionState, Navigator, Team, Obstacle, AggroInfo)]
+pub enum Minion {
+    Siege,
+    Melee,
+    Ranged,
+    Super,
+}
 
 #[derive(Component, Default)]
 pub struct AggroInfo {
@@ -21,7 +30,7 @@ pub enum MinionState {
 pub struct MinionPath(pub Vec<Vec2>);
 
 #[derive(Event, Debug)]
-pub struct FoundAggroTarget {
+pub struct EventMinionFoundTarget {
     pub target: Entity,
 }
 
@@ -38,23 +47,6 @@ pub struct SystemMoveByPath {
 
 #[derive(Event, Debug)]
 pub struct ChasingTooMuch;
-#[derive(Component, Debug, Clone, Copy)]
-#[require(
-    Navigator,
-    MoveVelocity,
-    AttackState,
-    MinionState,
-    Lane,
-    Team,
-    Obstacle,
-    AggroInfo
-)]
-pub enum Minion {
-    Siege,
-    Melee,
-    Ranged,
-    Super,
-}
 
 pub const AGGRO_RANGE: f32 = 500.0;
 
@@ -62,7 +54,7 @@ pub struct PluginMinion;
 
 impl Plugin for PluginMinion {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_event::<FoundAggroTarget>();
+        app.add_event::<EventMinionFoundTarget>();
         app.add_event::<ChasingTimeOut>();
         app.add_event::<ChasingTooMuch>();
         app.add_event::<SystemMoveByPath>();
@@ -118,7 +110,7 @@ pub fn minion_aggro(
         // 如果找到有效目标则触发
         if target_entity != Entity::PLACEHOLDER {
             commands.trigger_targets(
-                FoundAggroTarget {
+                EventMinionFoundTarget {
                     target: target_entity,
                 },
                 minion_entity,
@@ -148,12 +140,12 @@ fn on_system_move_by_path(trigger: Trigger<SystemMoveByPath>, mut commands: Comm
     // 由于移除了路径功能，这里需要外部系统来处理路径移动
     // 可以设置路径的第一个点作为目标，或者由外部路径管理系统处理
     if let Some(first_point) = trigger.path.first() {
-        commands.trigger_targets(ActionSetMoveTarget(*first_point), trigger.target());
+        commands.trigger_targets(CommandMovementMoveTo(*first_point), trigger.target());
     }
 }
 
 fn get_is_in_attack_range_in_found_aggro_target(
-    trigger: &Trigger<FoundAggroTarget>,
+    trigger: &Trigger<EventMinionFoundTarget>,
     q_attack: &Query<&Attack>,
     q_transform: &Query<&Transform>,
     q_bounding: &Query<&Bounding>,
@@ -174,7 +166,7 @@ fn get_is_in_attack_range_in_found_aggro_target(
 }
 
 fn on_found_aggro_target(
-    trigger: Trigger<FoundAggroTarget>,
+    trigger: Trigger<EventMinionFoundTarget>,
     mut commands: Commands,
     mut q_minion_state: Query<&mut MinionState>,
 
@@ -194,12 +186,12 @@ fn on_found_aggro_target(
     );
 
     if is_in_attack_range {
-        commands.trigger_targets(MoveEnd, trigger.target());
+        commands.trigger_targets(EventMovementMoveEnd, trigger.target());
     } else {
         // 获取目标位置并设置为移动目标
         if let Ok(target_transform) = q_transform.get(event.target) {
             commands.trigger_targets(
-                ActionSetMoveTarget(target_transform.translation.xy()),
+                CommandMovementMoveTo(target_transform.translation.xz()),
                 trigger.target(),
             );
         }

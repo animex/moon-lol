@@ -2,8 +2,7 @@
 mod tests {
     use bevy::{prelude::*, state::app::StatesPlugin};
     use moon_lol::{
-        classic::PluginClassic,
-        combat::PluginMove,
+        combat::PluginMovement,
         combat::{Health, PluginCombat},
         entities::Minion,
     };
@@ -17,7 +16,7 @@ mod tests {
         app.add_plugins(StatesPlugin);
         app.add_systems(Startup, setup);
         // app.add_plugins(PluginMinion);
-        app.add_plugins((PluginMove, PluginClassic, PluginCombat));
+        app.add_plugins((PluginMovement, PluginCombat));
         app
     }
 

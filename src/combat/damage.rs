@@ -2,6 +2,12 @@ use crate::combat::life::Health;
 use crate::{system_debug, system_info, system_warn};
 use bevy::prelude::*;
 
+#[derive(Component, Debug)]
+pub struct Damage(pub f32);
+
+#[derive(Component, Debug)]
+pub struct Armor(pub f32);
+
 /// 伤害类型枚举
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DamageType {
