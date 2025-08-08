@@ -89,6 +89,73 @@ fn setup(
     debug!("init_obstacle: {:?}", start.elapsed());
 }
 
+fn create_simulator(
+    timer: &Res<Time<Fixed>>,
+    obstacle_vertices_array: &Res<ObstacleVerticesArray>,
+) -> RVOSimulatorWrapper {
+    let mut simulator = RVOSimulatorWrapper::new();
+    simulator.set_time_step(timer.timestep().as_secs_f32());
+
+    for vertices_array in obstacle_vertices_array.0.iter() {
+        simulator.add_obstacle(&vertices_array);
+    }
+
+    simulator.process_obstacles();
+    simulator
+}
+
+fn add_agent_to_simulator(
+    simulator: &mut RVOSimulatorWrapper,
+    position: Vec2,
+    target: Vec2,
+    old_velocity: Vec2,
+    speed: f32,
+    radius: f32,
+) -> usize {
+    let direction = target - position;
+    let pref_velocity = if direction.length() > 0.0 {
+        direction.normalize() * speed
+    } else {
+        Vec2::ZERO
+    };
+
+    let neighbor_dist = radius * 2.0;
+    let max_neighbors = 25;
+    let time_horizon = 10.0;
+    let time_horizon_obst = 3.0;
+
+    let index = simulator.add_agent(
+        &[position.x, position.y],
+        neighbor_dist,
+        max_neighbors,
+        time_horizon,
+        time_horizon_obst,
+        radius,
+        speed,
+        &[old_velocity.x, old_velocity.y],
+    );
+
+    simulator.set_agent_pref_velocity(index, &[pref_velocity.x, pref_velocity.y]);
+    index
+}
+
+fn update_transform_and_velocity(
+    simulator: &RVOSimulatorWrapper,
+    index: usize,
+    entity: Entity,
+    q_transform: &mut Query<&mut Transform>,
+    movement_velocity: &mut MovementVelocity,
+) {
+    let current_pos = simulator.get_agent_position(index);
+    let current_velocity = simulator.get_agent_velocity(index);
+
+    let mut transform = q_transform.get_mut(entity).unwrap();
+    transform.translation = Vec3::new(current_pos[0], transform.translation.y, current_pos[1]);
+    transform.rotation = Quat::from_rotation_y(current_velocity[0].atan2(current_velocity[1]));
+
+    movement_velocity.0 = Vec2::new(current_velocity[0], current_velocity[1]);
+}
+
 fn update(
     mut commands: Commands,
     mut query: Query<(
@@ -102,81 +169,45 @@ fn update(
     timer: Res<Time<Fixed>>,
     obstacle_vertices_array: Res<ObstacleVerticesArray>,
 ) {
-    let mut simulator = RVOSimulatorWrapper::new();
-    simulator.set_time_step(timer.timestep().as_secs_f32());
+    let mut simulator = create_simulator(&timer, &obstacle_vertices_array);
+    let mut entity_to_index = HashMap::new();
 
-    for vertices_array in obstacle_vertices_array.0.iter() {
-        simulator.add_obstacle(&vertices_array);
-    }
-
-    simulator.process_obstacles();
-
-    let mut entity_to_index: HashMap<Entity, usize> = HashMap::new();
-
-    for (entity, movement, movement_destination, movement_velocity, bounding) in query.iter_mut() {
-        let destination = movement_destination.0;
-
+    // 添加代理到模拟器
+    for (entity, movement, destination, velocity, bounding) in query.iter() {
         let transform = q_transform.get(entity).unwrap();
-
         let position = transform.translation.xz();
 
-        let (old_velocity, pref_velocity) = {
-            let target = destination;
-            let direction = target - position;
-            let velocity = if direction.length() > 0.0 {
-                direction.normalize() * movement.speed
-            } else {
-                Vec2::ZERO
-            };
-
-            (movement_velocity.0, velocity)
-        };
-
-        let neighbor_dist = bounding.radius * 2.0;
-        let max_neighbors = 25;
-        let time_horizon = 10.0;
-        let time_horizon_obst = 3.0;
-        let radius = bounding.radius;
-        let max_speed = movement.speed;
-        let index = simulator.add_agent(
-            &[position.x, position.y],
-            neighbor_dist,
-            max_neighbors,
-            time_horizon,
-            time_horizon_obst,
-            radius,
-            max_speed,
-            &[old_velocity.x, old_velocity.y],
+        let index = add_agent_to_simulator(
+            &mut simulator,
+            position,
+            destination.0,
+            velocity.0,
+            movement.speed,
+            bounding.radius,
         );
 
         entity_to_index.insert(entity, index);
-
-        simulator.set_agent_pref_velocity(index, &[pref_velocity.x, pref_velocity.y]);
     }
 
     simulator.do_step();
 
-    for (entity, _, movement_destination, mut movement_velocity, _) in query.iter_mut() {
-        let target = movement_destination.0;
+    // 更新位置、旋转和速度
+    for (entity, _, destination, mut velocity, _) in query.iter_mut() {
+        let index = *entity_to_index.get(&entity).unwrap();
+        let target = destination.0;
 
-        let mut transform = q_transform.get_mut(entity).unwrap();
+        update_transform_and_velocity(&simulator, index, entity, &mut q_transform, &mut velocity);
 
-        let index = *entity_to_index.get(&entity).unwrap(); // 使用正确的索引
-
+        // 检查是否到达目标
         let current_pos = simulator.get_agent_position(index);
-        let current_velocity = simulator.get_agent_velocity(index);
+        let current_pos_vec2 = Vec2::new(current_pos[0], current_pos[1]);
 
-        transform.translation = Vec3::new(current_pos[0], transform.translation.y, current_pos[1]);
-
-        if target.distance(Vec2::new(current_pos[0], current_pos[1])) < 10.0 {
+        if target.distance(current_pos_vec2) < 10.0 {
+            let mut transform = q_transform.get_mut(entity).unwrap();
             transform.translation = Vec3::new(target.x, transform.translation.y, target.y);
             commands.entity(entity).remove::<MovementDestination>();
             commands.trigger_targets(EventMovementMoveEnd, entity);
         }
-
-        transform.rotation = Quat::from_rotation_y(current_velocity[0].atan2(current_velocity[1]));
-
-        movement_velocity.0 = Vec2::new(current_velocity[0], current_velocity[1]);
     }
 }
 
@@ -194,20 +225,12 @@ fn update_path_movement(
     timer: Res<Time<Fixed>>,
     obstacle_vertices_array: Res<ObstacleVerticesArray>,
 ) {
-    let mut simulator = RVOSimulatorWrapper::new();
-    simulator.set_time_step(timer.timestep().as_secs_f32());
+    let mut simulator = create_simulator(&timer, &obstacle_vertices_array);
+    let mut entity_to_index = HashMap::new();
+    let mut path_info = HashMap::new();
 
-    for vertices_array in obstacle_vertices_array.0.iter() {
-        simulator.add_obstacle(&vertices_array);
-    }
-
-    simulator.process_obstacles();
-
-    let mut entity_to_index: HashMap<Entity, usize> = HashMap::new();
-
-    for (entity, movement, movement_path, mut path_state, movement_velocity, bounding) in
-        query.iter_mut()
-    {
+    // 添加有效的路径移动代理到模拟器
+    for (entity, movement, movement_path, mut path_state, velocity, bounding) in query.iter_mut() {
         if path_state.completed || movement_path.0.is_empty() {
             continue;
         }
@@ -218,81 +241,65 @@ fn update_path_movement(
         // 找到当前应该前往的目标点
         let target = find_next_target_point(&movement_path.0, &mut path_state, position);
 
-        if target.is_none() {
+        if let Some(target) = target {
+            let index = add_agent_to_simulator(
+                &mut simulator,
+                position,
+                target,
+                velocity.0,
+                movement.speed,
+                bounding.radius,
+            );
+
+            entity_to_index.insert(entity, index);
+            path_info.insert(
+                entity,
+                (movement_path.0.len(), path_state.current_target_index),
+            );
+        } else {
             path_state.completed = true;
             commands.entity(entity).remove::<MovementPath>();
             commands.entity(entity).remove::<MovementPathState>();
             commands.trigger_targets(EventMovementMoveEnd, entity);
-            continue;
         }
+    }
 
-        let target = target.unwrap();
-
-        let (old_velocity, pref_velocity) = {
-            let direction = target - position;
-            let velocity = if direction.length() > 0.0 {
-                direction.normalize() * movement.speed
-            } else {
-                Vec2::ZERO
-            };
-
-            (movement_velocity.0, velocity)
-        };
-
-        let neighbor_dist = bounding.radius * 2.0;
-        let max_neighbors = 25;
-        let time_horizon = 10.0;
-        let time_horizon_obst = 3.0;
-        let radius = bounding.radius;
-        let max_speed = movement.speed;
-        let index = simulator.add_agent(
-            &[position.x, position.y],
-            neighbor_dist,
-            max_neighbors,
-            time_horizon,
-            time_horizon_obst,
-            radius,
-            max_speed,
-            &[old_velocity.x, old_velocity.y],
-        );
-
-        entity_to_index.insert(entity, index);
-        simulator.set_agent_pref_velocity(index, &[pref_velocity.x, pref_velocity.y]);
+    if entity_to_index.is_empty() {
+        return;
     }
 
     simulator.do_step();
 
-    for (entity, _, movement_path, mut path_state, mut movement_velocity, _) in query.iter_mut() {
-        if path_state.completed || movement_path.0.is_empty() {
-            continue;
-        }
+    // 更新位置、旋转和速度，并处理路径状态
+    for (entity, _, movement_path, mut path_state, mut velocity, _) in query.iter_mut() {
+        if let Some(&index) = entity_to_index.get(&entity) {
+            update_transform_and_velocity(
+                &simulator,
+                index,
+                entity,
+                &mut q_transform,
+                &mut velocity,
+            );
 
-        let mut transform = q_transform.get_mut(entity).unwrap();
-        let index = *entity_to_index.get(&entity).unwrap();
-
-        let current_pos = simulator.get_agent_position(index);
-        let current_velocity = simulator.get_agent_velocity(index);
-
-        transform.translation = Vec3::new(current_pos[0], transform.translation.y, current_pos[1]);
-
-        // 检查是否到达当前目标点
-        if path_state.current_target_index < movement_path.0.len() {
+            // 检查是否到达当前目标点
+            let current_pos = simulator.get_agent_position(index);
+            let current_pos_vec2 = Vec2::new(current_pos[0], current_pos[1]);
             let target = movement_path.0[path_state.current_target_index];
-            if target.distance(Vec2::new(current_pos[0], current_pos[1])) < 10.0 {
-                path_state.current_target_index += 1;
 
-                // 如果到达最后一个点，完成路径移动
-                if path_state.current_target_index >= movement_path.0.len() {
-                    path_state.completed = true;
+            if target.distance(current_pos_vec2) < 10.0 {
+                let new_index = path_state.current_target_index + 1;
+
+                if new_index >= movement_path.0.len() {
+                    // 完成路径移动
                     commands.entity(entity).remove::<MovementPath>();
                     commands.entity(entity).remove::<MovementPathState>();
                     commands.trigger_targets(EventMovementMoveEnd, entity);
+                } else {
+                    // 更新路径状态到下一个点
+                    path_state.current_target_index = new_index;
                 }
             }
         }
-
-        transform.rotation = Quat::from_rotation_y(current_velocity[0].atan2(current_velocity[1]));
-        movement_velocity.0 = Vec2::new(current_velocity[0], current_velocity[1]);
     }
 }
 

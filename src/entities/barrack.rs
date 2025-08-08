@@ -1,5 +1,9 @@
 use crate::{
-    combat::{Armor, Bounding, CommandMovementMoveTo, Damage, Health, Movement, Team},
+    combat::{
+        Armor, Bounding, CommandMovementFollowPath, CommandMovementMoveTo, Damage, Health,
+        Movement, Team,
+    },
+    config::GameConfig,
     entities::Minion,
     render::{load_character_record, WadRes},
 };
@@ -169,6 +173,8 @@ fn barracks_spawning_system(
     mut res_materials: ResMut<Assets<StandardMaterial>>,
     mut res_meshes: ResMut<Assets<Mesh>>,
     mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
+
+    res_game_config: Res<GameConfig>,
     res_wad: Res<WadRes>,
     time: Res<Time>,
     game_time: Res<Time<Virtual>>, // 使用 Virtual 时间可以更好地控制游戏进程，如果不用可以换回 Res<Time>
@@ -309,8 +315,21 @@ fn barracks_spawning_system(
                         team.clone(),
                     ));
 
-                    commands
-                        .trigger_targets(CommandMovementMoveTo(Vec2::new(7000.0, -7000.0)), entity);
+                    let path = res_game_config.minion_paths.first().unwrap();
+                    let path_position = Vec2::new(path.transform.w_axis.x, path.transform.w_axis.z);
+                    let path: Vec<Vec2> = path
+                        .segments
+                        .iter()
+                        .map(|v| v.xz() + path_position)
+                        .map(|mut v| {
+                            v.y = -v.y;
+                            v
+                        })
+                        .collect();
+
+                    println!("{:#?}", path);
+
+                    commands.trigger_targets(CommandMovementFollowPath(path), entity);
 
                     // 更新队列
                     current_spawn.count -= 1;
