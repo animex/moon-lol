@@ -1,15 +1,14 @@
-use crate::combat::{AttackState, MovementDestination, Target};
+use crate::combat::{AttackState, Movement, MovementDestination, Target};
+use crate::map::Map;
 use crate::render::{
     get_barrack_by_bin, neg_z, process_map_geo_mesh, EnvironmentVisibility,
-    LayerTransitionBehavior, LeagueBinMaybeCharacterMapRecord, LeagueLoader, LeagueMinionPath,
-    WadRes,
+    LayerTransitionBehavior, LeagueBinMaybeCharacterMapRecord, LeagueLoader, WadRes,
 };
 use crate::system_info;
-use bevy::asset::RenderAssetUsages;
 use bevy::render::mesh::skinning::SkinnedMeshInverseBindposes;
-use bevy::render::mesh::PrimitiveTopology;
 use bevy::{color::palettes, prelude::*};
 use cdragon_prop::{BinHash, BinMap, BinStruct};
+use std::cmp::Ordering;
 
 pub struct PluginMap;
 
@@ -18,6 +17,7 @@ impl Plugin for PluginMap {
         app.insert_resource(CurrentVisibilityLayers(EnvironmentVisibility::Layer1));
         app.add_systems(Startup, setup_map);
         app.add_systems(Startup, setup_map_placeble);
+        app.add_systems(Update, update_z);
     }
 }
 
@@ -63,6 +63,7 @@ fn setup_map(
                 })),
                 Visibility::Visible,
                 MapMeshLayer(map_mesh.environment_visibility),
+                Map,
             ));
         }
     }
@@ -170,4 +171,69 @@ fn setup_map_placeble(
         "map objects loaded in {:?}",
         start_time.elapsed()
     );
+}
+
+fn update_z(
+    mut ray_cast: MeshRayCast,
+    map_query: Query<(), With<Map>>,
+    // 新增一个查询，用于获取实体的父级
+    parent_query: Query<&ChildOf>,
+    mut q_champion: Query<(Entity, &mut Transform), With<Movement>>,
+) {
+    for (champion_entity, mut transform) in q_champion.iter_mut() {
+        let ray_origin = Vec3::new(transform.translation.x, 10000.0, transform.translation.z);
+        let ray = Ray3d::new(ray_origin, -Dir3::Y);
+
+        // 在闭包中，我们需要检查实体自身或其任何父级是否是地图
+        let filter = |entity: Entity| {
+            if map_query.contains(entity) {
+                return true; // 找到了！这个碰撞有效
+            }
+            return false;
+
+            // 首先，仍然要确保不与自己碰撞
+            if entity == champion_entity {
+                return false;
+            }
+
+            let mut current_entity = entity;
+            let mut depth = 0;
+            // 循环向上查找
+            loop {
+                // 检查当前实体是否是 Map
+
+                // 防止无限循环
+                depth += 1;
+                if depth > 10 {
+                    return false;
+                }
+
+                // 尝试获取当前实体的父级
+                match parent_query.get(current_entity) {
+                    // 如果有父级，下一轮循环就检查父级
+                    Ok(parent) => current_entity = parent.parent(),
+                    // 如果没有父级了（已经到了层级顶端），说明不是地图的一部分
+                    Err(_) => return false,
+                }
+            }
+        };
+
+        let settings = MeshRayCastSettings::default().with_filter(&filter);
+        let hits = ray_cast.cast_ray(ray, &settings);
+        if hits.len() > 1 {
+            println!("hits: {:?}", hits.len());
+        }
+
+        // ... 后续逻辑保持不变 ...
+        let highest_hit = hits.iter().max_by(|a, b| {
+            a.1.point
+                .y
+                .partial_cmp(&b.1.point.y)
+                .unwrap_or(Ordering::Equal)
+        });
+
+        if let Some(intersection) = highest_hit {
+            transform.translation.y = intersection.1.point.y;
+        }
+    }
 }

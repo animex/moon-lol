@@ -12,8 +12,10 @@ use moon_lol::{
 fn main() {
     App::new()
         .add_plugins((
-            // PluginLogging, // Add logging first to capture all system logs
+            PluginLogging, // Add logging first to capture all system logs
             DefaultPlugins
+                .build()
+                .disable::<bevy::log::LogPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
@@ -34,7 +36,6 @@ fn main() {
             PluginCombat,
             PluginEntities,
             PluginRender,
-            PluginLogging,
         ))
         .run();
 }
