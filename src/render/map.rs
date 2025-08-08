@@ -159,6 +159,9 @@ fn setup_map_placeble(
                     &character_map_record.definition.skin,
                 );
             }
+            0x71d0eabd => {
+                commands.spawn(get_barrack_by_bin(&bin, &v.1));
+            }
             _ => {}
         });
 
