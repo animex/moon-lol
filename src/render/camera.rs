@@ -20,7 +20,8 @@ impl Plugin for PluginCamera {
         app.add_systems(Startup, setup);
         app.add_systems(Startup, confine_cursor);
         app.add_systems(Update, camera_focus);
-        app.add_systems(Update, (camera_zoom, edge_scroll_camera));
+        app.add_systems(Update, camera_zoom);
+        app.add_systems(Update, edge_scroll_camera);
     }
 }
 
