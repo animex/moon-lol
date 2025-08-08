@@ -1,7 +1,5 @@
-use crate::{
-    combat::{movement::Movement, MovementState},
-    map::{MAP_HEIGHT, MAP_WIDTH},
-};
+use super::{Movement, MovementDestination};
+use crate::map::{MAP_HEIGHT, MAP_WIDTH};
 use crate::{system_debug, system_info, system_warn};
 use bevy::{app::App, math::vec2, prelude::*};
 use vleue_navigator::{
@@ -78,7 +76,8 @@ fn setup(
 }
 
 fn update(
-    mut query_navigator: Query<(&mut MovementState, &mut Transform), With<Navigator>>,
+    mut commands: Commands,
+    mut query_navigator: Query<(Entity, &MovementDestination, &mut Transform), With<Navigator>>,
     navmeshes: Res<GlobalNavMesh>,
 ) {
     let navmesh = &navmeshes.0;
@@ -95,10 +94,8 @@ fn update(
     let mut path_found_count = 0;
     let mut path_failed_count = 0;
 
-    for (mut movement_state, transform) in query_navigator.iter_mut() {
-        let Some(target) = movement_state.destination else {
-            continue;
-        };
+    for (entity, movement_destination, transform) in query_navigator.iter_mut() {
+        let target = movement_destination.0;
         let start = transform.translation.xz();
 
         if start == target {
@@ -137,7 +134,9 @@ fn update(
                 next_waypoint.x,
                 next_waypoint.y
             );
-            movement_state.destination = Some(next_waypoint);
+            commands
+                .entity(entity)
+                .insert(MovementDestination(next_waypoint));
             path_found_count += 1;
         }
     }

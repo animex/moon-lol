@@ -1,6 +1,6 @@
 use crate::{
     combat::{navigation::Obstacle, Bounding},
-    system_debug, system_info,
+    system_debug,
 };
 use bevy::prelude::*;
 use rvo2::RVOSimulatorWrapper;
@@ -22,22 +22,16 @@ impl Plugin for PluginMovement {
 }
 
 #[derive(Component)]
-#[require(MovementState)]
+#[require(MovementVelocity)]
 pub struct Movement {
     pub speed: f32,
 }
 
-impl Movement {
-    pub fn get_speed_in_a_frame(&self) -> f32 {
-        self.speed
-    }
-}
-
 #[derive(Component, Default)]
-pub struct MovementState {
-    pub destination: Option<Vec2>,
-    pub velocity: Option<Vec2>,
-}
+pub struct MovementVelocity(pub Vec2);
+
+#[derive(Component)]
+pub struct MovementDestination(pub Vec2);
 
 #[derive(Event, Debug)]
 pub struct EventMovementMoveEnd;
@@ -82,7 +76,13 @@ fn setup(
 
 fn update(
     mut commands: Commands,
-    mut query: Query<(Entity, &Movement, &mut MovementState, &Bounding)>,
+    mut query: Query<(
+        Entity,
+        &Movement,
+        &MovementDestination,
+        &mut MovementVelocity,
+        &Bounding,
+    )>,
     mut q_transform: Query<&mut Transform>,
     timer: Res<Time<Fixed>>,
     obstacle_vertices_array: Res<ObstacleVerticesArray>,
@@ -98,10 +98,8 @@ fn update(
 
     let mut entity_to_index: HashMap<Entity, usize> = HashMap::new();
 
-    for (entity, movement, movement_state, bounding) in query.iter_mut() {
-        let Some(destination) = movement_state.destination else {
-            continue;
-        };
+    for (entity, movement, movement_destination, movement_velocity, bounding) in query.iter_mut() {
+        let destination = movement_destination.0;
 
         let transform = q_transform.get(entity).unwrap();
 
@@ -111,13 +109,12 @@ fn update(
             let target = destination;
             let direction = target - position;
             let velocity = if direction.length() > 0.0 {
-                direction.normalize() * movement.get_speed_in_a_frame()
+                direction.normalize() * movement.speed
             } else {
                 Vec2::ZERO
             };
 
-            let old_velocity = movement_state.velocity.unwrap_or(velocity);
-            (old_velocity, velocity)
+            (movement_velocity.0, velocity)
         };
 
         let neighbor_dist = bounding.radius * 2.0;
@@ -125,7 +122,7 @@ fn update(
         let time_horizon = 10.0;
         let time_horizon_obst = 3.0;
         let radius = bounding.radius;
-        let max_speed = movement.get_speed_in_a_frame();
+        let max_speed = movement.speed;
         let index = simulator.add_agent(
             &[position.x, position.y],
             neighbor_dist,
@@ -144,10 +141,8 @@ fn update(
 
     simulator.do_step();
 
-    for (entity, _, mut movement_state, _) in query.iter_mut() {
-        let Some(target) = movement_state.destination else {
-            continue;
-        };
+    for (entity, _, movement_destination, mut movement_velocity, _) in query.iter_mut() {
+        let target = movement_destination.0;
 
         let mut transform = q_transform.get_mut(entity).unwrap();
 
@@ -160,19 +155,17 @@ fn update(
 
         if target.distance(Vec2::new(current_pos[0], current_pos[1])) < 10.0 {
             transform.translation = Vec3::new(target.x, transform.translation.y, target.y);
-            movement_state.destination = None;
+            commands.entity(entity).remove::<MovementDestination>();
             commands.trigger_targets(EventMovementMoveEnd, entity);
         }
 
-        transform.rotation = Quat::from_rotation_y(-current_velocity[0].atan2(current_velocity[1]));
-        movement_state.velocity = Some(Vec2::new(current_velocity[0], current_velocity[1]));
+        transform.rotation = Quat::from_rotation_y(current_velocity[0].atan2(current_velocity[1]));
+
+        movement_velocity.0 = Vec2::new(current_velocity[0], current_velocity[1]);
     }
 }
 
-fn command_movement_move_to(
-    trigger: Trigger<CommandMovementMoveTo>,
-    mut query: Query<&mut MovementState>,
-) {
+fn command_movement_move_to(trigger: Trigger<CommandMovementMoveTo>, mut commands: Commands) {
     let entity = trigger.target();
     let destination = trigger.event().0;
 
@@ -183,5 +176,7 @@ fn command_movement_move_to(
         destination,
     );
 
-    query.get_mut(entity).unwrap().destination = Some(destination);
+    commands
+        .entity(entity)
+        .insert(MovementDestination(destination));
 }

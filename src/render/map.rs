@@ -1,4 +1,4 @@
-use crate::combat::{AttackState, MovementState, Target};
+use crate::combat::{AttackState, MovementDestination, Target};
 use crate::render::{
     get_barrack_by_bin, neg_z, process_map_geo_mesh, EnvironmentVisibility,
     LayerTransitionBehavior, LeagueBinMaybeCharacterMapRecord, LeagueLoader, LeagueMinionPath,
@@ -75,7 +75,7 @@ fn setup_map(
 pub fn draw_attack(
     mut gizmos: Gizmos,
     q_attack: Query<(&Transform, &AttackState)>,
-    q_movement_state: Query<(&Transform, &MovementState)>,
+    q_movement_destination: Query<(&Transform, &MovementDestination)>,
     q_target: Query<(&Transform, &Target)>,
     q_transform: Query<&Transform>,
 ) {
@@ -93,14 +93,16 @@ pub fn draw_attack(
         );
     }
 
-    for (transform, movement_state) in q_movement_state.iter() {
-        let Some(destination) = movement_state.destination else {
-            continue;
-        };
+    for (transform, movement_destination) in q_movement_destination.iter() {
+        let destination = movement_destination.0;
 
         gizmos.line(
             transform.translation,
-            destination.extend(transform.translation.z),
+            transform
+                .translation
+                .clone()
+                .with_x(destination.x)
+                .with_z(destination.y),
             Color::Srgba(palettes::tailwind::GREEN_500),
         );
     }
