@@ -1,4 +1,7 @@
-use crate::{config::GameConfig, render::LeagueLoader};
+use crate::{
+    config::GameConfig,
+    render::{LeagueLoader, LeagueMinionPath},
+};
 use bevy::prelude::*;
 use cdragon_prop::{BinHash, BinMap, BinStruct};
 
@@ -39,7 +42,8 @@ impl Plugin for PluginResource {
                 })
                 .flat_map(|v| v.downcast::<BinHash, BinStruct>().unwrap())
                 .filter(|v| v.1.ctype.hash == 0x3c995caf)
-                .map(|v| (&v.1).into())
+                .map(|v| LeagueMinionPath::from(&v.1))
+                .map(|v| (v.lane, v.path))
                 .collect(),
         });
 

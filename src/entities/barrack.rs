@@ -1,6 +1,6 @@
 use crate::{
     combat::{
-        Armor, Bounding, CommandMovementFollowPath, CommandMovementMoveTo, Damage, Health,
+        Armor, Bounding, CommandMovementFollowPath, CommandMovementMoveTo, Damage, Health, Lane,
         Movement, Team,
     },
     config::GameConfig,
@@ -174,14 +174,14 @@ fn barracks_spawning_system(
     mut res_meshes: ResMut<Assets<Mesh>>,
     mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
 
-    res_game_config: Res<GameConfig>,
+    mut res_game_config: Res<GameConfig>,
     res_wad: Res<WadRes>,
     time: Res<Time>,
     game_time: Res<Time<Virtual>>, // 使用 Virtual 时间可以更好地控制游戏进程，如果不用可以换回 Res<Time>
     inhibitor_state: Res<InhibitorState>,
-    mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState, &Team)>,
+    mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState, &Team, &Lane)>,
 ) {
-    for (transform, barrack, mut state, team) in query.iter_mut() {
+    for (transform, barrack, mut state, team, lane) in query.iter_mut() {
         // --- 1. 更新所有计时器 ---
         state.wave_timer.tick(time.delta());
 
@@ -315,19 +315,11 @@ fn barracks_spawning_system(
                         team.clone(),
                     ));
 
-                    let path = res_game_config.minion_paths.first().unwrap();
-                    let path_position = Vec2::new(path.transform.w_axis.x, path.transform.w_axis.z);
-                    let path: Vec<Vec2> = path
-                        .segments
-                        .iter()
-                        .map(|v| v.xz() + path_position)
-                        .map(|mut v| {
-                            v.y = -v.y;
-                            v
-                        })
-                        .collect();
+                    let mut path = res_game_config.minion_paths.get(lane).unwrap().clone();
 
-                    println!("{:#?}", path);
+                    if *team == Team::Chaos {
+                        path.reverse();
+                    }
 
                     commands.trigger_targets(CommandMovementFollowPath(path), entity);
 
