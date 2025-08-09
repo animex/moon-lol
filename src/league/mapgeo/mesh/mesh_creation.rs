@@ -3,8 +3,6 @@ use bevy::prelude::*;
 use bevy::render::mesh::{Indices, PrimitiveTopology};
 use std::collections::HashMap;
 
-/// 根据单个 submesh 的索引范围，从全局顶点数据中提取数据，
-/// 创建一个独立的、自包含的 Bevy Mesh。
 pub fn create_bevy_mesh_for_submesh(
     global_indices_slice: &[u16],
     all_positions: &[[f32; 3]],
@@ -34,7 +32,6 @@ pub fn create_bevy_mesh_for_submesh(
         local_indices.push(local_index);
     }
 
-    // 修正因Z轴翻转导致的三角形环绕顺序问题
     for tri_indices in local_indices.chunks_exact_mut(3) {
         tri_indices.swap(1, 2);
     }

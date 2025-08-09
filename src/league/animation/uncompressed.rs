@@ -28,14 +28,13 @@ pub enum UncompressedData {
     V5(UncompressedDataV5),
 }
 
-// ------------------- Version 5 -------------------
 #[binread]
 #[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedDataV5 {
     pub resource_size: u32,
     pub format_token: u32,
-    pub version_again: u32, // Should be 5
+    pub version_again: u32,
     pub flags: u32,
     pub track_count: i32,
     pub frame_count: i32,
@@ -80,14 +79,13 @@ pub struct UncompressedDataV5 {
     pub frames: Vec<UncompressedFrame>,
 }
 
-// ------------------- Version 4 -------------------
 #[binread]
 #[derive(Debug, Clone)]
 #[br(little)]
 pub struct UncompressedDataV4 {
     pub resource_size: u32,
     pub format_token: u32,
-    pub version_again: u32, // Should be 4
+    pub version_again: u32,
     pub flags: u32,
     pub track_count: i32,
     pub frame_count: i32,
@@ -145,9 +143,6 @@ fn group_v4_frames(frames: Vec<UncompressedFrameV4>) -> HashMap<u32, Vec<Uncompr
     map
 }
 
-// ------------------- Version 3 (Legacy) -------------------
-
-// 用于V3解析的辅助结构体。它们使用宏来读取数据块。
 #[binread]
 #[derive(Debug, Clone)]
 #[br(little, import { frame_count: i32 })]
@@ -166,7 +161,6 @@ struct RawFrameV3 {
     translation: BinVec3,
 }
 
-/// V3 数据的最终结构。它本身不派生 BinRead。
 #[derive(Debug, Clone)]
 pub struct UncompressedDataV3 {
     pub skeleton_id: u32,
@@ -190,26 +184,19 @@ struct RawDataV3 {
     tracks: Vec<RawTrackV3>,
 }
 
-/// 自定义解析函数，它使用辅助结构体来读取原始数据，
-/// 然后将其转换为最终的 UncompressedDataV3 结构。
-/// 这取代了手动的 `impl BinRead`。
 fn parse_uncompressed_data_v3<R: Read + Seek>(
     reader: &mut R,
     _: Endian,
     _: (),
 ) -> BinResult<UncompressedDataV3> {
-    // 定义一个临时结构体，使用 binrw 宏来读取原始数据块
-
-    // 从流中读取原始数据结构
     let raw = RawDataV3::read(reader)?;
 
-    // 现在，将原始数据转换为所需的 UncompressedDataV3 结构
     let track_count = raw.track_count;
     let frame_count = raw.frame_count;
     let mut joint_frames = HashMap::with_capacity(track_count as usize);
     let palette_size = (track_count * frame_count) as usize;
     let mut quat_palette = Vec::with_capacity(palette_size);
-    // +1 是为人为添加的静态缩放向量
+
     let mut vector_palette = Vec::with_capacity(palette_size + 1);
     vector_palette.push(BinVec3(Vec3::ONE));
 
@@ -218,8 +205,6 @@ fn parse_uncompressed_data_v3<R: Read + Seek>(
             .trim_end_matches('\0')
             .to_string();
 
-        // C# 代码使用 Elf.HashLower，我们在此模拟一个简单的小写哈希
-        // 为了完美匹配，你需要实现确切的 Elf 哈希算法。
         let joint_hash = LeagueLoader::hash_joint(&track_name);
 
         let mut frames_for_joint = Vec::with_capacity(frame_count as usize);
@@ -232,7 +217,7 @@ fn parse_uncompressed_data_v3<R: Read + Seek>(
 
             frames_for_joint.push(UncompressedFrame {
                 rotation_id: index as u16,
-                // 旧版格式可能没有缩放，C# 默认使用索引为 0 的静态 Vector3.One
+
                 scale_id: 0,
                 translation_id: (index + 1) as u16,
             });
@@ -251,7 +236,6 @@ fn parse_uncompressed_data_v3<R: Read + Seek>(
     })
 }
 
-// ------------------- 通用未压缩结构 -------------------
 #[derive(BinRead, Debug, Clone, Copy)]
 #[br(little)]
 pub struct UncompressedFrame {

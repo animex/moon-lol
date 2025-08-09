@@ -5,10 +5,8 @@ use binrw::binread;
 #[derive(Debug)]
 #[br(little)]
 pub struct Submesh {
-    #[br(dbg)]
     pub hash: u32,
 
-    #[br(dbg)]
     pub material_name: SizedString,
 
     pub start_index: u32,

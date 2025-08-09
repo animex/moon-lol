@@ -4,6 +4,7 @@ use crate::league::{
 };
 use crate::render::CharacterResourceCache;
 use bevy::animation::{animated_field, AnimationTarget, AnimationTargetId};
+use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use bevy::render::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
 use bevy::{image::Image, math::Mat4};
@@ -490,14 +491,16 @@ pub fn spawn_character(
         .collect::<Vec<_>>();
     let idle_path = idle_path.first();
 
-    let animation_data = idle_path.map(|v| {
-        loader
-            .get_wad_entry_reader_by_path(v)
-            .map(|mut v| AnimationData::from(AnimationFile::read(&mut v).unwrap()))
-            .unwrap()
-    });
+    let animation_data = idle_path
+        .map(|v| {
+            loader
+                .get_wad_entry_reader_by_path(v)
+                .map(|mut v| AnimationData::from(AnimationFile::read(&mut v).unwrap()))
+                .unwrap()
+        })
+        .unwrap();
 
-    let mut clip = AnimationClip::default();
+    let clip: AnimationClip = animation_data.into();
 
     let mut index_to_entity = vec![Entity::PLACEHOLDER; league_skeleton.modern_data.joints.len()];
     let mut joint_inverse_matrix = vec![Mat4::default(); league_skeleton.modern_data.joints.len()];
@@ -511,47 +514,6 @@ pub fn spawn_character(
         let name = Name::new(joint_name_str.clone());
         let hash = LeagueLoader::hash_joint(&joint.name);
 
-        let target_id = AnimationTargetId::from_name(&name);
-
-        match animation_data {
-            Some(ref animation_data) => {
-                if let Some(anim_track_index) =
-                    animation_data.joint_hashes.iter().position(|v| *v == hash)
-                {
-                    if let Some(data) = animation_data.translates.get(anim_track_index) {
-                        clip.add_curve_to_target(
-                            target_id,
-                            AnimatableCurve::new(
-                                animated_field!(Transform::translation),
-                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
-                            ),
-                        );
-                    }
-
-                    if let Some(data) = animation_data.rotations.get(anim_track_index) {
-                        clip.add_curve_to_target(
-                            target_id,
-                            AnimatableCurve::new(
-                                animated_field!(Transform::rotation),
-                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
-                            ),
-                        );
-                    }
-
-                    if let Some(data) = animation_data.scales.get(anim_track_index) {
-                        clip.add_curve_to_target(
-                            target_id,
-                            AnimatableCurve::new(
-                                animated_field!(Transform::scale),
-                                AnimatableKeyframeCurve::new(data.clone().into_iter()).unwrap(),
-                            ),
-                        );
-                    }
-                }
-            }
-            None => {}
-        }
-
         let ent = commands
             .spawn((
                 // Mesh3d(sphere.clone()),
@@ -559,7 +521,7 @@ pub fn spawn_character(
                 Transform::from_matrix(joint.local_transform),
                 name,
                 AnimationTarget {
-                    id: target_id,
+                    id: AnimationTargetId(Uuid::from_u128(hash as u128)),
                     player: player_entity,
                 },
             ))
