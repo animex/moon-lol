@@ -1,8 +1,6 @@
 use bevy::prelude::*;
 use binrw::{io::BufReader, BinRead};
-use moon_lol::{
-    combat::PluginCombat, entities::PluginEntities, league::AiMeshNGrid, render::PluginRender,
-};
+use moon_lol::{core::PluginCore, entities::PluginEntities, league::AiMeshNGrid};
 use std::fs::File;
 
 fn main() {
@@ -12,9 +10,8 @@ fn main() {
 
     App::new()
         .add_plugins(DefaultPlugins)
-        .add_plugins(PluginCombat)
+        .add_plugins(PluginCore)
         .add_plugins(PluginEntities)
-        .add_plugins(PluginRender)
         .insert_resource(aimesh)
         .add_systems(Startup, spawn_nav_grid)
         .run();

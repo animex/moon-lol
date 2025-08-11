@@ -1,5 +1,5 @@
 use crate::{
-    combat::{Lane, Team},
+    core::{Lane, Team},
     entities::{
         Barrack, BarracksMinionConfig, Minion, MinionRecord, MinionUpgradeConfig,
         TimedWaveBehaviorInfo, WaveBehavior,

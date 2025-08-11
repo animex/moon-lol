@@ -8,7 +8,7 @@ use bevy::{
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    combat::{Lane, Team},
+    core::{Lane, Team},
     entities::Barrack,
 };
 

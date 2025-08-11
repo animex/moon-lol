@@ -1,5 +1,5 @@
 // UI-related functionality
-use crate::combat::Health;
+use crate::core::Health;
 use crate::{system_debug, system_info};
 use bevy::{color::palettes, prelude::*};
 

@@ -1,12 +1,12 @@
 use crate::{
-    combat::{
+    config::Configs,
+    core::{
         Armor, Bounding, CommandMovementFollowPath, CommandMovementMoveTo, Damage, Health, Lane,
         Movement, Team,
     },
-    config::Configs,
     entities::Minion,
 };
-// use crate::render::WasRes;
+// use crate::core::WasRes;
 use bevy::{prelude::*, render::mesh::skinning::SkinnedMeshInverseBindposes};
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, time::Duration};
@@ -163,7 +163,7 @@ fn setup_barracks_state(mut commands: Commands, query: Query<(Entity, &Barrack),
 /// 核心系统：处理兵营的计时、升级和生成逻辑
 // fn barracks_spawning_system(
 //     mut commands: Commands,
-//     mut character_cache: ResMut<crate::render::CharacterResourceCache>,
+//     mut character_cache: ResMut<crate::core::CharacterResourceCache>,
 //     mut res_animation_clips: ResMut<Assets<AnimationClip>>,
 //     mut res_animation_graphs: ResMut<Assets<AnimationGraph>>,
 //     mut res_image: ResMut<Assets<Image>>,
@@ -279,7 +279,7 @@ fn setup_barracks_state(mut commands: Commands, query: Query<(Entity, &Barrack),
 //                     let final_move_speed = record.base_move_speed.unwrap()
 //                         + (barrack.move_speed_increase_increment * move_speed_upgrade_count) as f32;
 
-//                     let entity = crate::render::spawn_character_cached(
+//                     let entity = crate::core::spawn_character_cached(
 //                         &mut commands,
 //                         &mut character_cache,
 //                         &mut res_animation_clips,

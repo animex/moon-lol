@@ -1,5 +1,5 @@
-use crate::combat::{AttackState, MovementDestination, Target};
 use crate::config::Configs;
+use crate::core::{AttackState, MovementDestination, Target};
 use crate::league::{spawn_environment_objects_from_configs, spawn_geometry_objects_from_configs};
 
 use bevy::color::palettes;

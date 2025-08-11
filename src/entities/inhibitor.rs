@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::combat::{Obstacle, Team};
+use crate::core::{Obstacle, Team};
 
 #[derive(Component)]
 #[require(Transform, Team, Obstacle)]

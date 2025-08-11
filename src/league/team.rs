@@ -1,4 +1,4 @@
-use crate::combat::Team;
+use crate::core::Team;
 
 pub fn u32_to_team(value: u32) -> Team {
     match value {

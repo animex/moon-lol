@@ -1,4 +1,4 @@
-use crate::combat::Lane;
+use crate::core::Lane;
 
 pub fn u16_to_lane(value: u16) -> Lane {
     match value {

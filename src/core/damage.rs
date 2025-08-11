@@ -1,4 +1,4 @@
-use crate::combat::life::Health;
+use crate::core::life::Health;
 use crate::{system_debug, system_info, system_warn};
 use bevy::prelude::*;
 

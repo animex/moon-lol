@@ -1,4 +1,4 @@
-use crate::combat::{
+use crate::core::{
     Attack, AttackMachineState, AttackState, Bounding, CommandMovementMoveTo, CommandTargetRemove,
     CommandTargetSet, Dead, EventAttackAttack, EventMovementMoveEnd, Health, Navigator, Obstacle,
     Target, Team,

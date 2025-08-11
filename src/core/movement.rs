@@ -1,5 +1,5 @@
 use crate::{
-    combat::{navigation::Obstacle, Bounding},
+    core::{navigation::Obstacle, Bounding},
     system_debug,
 };
 use bevy::prelude::*;

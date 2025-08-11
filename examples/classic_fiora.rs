@@ -3,9 +3,7 @@ use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
 };
-use moon_lol::{
-    combat::PluginCombat, entities::PluginEntities, logging::PluginLogging, render::PluginRender,
-};
+use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
     App::new()
@@ -31,9 +29,8 @@ fn main() {
                     }),
                     ..default()
                 }),
-            PluginCombat,
+            PluginCore,
             PluginEntities,
-            PluginRender,
         ))
         .run();
 }
