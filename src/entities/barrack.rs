@@ -3,7 +3,7 @@ use crate::{
         Armor, Bounding, CommandMovementFollowPath, ConfigEnvironmentObject, Configs, Damage,
         Health, Lane, Movement, Team,
     },
-    entities::Minion,
+    entities::{CommandMinionContinuePath, Minion, MinionPath},
     league::spawn_environment_object,
 };
 use bevy::{prelude::*, render::mesh::skinning::SkinnedMeshInverseBindposes};
@@ -292,8 +292,15 @@ fn barracks_spawning_system(
                         &config_environment_object,
                     );
 
+                    let mut path = res_game_config.minion_paths.get(lane).unwrap().clone();
+
+                    if *team == Team::Chaos {
+                        path.reverse();
+                    }
+
                     commands.entity(entity).insert((
                         minion_config.minion_type,
+                        MinionPath(path),
                         health,
                         movement,
                         damage,
@@ -302,13 +309,7 @@ fn barracks_spawning_system(
                         team.clone(),
                     ));
 
-                    let mut path = res_game_config.minion_paths.get(lane).unwrap().clone();
-
-                    if *team == Team::Chaos {
-                        path.reverse();
-                    }
-
-                    commands.trigger_targets(CommandMovementFollowPath(path), entity);
+                    commands.trigger_targets(CommandMinionContinuePath, entity);
 
                     // 更新队列
                     current_spawn.count -= 1;

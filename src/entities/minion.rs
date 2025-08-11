@@ -1,7 +1,7 @@
 use crate::core::{
-    Attack, AttackMachineState, AttackState, Bounding, CommandMovementMoveTo, CommandTargetRemove,
-    CommandTargetSet, EventAttackAttack, EventDead, EventMovementMoveEnd, Health, Navigator,
-    Obstacle, Target, Team,
+    Attack, AttackMachineState, AttackState, Bounding, CommandMovementFollowPath,
+    CommandMovementMoveTo, CommandTargetRemove, CommandTargetSet, EventAttackAttack, EventDead,
+    EventMovementMoveEnd, Health, Navigator, Obstacle, Target, Team,
 };
 use bevy::{app::Plugin, prelude::*};
 use serde::{Deserialize, Serialize};
@@ -31,20 +31,15 @@ pub enum MinionState {
 pub struct MinionPath(pub Vec<Vec2>);
 
 #[derive(Event, Debug)]
+pub struct CommandMinionContinuePath;
+
+#[derive(Event, Debug)]
 pub struct EventMinionFoundTarget {
     pub target: Entity,
 }
 
 #[derive(Event, Debug)]
-pub struct ChasingTimeOut;
-
-#[derive(Event, Debug)]
-pub struct CommandMinionContinuePath;
-
-#[derive(Event, Debug)]
-pub struct SystemMoveByPath {
-    pub path: Vec<Vec2>,
-}
+pub struct EventMinionChasingTimeout;
 
 #[derive(Event, Debug)]
 pub struct ChasingTooMuch;
@@ -56,13 +51,11 @@ pub struct PluginMinion;
 impl Plugin for PluginMinion {
     fn build(&self, app: &mut bevy::prelude::App) {
         app.add_event::<EventMinionFoundTarget>();
-        app.add_event::<ChasingTimeOut>();
+        app.add_event::<EventMinionChasingTimeout>();
         app.add_event::<ChasingTooMuch>();
-        app.add_event::<SystemMoveByPath>();
         app.add_systems(FixedPostUpdate, minion_aggro);
         app.add_systems(FixedUpdate, on_spawn);
         app.add_observer(action_continue_minion_path);
-        app.add_observer(on_system_move_by_path);
         app.add_observer(on_found_aggro_target);
         app.add_observer(on_target_dead);
     }
@@ -130,19 +123,9 @@ pub fn action_continue_minion_path(
     };
 
     commands.trigger_targets(
-        SystemMoveByPath {
-            path: minion_path.0.clone(),
-        },
+        CommandMovementFollowPath(minion_path.0.clone()),
         trigger.target(),
     );
-}
-
-fn on_system_move_by_path(trigger: Trigger<SystemMoveByPath>, mut commands: Commands) {
-    // 由于移除了路径功能，这里需要外部系统来处理路径移动
-    // 可以设置路径的第一个点作为目标，或者由外部路径管理系统处理
-    if let Some(first_point) = trigger.path.first() {
-        commands.trigger_targets(CommandMovementMoveTo(*first_point), trigger.target());
-    }
 }
 
 fn get_is_in_attack_range_in_found_aggro_target(
