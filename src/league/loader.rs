@@ -1,22 +1,23 @@
 use crate::core::{
-    ConfigAnimationGraph, ConfigEnvironmentObject, ConfigGeometryObject, ConfigJoint, Configs,
-    Health,
-};
-use crate::league::{
-    find_and_load_image_for_submesh, static_conversion::parse_vertex_data, LayerTransitionBehavior,
-    LeagueMapGeo, LeagueTexture,
+    ConfigAnimationGraph, ConfigEnvironmentObject, ConfigGeometryObject, ConfigJoint,
+    ConfigSkinnedMeshInverseBindposes, Configs, Health,
 };
 use crate::league::{
     neg_mat_z, skinned_mesh_to_intermediate, submesh_to_intermediate, AnimationClipData,
-    AnimationGraphData, LeagueBinCharacterRecord, LeagueBinMaybeCharacterMapRecord,
+    AnimationGraphData, LeagueBinCharacterRecord, LeagueBinMaybeCharacterMapRecord, LeagueMaterial,
     LeagueMinionPath, LeagueSkeleton, LeagueSkinnedMesh, LeagueSkinnedMeshInternal,
     SkinCharacterDataProperties,
+};
+use crate::league::{
+    static_conversion::parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo, LeagueTexture,
 };
 use bevy::transform::components::Transform;
 use bevy::{image::TextureError, scene::ron, scene::ron::de::SpannedError};
 use binrw::BinWrite;
 use binrw::{args, binread, io::NoSeek, BinRead, Endian};
-use cdragon_prop::{BinEntry, BinHash, BinMap, BinStruct, PropError, PropFile};
+use cdragon_prop::{
+    BinEmbed, BinEntry, BinHash, BinList, BinMap, BinString, BinStruct, PropError, PropFile,
+};
 use serde::Serialize;
 use std::io::BufReader;
 #[cfg(unix)]
@@ -263,11 +264,9 @@ impl LeagueLoader {
                     &all_normals,
                     &all_uvs,
                 );
-                let material = find_and_load_image_for_submesh(
-                    &submesh.material_name.text,
-                    &self.materials_bin,
-                )
-                .unwrap();
+                let material = self
+                    .find_and_load_image_for_submesh(&submesh.material_name.text)
+                    .unwrap();
 
                 let mesh_path = format!("mapgeo/meshes/{}_{}.mesh", i, j);
                 let material_path = submesh.material_name.text.clone();
@@ -297,8 +296,8 @@ impl LeagueLoader {
             .materials_bin
             .entries
             .iter()
-            .filter(|v| v.ctype.hash == LeagueLoader::hash_bin("MapPlaceableContainer"))
-            .filter_map(|v| v.getv::<BinMap>(LeagueLoader::hash_bin("items").into()))
+            .filter(|v| v.ctype.hash == Self::hash_bin("MapPlaceableContainer"))
+            .filter_map(|v| v.getv::<BinMap>(Self::hash_bin("items").into()))
             .filter_map(|v| v.downcast::<BinHash, BinStruct>())
             .flatten()
         {
@@ -334,11 +333,8 @@ impl LeagueLoader {
             .materials_bin
             .entries
             .iter()
-            .filter(|v| v.ctype.hash == LeagueLoader::hash_bin("MapPlaceableContainer"))
-            .map(|v| {
-                v.getv::<BinMap>(LeagueLoader::hash_bin("items").into())
-                    .unwrap()
-            })
+            .filter(|v| v.ctype.hash == Self::hash_bin("MapPlaceableContainer"))
+            .map(|v| v.getv::<BinMap>(Self::hash_bin("items").into()).unwrap())
             .flat_map(|v| v.downcast::<BinHash, BinStruct>().unwrap())
             .filter(|v| v.1.ctype.hash == 0x3c995caf)
             .map(|v| LeagueMinionPath::from(&v.1))
@@ -354,6 +350,43 @@ impl LeagueLoader {
         Ok(configs)
     }
 
+    pub fn find_and_load_image_for_submesh(&self, material_name: &str) -> Option<LeagueMaterial> {
+        // 1. 根据材质名查找 texturePath
+        let binhash = LeagueLoader::hash_bin(material_name);
+
+        for entry in &self.materials_bin.entries {
+            if entry.path.hash == binhash {
+                let sampler_values =
+                    entry.getv::<BinList>(LeagueLoader::hash_bin("samplerValues").into())?;
+
+                // 2. 将列表转换为可迭代的 BinEmbed
+                let embedded_samplers = sampler_values.downcast::<BinEmbed>()?;
+
+                // 3. 遍历所有 sampler，查找第一个包含 "texturePath" 的
+                // `find_map` 会在找到第一个 Some(T) 后立即停止，比 filter_map + collect + first 更高效
+                let texture_path = embedded_samplers.into_iter().find_map(|sampler_item| {
+                    let texture_name = &sampler_item
+                        .getv::<BinString>(LeagueLoader::hash_bin("textureName").into())?
+                        .0;
+                    if !(texture_name == "DiffuseTexture" || texture_name == "Diffuse_Texture") {
+                        return None;
+                    }
+                    sampler_item
+                        .getv::<BinString>(LeagueLoader::hash_bin("texturePath").into())
+                        .map(|v| v.0.clone())
+                });
+
+                if let Some(texture_path) = texture_path {
+                    return Some(LeagueMaterial {
+                        texture_path: texture_path,
+                    });
+                }
+            }
+        }
+
+        None
+    }
+
     pub fn load_character_record(&self, character_record: &str) -> LeagueBinCharacterRecord {
         let name = character_record.split("/").nth(1).unwrap();
 
@@ -364,7 +397,7 @@ impl LeagueLoader {
         let character_record = character_bin
             .entries
             .iter()
-            .find(|v| v.path.hash == LeagueLoader::hash_bin(&character_record))
+            .find(|v| v.path.hash == Self::hash_bin(&character_record))
             .unwrap();
 
         let character_record = character_record.into();
@@ -382,6 +415,11 @@ impl LeagueLoader {
             .skin_mesh_properties
             .texture
             .clone();
+
+        let material = LeagueMaterial {
+            texture_path: texture_path.clone(),
+        };
+
         let skeleton_path = skin_character_data_properties
             .skin_mesh_properties
             .skeleton
@@ -423,20 +461,28 @@ impl LeagueLoader {
             })
             .collect::<Vec<_>>();
 
-        // 保存纹理和骨骼文件
-        self.save_wad_entry_to_file(&texture_path).await?;
-        self.save_wad_entry_to_file(&skeleton_path).await?;
-
         // 保存动画文件
         for clip_path in &clip_paths {
             self.save_wad_entry_to_file(clip_path).await?;
         }
 
+        let animation_graph = ConfigAnimationGraph { clip_paths };
+
+        let animation_graph_path = format!("ASSETS/{}/animation_graph.ron", skin);
+
+        save_struct_to_file(&animation_graph_path, &animation_graph).await?;
+
+        let material_path = format!("ASSETS/{}/material.ron", skin);
+        save_struct_to_file(&material_path, &material).await?;
+        // 保存纹理和骨骼文件
+        self.save_wad_entry_to_file(&texture_path).await?;
+        self.save_wad_entry_to_file(&skeleton_path).await?;
+
         let mut submesh_paths = Vec::new();
 
         for (i, range) in league_skinned_mesh.ranges.iter().enumerate() {
             let mesh = skinned_mesh_to_intermediate(&league_skinned_mesh, i).unwrap();
-            let mesh_path = format!("skin_meshes/{}.mesh", &range.name);
+            let mesh_path = format!("ASSETS/{}/meshes/{}.mesh", skin, &range.name);
 
             let mut file = get_asset_writer(&mesh_path).await?;
             let mut buffer = Vec::new();
@@ -448,22 +494,38 @@ impl LeagueLoader {
             submesh_paths.push(mesh_path);
         }
 
+        let inverse_bind_poses = league_skeleton
+            .modern_data
+            .influences
+            .iter()
+            .map(|&v| league_skeleton.modern_data.joints[v as usize].inverse_bind_transform)
+            .collect::<Vec<_>>();
+
+        let inverse_bind_pose_path = format!("ASSETS/{}/inverse_bind_pose.ron", skin);
+        save_struct_to_file(
+            &inverse_bind_pose_path,
+            &ConfigSkinnedMeshInverseBindposes {
+                inverse_bindposes: inverse_bind_poses,
+            },
+        )
+        .await?;
+
         Ok(ConfigEnvironmentObject {
-            texture_path,
+            material_path,
             submesh_paths,
             joint_influences_indices: league_skeleton.modern_data.influences,
+            inverse_bind_pose_path,
             joints: league_skeleton
                 .modern_data
                 .joints
                 .iter()
-                .map(|v| ConfigJoint {
-                    name: v.name.clone(),
-                    transform: Transform::from_matrix(v.local_transform),
-                    inverse_bind_pose: v.inverse_bind_transform,
-                    parent_index: v.parent_index,
+                .map(|joint| ConfigJoint {
+                    hash: Self::hash_joint(&joint.name),
+                    transform: Transform::from_matrix(joint.local_transform),
+                    parent_index: joint.parent_index,
                 })
                 .collect(),
-            animation_graph: ConfigAnimationGraph { clip_paths },
+            animation_graph_path,
         })
     }
 
@@ -478,7 +540,7 @@ impl LeagueLoader {
         let skin_mesh_properties = skin_bin
             .entries
             .iter()
-            .find(|v| v.ctype.hash == LeagueLoader::hash_bin("SkinCharacterDataProperties"))
+            .find(|v| v.ctype.hash == Self::hash_bin("SkinCharacterDataProperties"))
             .unwrap();
 
         let flat_map: HashMap<_, _> = skin_bin

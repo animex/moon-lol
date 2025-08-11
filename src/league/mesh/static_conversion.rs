@@ -57,11 +57,6 @@ pub fn submesh_to_intermediate(
         local_indices.push(local_index);
     }
 
-    // 修正三角形绕序（与原始代码保持一致）
-    for tri_indices in local_indices.chunks_exact_mut(3) {
-        tri_indices.swap(1, 2);
-    }
-
     // 创建中间mesh结构
     let mut intermediate_mesh = IntermediateMesh::new(submesh.material_name.text.clone());
 
@@ -126,8 +121,7 @@ pub fn parse_vertex_data(
                             let x = f32::from_le_bytes(element_data[0..4].try_into().unwrap());
                             let y = f32::from_le_bytes(element_data[4..8].try_into().unwrap());
                             let z = f32::from_le_bytes(element_data[8..12].try_into().unwrap());
-                            // Bevy 使用右手坐标系 (Y-up)，这里根据需要翻转Z轴
-                            all_positions.push([x, y, -z]);
+                            all_positions.push([x, y, z]);
                         }
                     }
                     ElementName::Normal => {
@@ -135,8 +129,7 @@ pub fn parse_vertex_data(
                             let x = f32::from_le_bytes(element_data[0..4].try_into().unwrap());
                             let y = f32::from_le_bytes(element_data[4..8].try_into().unwrap());
                             let z = f32::from_le_bytes(element_data[8..12].try_into().unwrap());
-                            // 同样翻转Z轴以匹配坐标系
-                            all_normals.push([x, y, -z]);
+                            all_normals.push([x, y, z]);
                         }
                     }
                     ElementName::Texcoord0 => {
@@ -146,7 +139,6 @@ pub fn parse_vertex_data(
                             all_uvs.push([u, v]);
                         }
                     }
-                    // 根据需要可以添加对其他元素（如颜色、骨骼权重等）的解析
                     _ => {}
                 }
                 offset += size;

@@ -4,7 +4,7 @@ use crate::{
         Barrack, BarracksMinionConfig, Minion, MinionUpgradeConfig, TimedWaveBehaviorInfo,
         WaveBehavior,
     },
-    league::{u16_to_lane, u32_option_to_team, LeagueLoader, LeagueLoaderError},
+    league::{neg_mat_z, u16_to_lane, u32_option_to_team, LeagueLoader, LeagueLoaderError},
 };
 use bevy::{math::Mat4, transform::components::Transform};
 use cdragon_prop::{
@@ -23,7 +23,7 @@ impl LeagueLoader {
             .unwrap();
 
         let mut transform = Mat4::from_cols_array_2d(&transform.0);
-        transform.w_axis.z = -transform.w_axis.z;
+        neg_mat_z(&mut transform);
 
         let definition = value
             .getv::<BinStruct>(LeagueLoader::hash_bin("definition").into())

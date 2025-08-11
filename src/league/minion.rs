@@ -1,6 +1,6 @@
 use crate::{core::Lane, league::LeagueLoader};
-use bevy::math::{Mat4, Vec2, Vec3};
-use cdragon_prop::{BinList, BinMatrix, BinString, BinStruct, BinVec2, BinVec3};
+use bevy::math::{Mat4, Vec2};
+use cdragon_prop::{BinList, BinMatrix, BinString, BinStruct, BinVec3};
 
 #[derive(Debug)]
 pub struct LeagueMinionPath {

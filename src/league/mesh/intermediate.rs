@@ -201,7 +201,14 @@ impl IntermediateMesh {
         );
 
         // 插入必需的位置属性
-        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, self.positions.clone());
+        bevy_mesh.insert_attribute(
+            Mesh::ATTRIBUTE_POSITION,
+            self.positions.clone(),
+            // self.positions
+            // .iter()
+            // .map(|v| [v[0], v[1], -v[2]])
+            // .collect::<Vec<_>>(),
+        );
 
         // 插入可选属性
         if let Some(ref normals) = self.normals {
@@ -232,8 +239,11 @@ impl IntermediateMesh {
             bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights.clone());
         }
 
+        let mut indices = self.indices.clone();
+        indices.reverse();
+
         // 插入索引
-        bevy_mesh.insert_indices(Indices::U16(self.indices.clone()));
+        bevy_mesh.insert_indices(Indices::U16(indices));
 
         bevy_mesh
     }

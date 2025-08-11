@@ -28,11 +28,12 @@ pub struct ConfigGeometryObject {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ConfigEnvironmentObject {
-    pub texture_path: String,
+    pub material_path: String,
     pub submesh_paths: Vec<String>,
     pub joint_influences_indices: Vec<i16>,
     pub joints: Vec<ConfigJoint>,
-    pub animation_graph: ConfigAnimationGraph,
+    pub animation_graph_path: String,
+    pub inverse_bind_pose_path: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -42,8 +43,12 @@ pub struct ConfigAnimationGraph {
 
 #[derive(Clone, Serialize, Deserialize)]
 pub struct ConfigJoint {
-    pub name: String,
+    pub hash: u32,
     pub transform: Transform,
-    pub inverse_bind_pose: Mat4,
     pub parent_index: i16,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+pub struct ConfigSkinnedMeshInverseBindposes {
+    pub inverse_bindposes: Vec<Mat4>,
 }

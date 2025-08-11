@@ -1,12 +1,11 @@
 use crate::{
     core::{
-        Armor, Bounding, CommandMovementFollowPath, ConfigEnvironmentObject, Configs, Damage,
+        spawn_environment_object, Armor, Bounding, ConfigEnvironmentObject, Configs, Damage,
         Health, Lane, Movement, Team,
     },
     entities::{CommandMinionContinuePath, Minion, MinionPath},
-    league::spawn_environment_object,
 };
-use bevy::{prelude::*, render::mesh::skinning::SkinnedMeshInverseBindposes};
+use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 use std::{collections::VecDeque, time::Duration};
 
@@ -175,9 +174,6 @@ fn barracks_spawning_system(
     inhibitor_state: Res<InhibitorState>,
     mut commands: Commands,
     mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState, &Team, &Lane)>,
-    mut res_animation_graphs: ResMut<Assets<AnimationGraph>>,
-    mut res_materials: ResMut<Assets<StandardMaterial>>,
-    mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
     res_game_config: Res<Configs>,
     time: Res<Time>,
 ) {
@@ -284,9 +280,6 @@ fn barracks_spawning_system(
 
                     let entity = spawn_environment_object(
                         &mut commands,
-                        &mut res_animation_graphs,
-                        &mut res_materials,
-                        &mut res_skinned_mesh_inverse_bindposes,
                         &asset_server,
                         transform.compute_transform(),
                         &config_environment_object,

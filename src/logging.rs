@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use chrono::Utc;
 use std::fs::File;
 use std::path::PathBuf;
 use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
@@ -14,9 +13,9 @@ pub struct PluginLogging;
 impl Plugin for PluginLogging {
     fn build(&self, app: &mut App) {
         // Create log file path
-        let temp_dir = std::env::temp_dir();
-        let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
-        let log_filename = format!("moon_lol_debug_{}.log", timestamp);
+        // let temp_dir = std::env::temp_dir();
+        // let timestamp = Utc::now().format("%Y%m%d_%H%M%S");
+        // let log_filename = format!("moon_lol_debug_{}.log", timestamp);
         // let log_path = temp_dir.join(log_filename);
         let log_path = "moon_lol.log".to_string().into();
 

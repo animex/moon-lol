@@ -8,7 +8,6 @@ use std::collections::HashMap;
 pub use compressed::*;
 pub use loader::*;
 pub use skeleton::*;
-use tracing::info;
 pub use uncompressed::*;
 
 use bevy::prelude::AnimatedField;

@@ -123,10 +123,10 @@ fn edge_scroll_camera(window: Query<&Window>, mut camera: Query<&mut Transform, 
 
                 transform.translation.x = transform.translation.x.clamp(0.0, MAP_WIDTH);
 
-                let min_y = transform.translation.z * CAMERA_OFFSET_Y / CAMERA_OFFSET_Z;
-                let max_y = MAP_HEIGHT + min_y;
+                let max_z = transform.translation.y * CAMERA_OFFSET_Z / CAMERA_OFFSET_Y;
+                let min_z = max_z - MAP_HEIGHT;
 
-                transform.translation.z = transform.translation.z.clamp(min_y, max_y);
+                transform.translation.z = transform.translation.z.clamp(min_z, max_z);
             }
         }
     }

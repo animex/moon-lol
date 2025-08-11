@@ -144,20 +144,3 @@ pub fn skinned_mesh_to_intermediate(
 
     Some(intermediate_mesh)
 }
-
-/// 从LeagueSkinnedMesh转换单个指定的submesh到中间结构
-pub fn skinned_mesh_submesh_to_intermediate(
-    skinned_mesh: &LeagueSkinnedMesh,
-    submesh_index: usize,
-    custom_name: Option<String>,
-) -> Option<IntermediateMesh> {
-    let mut intermediate = skinned_mesh_to_intermediate(skinned_mesh, submesh_index)?;
-
-    // 如果提供了自定义名称，使用它
-    if let Some(name) = custom_name {
-        intermediate.name = name.clone().into();
-        intermediate.set_material_info(Some(name));
-    }
-
-    Some(intermediate)
-}

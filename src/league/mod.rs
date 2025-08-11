@@ -13,7 +13,6 @@ mod texture;
 mod utils;
 
 pub use animation::*;
-pub use barrack::*;
 pub use character::*;
 pub use grid::*;
 pub use lane::*;
