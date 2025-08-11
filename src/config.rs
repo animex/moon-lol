@@ -23,7 +23,7 @@ pub struct Configs {
 #[derive(Serialize, Deserialize)]
 pub struct ConfigGeometryObject {
     pub mesh_path: String,
-    pub texture_path: String,
+    pub material_path: String,
 }
 
 #[derive(Serialize, Deserialize)]

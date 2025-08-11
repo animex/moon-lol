@@ -1,6 +1,6 @@
 use crate::combat::{AttackState, MovementDestination, Target};
 use crate::config::Configs;
-use crate::league::spawn_environment_objects_from_configs;
+use crate::league::{spawn_environment_objects_from_configs, spawn_geometry_objects_from_configs};
 
 use bevy::color::palettes;
 use bevy::prelude::*;
@@ -32,6 +32,8 @@ fn setup(
     mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
     asset_server: Res<AssetServer>,
 ) {
+    spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
+
     spawn_environment_objects_from_configs(
         &mut commands,
         &mut res_animation_graphs,

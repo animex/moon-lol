@@ -1,4 +1,4 @@
-use crate::config::{ConfigEnvironmentObject, Configs};
+use crate::config::{ConfigEnvironmentObject, ConfigGeometryObject, Configs};
 use crate::league::LeagueLoader;
 use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
@@ -496,44 +496,47 @@ pub fn spawn_environment_objects_from_configs(
     entities
 }
 
-/*
-使用示例：
+/// 从Config中的ConfigGeometryObject生成几何对象实体
+pub fn spawn_geometry_object(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    transform: Transform,
+    config_geo_object: &ConfigGeometryObject,
+) -> Entity {
+    // 加载纹理
+    let material_handle: Handle<StandardMaterial> =
+        asset_server.load(config_geo_object.material_path.clone());
 
-```rust
-use bevy::prelude::*;
-use moon_lol::config::Configs;
-use moon_lol::league::spawn_environment_objects_from_configs;
+    // 加载网格
+    let mesh_handle = asset_server.load(config_geo_object.mesh_path.clone());
 
-fn spawn_environment_system(
-    mut commands: Commands,
-    mut res_animation_graphs: ResMut<Assets<AnimationGraph>>,
-    mut res_materials: ResMut<Assets<StandardMaterial>>,
-    mut res_skinned_mesh_inverse_bindposes: ResMut<Assets<SkinnedMeshInverseBindposes>>,
-    asset_server: Res<AssetServer>,
-    configs: Res<Configs>,
-) {
-    // 批量加载所有环境对象
-    let _entities = spawn_environment_objects_from_configs(
-        &mut commands,
-        &mut res_animation_graphs,
-        &mut res_materials,
-        &mut res_skinned_mesh_inverse_bindposes,
-        &asset_server,
-        &configs,
-    );
-
-    // 或者单独加载一个环境对象
-    if let Some((transform, config_env_object)) = configs.environment_objects.first() {
-        let _entity = spawn_environment_object(
-            &mut commands,
-            &mut res_animation_graphs,
-            &mut res_materials,
-            &mut res_skinned_mesh_inverse_bindposes,
-            &asset_server,
-            *transform,
-            config_env_object,
-        );
-    }
+    // 创建几何对象实体
+    commands
+        .spawn((
+            transform,
+            Mesh3d(mesh_handle),
+            MeshMaterial3d(material_handle),
+        ))
+        .id()
 }
-```
-*/
+
+/// 从Configs批量生成所有几何对象
+pub fn spawn_geometry_objects_from_configs(
+    commands: &mut Commands,
+    asset_server: &Res<AssetServer>,
+    configs: &Configs,
+) -> Vec<Entity> {
+    let mut entities = Vec::new();
+
+    for config_geo_object in &configs.geometry_objects {
+        let entity = spawn_geometry_object(
+            commands,
+            asset_server,
+            Transform::default(), // 几何对象使用默认变换
+            config_geo_object,
+        );
+        entities.push(entity);
+    }
+
+    entities
+}

@@ -285,7 +285,7 @@ impl LeagueLoader {
 
                 configs.geometry_objects.push(ConfigGeometryObject {
                     mesh_path,
-                    texture_path: submesh.material_name.text.clone(),
+                    material_path: submesh.material_name.text.clone(),
                 });
             }
         }
