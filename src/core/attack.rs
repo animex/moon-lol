@@ -17,12 +17,15 @@ impl Plugin for PluginAttack {
         app.add_observer(on_command_attack_cast);
         app.add_observer(on_command_attack_reset);
         app.add_observer(on_command_attack_cancel);
-        app.add_systems(FixedUpdate, attack_state_machine_system);
+        app.add_systems(
+            FixedUpdate,
+            (attack_state_machine_system, check_target_validity_system),
+        );
     }
 }
 
 /// 攻击组件 - 包含攻击的基础属性
-#[derive(Component)]
+#[derive(Component, Clone)]
 #[require(AttackState)]
 pub struct Attack {
     pub range: f32,
@@ -77,7 +80,8 @@ impl Attack {
         if self.windup_modifier == 1.0 {
             base_windup
         } else {
-            base_windup + self.windup_modifier * (total_time * self.windup_percent() - base_windup)
+            // 修复：直接对前摇时间应用修正系数
+            base_windup * self.windup_modifier
         }
     }
 
@@ -226,9 +230,15 @@ fn on_command_attack_cast(
                 commands.trigger_targets(EventAttackCast { target: target.0 }, entity);
             }
             AttackStatus::Windup {
-                target: _current_target,
+                target: current_target,
             } => {
-                // 前摇状态：检查是否可以取消
+                // 前摇状态：检查目标是否相同
+                if *current_target == target.0 {
+                    // 攻击同一个目标，不做任何改变
+                    return;
+                }
+
+                // 不同目标：检查是否可以取消
                 let windup_time = attack.windup_time();
                 if attack_state.can_cancel(current_time, windup_time) {
                     // 可以取消：立即切换到新目标
@@ -340,6 +350,24 @@ fn attack_state_machine_system(
             }
 
             AttackStatus::Idle => {}
+        }
+    }
+}
+
+/// 检查目标有效性的系统
+/// 如果攻击者正在攻击的目标不存在，则取消攻击
+fn check_target_validity_system(
+    mut commands: Commands,
+    query: Query<(Entity, &AttackState)>,
+    entities: Query<Entity>,
+) {
+    for (attacker, attack_state) in query.iter() {
+        if let Some(target) = attack_state.current_target() {
+            // 检查目标实体是否仍然存在
+            if entities.get(target).is_err() {
+                // 目标不存在，取消攻击
+                commands.trigger_targets(CommandAttackCancel, attacker);
+            }
         }
     }
 }
@@ -882,11 +910,12 @@ mod tests {
         // 移除目标（模拟死亡）
         app.world_mut().entity_mut(target_entity).despawn();
 
-        // 更新系统
-        app.update();
+        // 手动运行FixedUpdate调度来触发目标有效性检查
+        app.world_mut().run_schedule(FixedUpdate);
 
-        // 验证攻击被取消（这里需要额外的系统来处理目标失效，暂时跳过）
-        // 在实际实现中，应该有一个系统检测目标失效并发送CommandAttackCancel
+        // 验证攻击被取消（现在有了check_target_validity_system）
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_idle(), "目标失效后攻击应该被取消");
     }
 
     /// 目标 11：目标在攻击前摇期间移出攻击范围
@@ -950,7 +979,7 @@ mod tests {
     /// 目标 14：验证windup_modifier的效果
     #[test]
     fn test_windup_modifier_effect() {
-        // 使用Modern模式来测试修正系数，因为Legacy模式的前摇时间固定
+        // 测试基础情况（无修正）
         let base_attack = Attack {
             base_attack_speed: 1.0,
             windup_config: WindupConfig::Modern {
@@ -962,87 +991,66 @@ mod tests {
         };
 
         let base_windup = base_attack.windup_time();
-        assert_eq!(base_windup, 0.3);
+        // 使用容差比较浮点数
+        assert!((base_windup - 0.3).abs() < 1e-6, "基础前摇时间应该是0.3");
 
-        // 测试缩短前摇
+        // 测试缩短前摇（修正后的逻辑：直接乘以修正系数）
         let fast_attack = Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.3,
-                attack_total_time: 1.0,
-            },
-            windup_modifier: 0.5, // 缩短前摇
-            ..Default::default()
+            windup_modifier: 0.5, // 缩短50%前摇
+            ..base_attack.clone()
         };
         let fast_windup = fast_attack.windup_time();
-
-        // 手动计算期望值来验证逻辑
-        // base_windup = 0.3, windup_percent = 0.3, total_time = 1.0
-        // 修正后 = 0.3 + 0.5 * (1.0 * 0.3 - 0.3) = 0.3 + 0.5 * 0 = 0.3
-        // 所以windup_modifier = 0.5时，前摇时间不会改变
-        assert_eq!(
-            fast_windup, 0.3,
-            "windup_modifier = 0.5时，前摇时间应该保持不变"
+        let expected_fast = 0.3 * 0.5; // 0.15
+        assert!(
+            (fast_windup - expected_fast).abs() < 1e-6,
+            "修正系数0.5时，前摇时间应该是{}, 实际是{}",
+            expected_fast,
+            fast_windup
         );
 
         // 测试延长前摇
         let slow_attack = Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.3,
-                attack_total_time: 1.0,
-            },
-            windup_modifier: 1.5, // 延长前摇
-            ..Default::default()
+            windup_modifier: 1.5, // 延长50%前摇
+            ..base_attack.clone()
         };
         let slow_windup = slow_attack.windup_time();
-
-        // 手动计算期望值
-        // 修正后 = 0.3 + 1.5 * (1.0 * 0.3 - 0.3) = 0.3 + 1.5 * 0 = 0.3
-        // 所以windup_modifier = 1.5时，前摇时间也不会改变
-        assert_eq!(
-            slow_windup, 0.3,
-            "windup_modifier = 1.5时，前摇时间应该保持不变"
+        let expected_slow = 0.3 * 1.5; // 0.45
+        assert!(
+            (slow_windup - expected_slow).abs() < 1e-6,
+            "修正系数1.5时，前摇时间应该是{}, 实际是{}",
+            expected_slow,
+            slow_windup
         );
 
-        // 测试一个真正会改变前摇时间的配置
-        let extreme_attack = Attack {
+        // 测试Legacy模式下的修正系数
+        let legacy_attack = Attack {
             base_attack_speed: 1.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.2, // 20%前摇比例
-                attack_total_time: 1.0,
-            },
-            windup_modifier: 0.5, // 缩短前摇
+            windup_config: WindupConfig::Legacy { attack_offset: 0.1 },
+            windup_modifier: 0.8,
             ..Default::default()
         };
-        let _extreme_windup = extreme_attack.windup_time();
+        let legacy_windup = legacy_attack.windup_time();
+        let expected_legacy = (0.3 + 0.1) * 0.8; // 0.32
+        assert!(
+            (legacy_windup - expected_legacy).abs() < 1e-6,
+            "Legacy模式修正系数0.8时，前摇时间应该是{}, 实际是{}",
+            expected_legacy,
+            legacy_windup
+        );
 
-        // 手动计算期望值
-        // base_windup = 0.2, windup_percent = 0.2, total_time = 1.0
-        // 修正后 = 0.2 + 0.5 * (1.0 * 0.2 - 0.2) = 0.2 + 0.5 * 0 = 0.2
-        // 这个配置也不会改变前摇时间
-
-        // 让我们测试一个真正有效的配置
-        let effective_attack = Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.4, // 40%前摇比例
-                attack_total_time: 1.0,
-            },
-            windup_modifier: 0.5, // 缩短前摇
-            ..Default::default()
+        // 测试极端修正系数
+        let extreme_fast = Attack {
+            windup_modifier: 0.1, // 极快前摇
+            ..base_attack.clone()
         };
-        let _effective_windup = effective_attack.windup_time();
-
-        // 手动计算期望值
-        // base_windup = 0.4, windup_percent = 0.4, total_time = 1.0
-        // 修正后 = 0.4 + 0.5 * (1.0 * 0.4 - 0.4) = 0.4 + 0.5 * 0 = 0.4
-        // 这个配置也不会改变前摇时间
-
-        // 看起来当前的修正系数逻辑有问题，让我们直接测试基础功能
-        assert_eq!(base_windup, 0.3, "基础前摇时间应该是0.3");
-        assert_eq!(fast_windup, 0.3, "修正系数0.5的前摇时间应该是0.3");
-        assert_eq!(slow_windup, 0.3, "修正系数1.5的前摇时间应该是0.3");
+        let extreme_fast_windup = extreme_fast.windup_time();
+        let expected_extreme_fast = 0.3 * 0.1; // 0.03
+        assert!(
+            (extreme_fast_windup - expected_extreme_fast).abs() < 1e-6,
+            "极端修正系数0.1时，前摇时间应该是{}, 实际是{}",
+            expected_extreme_fast,
+            extreme_fast_windup
+        );
     }
 
     // ===== 辅助测试函数 =====
@@ -1357,5 +1365,224 @@ mod tests {
             Some(target_b),
             "下一次攻击的目标应该是B"
         );
+    }
+
+    // ===== 七、边缘和异常情况测试 (Edge Cases & Exception Handling) =====
+
+    /// 测试后摇期间发送取消命令
+    #[test]
+    fn test_cancel_attack_during_cooldown() {
+        let mut app = create_test_app();
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let attacker = app
+            .world_mut()
+            .spawn((
+                Attack {
+                    base_attack_speed: 1.0,
+                    windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
+                    ..Default::default()
+                },
+                AttackState::default(),
+                crate::core::Target(target_entity),
+            ))
+            .id();
+
+        // 开始攻击并完成前摇
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+        advance_time(&mut app, 0.3); // 完成前摇
+
+        // 验证进入后摇状态
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_cooldown());
+
+        // 在后摇期间发送取消命令
+        app.world_mut()
+            .trigger_targets(CommandAttackCancel, attacker);
+        app.update();
+
+        // 验证攻击被取消，回到空闲状态
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_idle(), "后摇期间应该可以取消攻击");
+
+        // 验证可以立即开始新攻击
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup(), "取消后应该能立即开始新攻击");
+    }
+
+    /// 测试空闲状态下发送取消或重置命令
+    #[test]
+    fn test_cancel_and_reset_in_idle_state() {
+        let mut app = create_test_app();
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let attacker = app
+            .world_mut()
+            .spawn((
+                Attack::default(),
+                AttackState::default(),
+                crate::core::Target(target_entity),
+            ))
+            .id();
+
+        // 验证初始状态为空闲
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_idle());
+
+        // 在空闲状态下发送取消命令
+        app.world_mut()
+            .trigger_targets(CommandAttackCancel, attacker);
+        app.update();
+
+        // 验证仍然保持空闲状态
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_idle(), "空闲状态下取消命令不应改变状态");
+
+        // 在空闲状态下发送重置命令
+        app.world_mut()
+            .trigger_targets(CommandAttackReset, attacker);
+        app.update();
+
+        // 验证仍然保持空闲状态
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_idle(), "空闲状态下重置命令不应改变状态");
+    }
+
+    /// 测试连续发送攻击命令
+    #[test]
+    fn test_consecutive_attack_commands() {
+        let mut app = create_test_app();
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let attacker = app
+            .world_mut()
+            .spawn((
+                Attack {
+                    base_attack_speed: 1.0,
+                    windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
+                    ..Default::default()
+                },
+                AttackState::default(),
+                crate::core::Target(target_entity),
+            ))
+            .id();
+
+        // 发送第一个攻击命令
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup());
+        let first_cast_time = attack_state.cast_time;
+
+        // 立即发送第二个攻击命令（攻击同一目标）
+        advance_time(&mut app, 0.1);
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        // 验证攻击继续，而不是重新开始（因为目标相同）
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup());
+        assert_eq!(
+            attack_state.cast_time, first_cast_time,
+            "攻击同一目标时不应该重新开始，cast_time应该保持不变"
+        );
+
+        // 推进到不可取消期
+        advance_time(&mut app, 0.15);
+        // 还剩 0.05 秒攻击生效
+
+        // 发送第三个攻击命令（攻击同一目标，在不可取消期）
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        let before_third_command = attack_state.cast_time;
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        // 验证命令被忽略，攻击继续
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup());
+        assert_eq!(
+            attack_state.cast_time, before_third_command,
+            "攻击同一目标时，即使在不可取消期，命令也应该被忽略"
+        );
+    }
+
+    /// 测试后摇期间发送新的攻击命令
+    #[test]
+    fn test_attack_command_during_cooldown() {
+        let mut app = create_test_app();
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let attacker = app
+            .world_mut()
+            .spawn((
+                Attack {
+                    base_attack_speed: 1.0,
+                    windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
+                    ..Default::default()
+                },
+                AttackState::default(),
+                crate::core::Target(target_entity),
+            ))
+            .id();
+
+        // 完成前摇，进入后摇
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+        advance_time(&mut app, 0.3);
+
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_cooldown());
+        let cooldown_cast_time = attack_state.cast_time;
+
+        // 在后摇期间发送攻击命令
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        // 验证命令被忽略，后摇继续
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_cooldown(), "后摇期间的攻击命令应该被忽略");
+        assert_eq!(
+            attack_state.cast_time, cooldown_cast_time,
+            "后摇时间不应该被重置"
+        );
+
+        // 等待后摇结束
+        advance_time(&mut app, 0.7);
+
+        // 验证自动开始下一次攻击
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup(), "后摇结束后应该自动开始下一次攻击");
+    }
+
+    // ===== 八、浮点数精度测试 (Floating Point Precision Tests) =====
+
+    /// 使用容差比较的浮点数测试
+    #[test]
+    fn test_floating_point_precision() {
+        let attack = Attack {
+            base_attack_speed: 0.625,
+            bonus_attack_speed: 0.6, // 60%额外攻击速度
+            windup_config: WindupConfig::Modern {
+                attack_cast_time: 0.25,
+                attack_total_time: 1.0,
+            },
+            ..Default::default()
+        };
+
+        // 计算期望值
+        let expected_speed = 0.625 * (1.0 + 0.6); // 1.0
+        let expected_interval = 1.0 / expected_speed; // 1.0
+        let expected_windup = 0.25 / 1.0 * expected_interval; // 0.25
+
+        // 使用容差比较
+        const EPSILON: f32 = 1e-6;
+        assert!((attack.current_attack_speed() - expected_speed).abs() < EPSILON);
+        assert!((attack.attack_interval() - expected_interval).abs() < EPSILON);
+        assert!((attack.windup_time() - expected_windup).abs() < EPSILON);
     }
 }
