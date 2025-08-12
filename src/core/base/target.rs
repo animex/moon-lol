@@ -15,6 +15,8 @@ pub struct PluginTarget;
 
 impl Plugin for PluginTarget {
     fn build(&self, app: &mut App) {
+        app.add_event::<CommandTargetSet>();
+        app.add_event::<CommandTargetRemove>();
         app.add_observer(command_set_target);
         app.add_observer(command_remove_target);
     }
