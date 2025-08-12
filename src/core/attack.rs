@@ -219,9 +219,11 @@ fn on_command_attack_cast(
         if attack_state.is_idle() {
             attack_state.status = AttackStatus::Windup {
                 target: target.0,
-                can_cancel: true,
+                can_cancel: false, // 初始时不可取消
             };
             timer.phase_start_time = time.elapsed_secs();
+            timer.uncancellable_windup = true;
+            timer.uncancellable_remaining = UNCANCELLABLE_GRACE_PERIOD;
             commands.trigger_targets(EventAttackWindupStart { target: target.0 }, entity);
         }
     }
@@ -249,9 +251,11 @@ fn on_command_attack_reset(
                 info!("Attack reset during cooldown - skipping to next attack");
                 attack_state.status = AttackStatus::Windup {
                     target: *target,
-                    can_cancel: true,
+                    can_cancel: false, // 重置后的攻击也有不可取消期
                 };
                 timer.phase_start_time = time.elapsed_secs();
+                timer.uncancellable_windup = true;
+                timer.uncancellable_remaining = UNCANCELLABLE_GRACE_PERIOD;
                 commands.trigger_targets(EventAttackReset, entity);
             }
             _ => {
@@ -357,7 +361,7 @@ fn attack_state_machine_system(
 
 #[cfg(test)]
 mod tests {
-    use crate::core::{CommandCommandAttack, PluginCommand, PluginTarget};
+    use crate::core::{PluginCommand, PluginTarget};
 
     use super::*;
 
@@ -460,13 +464,13 @@ mod tests {
             })
             .id();
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 第一次攻击命令
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 验证进入前摇状态
@@ -475,12 +479,7 @@ mod tests {
         assert_eq!(attack_state.current_target(), Some(target_entity));
 
         // 对同一目标发起第二次攻击命令 - 应该被忽略
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 状态应该保持不变
@@ -504,18 +503,24 @@ mod tests {
             })
             .id();
 
-        // 攻击第一个目标
+        // 设置初始目标
         app.world_mut()
-            .trigger_targets(CommandCommandAttack { target: target1 }, attacker);
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target1));
+
+        // 攻击第一个目标
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         let attack_state = app.world().get::<AttackState>(attacker).unwrap();
         assert!(attack_state.is_windup());
         assert_eq!(attack_state.current_target(), Some(target1));
 
-        // 尝试攻击不同目标 - 在前摇期间应该被忽略
+        // 更改目标并尝试攻击不同目标 - 在前摇期间应该被忽略
         app.world_mut()
-            .trigger_targets(CommandCommandAttack { target: target2 }, attacker);
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target2));
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 目标应该保持为第一个目标
@@ -525,7 +530,7 @@ mod tests {
     }
 
     #[test]
-    fn test_attack_cancel_during_windup_early() {
+    fn test_attack_cancel_during_uncancellable_period() {
         let mut app = create_test_app();
 
         let target_entity = app.world_mut().spawn_empty().id();
@@ -538,26 +543,71 @@ mod tests {
             })
             .id();
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 开始攻击
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
-        // 验证进入前摇状态
+        // 验证进入前摇状态，初始时不可取消
         let attack_state = app.world().get::<AttackState>(attacker).unwrap();
         assert!(attack_state.is_windup());
+        if let AttackStatus::Windup { can_cancel, .. } = &attack_state.status {
+            assert!(!*can_cancel, "攻击在不可取消期内应该不能取消");
+        }
 
-        // 在前摇早期尝试取消 (0.1秒后，远早于2帧宽限期)
-        advance_time(&mut app, 0.1);
+        // 在不可取消期内尝试取消 (0.03秒后，仍在2帧宽限期内)
+        advance_time(&mut app, 0.03);
 
-        // 验证仍然可以取消
+        // 验证仍然不可取消
         let attack_state = app.world().get::<AttackState>(attacker).unwrap();
         if let AttackStatus::Windup { can_cancel, .. } = &attack_state.status {
-            assert!(*can_cancel, "攻击在前摇早期应该可以取消");
+            assert!(!*can_cancel, "攻击在不可取消期内应该不能取消");
+        }
+
+        // 发送取消命令 - 应该被忽略
+        app.world_mut()
+            .trigger_targets(CommandAttackCancel, attacker);
+        app.update();
+
+        // 验证攻击没有被取消
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        assert!(attack_state.is_windup(), "不可取消期内的攻击不应该被取消");
+    }
+
+    #[test]
+    fn test_attack_cancel_after_uncancellable_period() {
+        let mut app = create_test_app();
+
+        let target_entity = app.world_mut().spawn_empty().id();
+        let attacker = app
+            .world_mut()
+            .spawn(Attack {
+                base_attack_speed: 1.0,
+                windup_config: WindupConfig::Legacy { attack_offset: 0.0 }, // 0.3秒前摇
+                ..Default::default()
+            })
+            .id();
+
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
+        // 开始攻击
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
+        app.update();
+
+        // 等待不可取消期结束 (0.1秒后，超过2帧宽限期)
+        advance_time(&mut app, 0.1);
+
+        // 验证现在可以取消
+        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
+        if let AttackStatus::Windup { can_cancel, .. } = &attack_state.status {
+            assert!(*can_cancel, "攻击在不可取消期后应该可以取消");
         }
 
         // 发送取消命令
@@ -567,57 +617,7 @@ mod tests {
 
         // 验证攻击被取消
         let attack_state = app.world().get::<AttackState>(attacker).unwrap();
-        assert!(attack_state.is_idle());
-    }
-
-    #[test]
-    fn test_attack_cancel_logic() {
-        // 这个测试验证取消逻辑的核心功能
-        let mut app = create_test_app();
-
-        let target_entity = app.world_mut().spawn_empty().id();
-        let attacker = app
-            .world_mut()
-            .spawn(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
-            .id();
-
-        // 测试可取消的攻击
-        {
-            let mut attack_state = app.world_mut().get_mut::<AttackState>(attacker).unwrap();
-            attack_state.status = AttackStatus::Windup {
-                target: target_entity,
-                can_cancel: true,
-            };
-        }
-
-        // 验证可以取消
-        app.world_mut()
-            .trigger_targets(CommandAttackCancel, attacker);
-        app.world_mut().flush();
-
-        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
-        assert!(attack_state.is_idle(), "可取消的攻击应该被取消");
-
-        // 测试不可取消的攻击
-        {
-            let mut attack_state = app.world_mut().get_mut::<AttackState>(attacker).unwrap();
-            attack_state.status = AttackStatus::Windup {
-                target: target_entity,
-                can_cancel: false,
-            };
-        }
-
-        // 验证不能取消
-        app.world_mut()
-            .trigger_targets(CommandAttackCancel, attacker);
-        app.world_mut().flush();
-
-        let attack_state = app.world().get::<AttackState>(attacker).unwrap();
-        assert!(attack_state.is_windup(), "不可取消的攻击不应该被取消");
+        assert!(attack_state.is_idle(), "可取消期内的攻击应该被取消");
     }
 
     #[test]
@@ -635,13 +635,13 @@ mod tests {
             })
             .id();
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 开始攻击
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 记录初始前摇时间
@@ -701,12 +701,7 @@ mod tests {
         }
 
         // 开始攻击
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 验证前摇状态
@@ -748,13 +743,13 @@ mod tests {
             })
             .id();
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 完成一次攻击到后摇阶段
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
         advance_time(&mut app, 0.3); // 完成前摇
 
@@ -786,13 +781,13 @@ mod tests {
             })
             .id();
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 开始攻击
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         let attack_state = app.world().get::<AttackState>(attacker).unwrap();
@@ -832,13 +827,13 @@ mod tests {
         // 后摇时间应该是: 0.5 - 0.125 = 0.375秒
         assert_eq!(attack.cooldown_time(), 0.375);
 
+        // 确保attacker有Target组件
+        app.world_mut()
+            .entity_mut(attacker)
+            .insert(crate::core::Target(target_entity));
+
         // 测试完整攻击周期
-        app.world_mut().trigger_targets(
-            CommandCommandAttack {
-                target: target_entity,
-            },
-            attacker,
-        );
+        app.world_mut().trigger_targets(CommandAttackCast, attacker);
         app.update();
 
         // 前摇阶段
