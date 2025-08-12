@@ -30,15 +30,15 @@ impl Plugin for PluginAttack {
 #[require(AttackState, AttackTimer)]
 pub struct Attack {
     pub range: f32,
-    /// 基础攻击速度 (attacks per second at level 1)
+    /// 基础攻击速度 (1级时的每秒攻击次数)
     pub base_attack_speed: f32,
-    /// 额外攻击速度加成 (bonus attack speed from items/runes)
+    /// 额外攻击速度加成 (来自装备/符文的攻击速度)
     pub bonus_attack_speed: f32,
-    /// 攻击速度上限 (default 2.5)
+    /// 攻击速度上限 (默认 2.5)
     pub attack_speed_cap: f32,
     /// 前摇时间配置
     pub windup_config: WindupConfig,
-    /// 前摇修正系数 (default 1.0, can be modified by abilities)
+    /// 前摇修正系数 (默认 1.0，可以被技能修改)
     pub windup_modifier: f32,
 }
 
@@ -49,7 +49,7 @@ impl Default for Attack {
             base_attack_speed: 0.625,
             bonus_attack_speed: 0.0,
             attack_speed_cap: 2.5,
-            windup_config: WindupConfig::Percent(0.25),
+            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
             windup_modifier: 1.0,
         }
     }
@@ -70,8 +70,6 @@ impl Attack {
     pub fn windup_time(&self) -> f32 {
         let total_time = self.attack_interval();
         let base_windup = match self.windup_config {
-            WindupConfig::Fixed(time) => time,
-            WindupConfig::Percent(percent) => total_time * percent,
             WindupConfig::Legacy { attack_offset } => 0.3 + attack_offset,
             WindupConfig::Modern {
                 attack_cast_time,
@@ -79,7 +77,7 @@ impl Attack {
             } => attack_cast_time / attack_total_time * total_time,
         };
 
-        // Apply windup modifier
+        // 应用前摇修正系数
         if self.windup_modifier == 1.0 {
             base_windup
         } else {
@@ -94,8 +92,6 @@ impl Attack {
 
     fn windup_percent(&self) -> f32 {
         match self.windup_config {
-            WindupConfig::Fixed(_) => 0.25, // fallback
-            WindupConfig::Percent(percent) => percent,
             WindupConfig::Legacy { .. } => 0.3,
             WindupConfig::Modern {
                 attack_cast_time,
@@ -108,10 +104,6 @@ impl Attack {
 /// 前摇时间配置方式
 #[derive(Component, Clone, Debug)]
 pub enum WindupConfig {
-    /// 固定前摇时间 (秒)
-    Fixed(f32),
-    /// 前摇时间占总攻击时间的百分比
-    Percent(f32),
     /// 老英雄公式: 0.3 + attackOffset
     Legacy { attack_offset: f32 },
     /// 新英雄公式: attackCastTime / attackTotalTime
@@ -128,7 +120,7 @@ pub struct AttackTimer {
     pub phase_start_time: f32,
     /// 前摇是否不可取消 (uncancellable)
     pub uncancellable_windup: bool,
-    /// 不可取消的剩余时间 (2 game ticks = 0.066s grace period)
+    /// 不可取消的剩余时间 (2 游戏帧 = 0.066秒宽限期)
     pub uncancellable_remaining: f32,
 }
 
@@ -175,7 +167,7 @@ impl AttackState {
     }
 }
 
-// Events
+// 事件定义
 #[derive(Event, Debug)]
 pub struct CommandAttackCast;
 
@@ -209,11 +201,11 @@ pub struct EventAttackReset;
 #[derive(Event, Debug)]
 pub struct EventAttackCancel;
 
-// Constants
-const GAME_TICK_DURATION: f32 = 0.033; // 30 FPS game ticks
-const UNCANCELLABLE_GRACE_PERIOD: f32 = 2.0 * GAME_TICK_DURATION; // 0.066 seconds
+// 常量定义
+const GAME_TICK_DURATION: f32 = 0.033; // 30 FPS 游戏帧
+const UNCANCELLABLE_GRACE_PERIOD: f32 = 2.0 * GAME_TICK_DURATION; // 0.066 秒
 
-// Observer functions
+// 观察者函数
 fn on_command_attack_cast(
     trigger: Trigger<CommandAttackCast>,
     mut commands: Commands,
@@ -296,7 +288,7 @@ fn on_command_attack_cancel(
     }
 }
 
-// Systems
+// 系统函数
 fn attack_timer_system(mut query: Query<(&mut AttackTimer, &Attack)>, time: Res<Time<Fixed>>) {
     for (mut timer, _attack) in query.iter_mut() {
         // 更新不可取消的剩余时间
@@ -373,32 +365,32 @@ mod tests {
     fn test_attack_speed_calculations() {
         let attack = Attack {
             base_attack_speed: 0.625,
-            bonus_attack_speed: 1.0, // 100% bonus AS
+            bonus_attack_speed: 1.0, // 100% 额外攻击速度
             attack_speed_cap: 2.5,
-            windup_config: WindupConfig::Percent(0.25),
+            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
             ..Default::default()
         };
 
-        // 0.625 * (1 + 1.0) = 1.25 attacks per second
+        // 0.625 * (1 + 1.0) = 1.25 每秒攻击次数
         assert_eq!(attack.current_attack_speed(), 1.25);
-        // 1 / 1.25 = 0.8 seconds per attack
+        // 1 / 1.25 = 0.8 秒每次攻击
         assert_eq!(attack.attack_interval(), 0.8);
-        // 0.8 * 0.25 = 0.2 seconds windup
-        assert_eq!(attack.windup_time(), 0.2);
-        // 0.8 - 0.2 = 0.6 seconds cooldown
-        assert_eq!(attack.cooldown_time(), 0.6);
+        // 0.3 + 0.0 = 0.3 秒前摇
+        assert_eq!(attack.windup_time(), 0.3);
+        // 0.8 - 0.3 = 0.5 秒后摇
+        assert_eq!(attack.cooldown_time(), 0.5);
     }
 
     #[test]
     fn test_attack_speed_cap() {
         let attack = Attack {
             base_attack_speed: 0.625,
-            bonus_attack_speed: 10.0, // 1000% bonus AS (way over cap)
+            bonus_attack_speed: 10.0, // 1000% 额外攻击速度 (远超上限)
             attack_speed_cap: 2.5,
             ..Default::default()
         };
 
-        // Should be capped at 2.5
+        // 应该被限制在 2.5
         assert_eq!(attack.current_attack_speed(), 2.5);
     }
 
@@ -410,14 +402,14 @@ mod tests {
             ..Default::default()
         };
 
-        // Legacy formula: 0.3 + attack_offset = 0.3 + 0.1 = 0.4
+        // 老英雄公式: 0.3 + attack_offset = 0.3 + 0.1 = 0.4
         assert_eq!(attack.windup_time(), 0.4);
     }
 
     #[test]
     fn test_windup_config_modern() {
         let attack = Attack {
-            base_attack_speed: 1.0, // 1 second attack interval
+            base_attack_speed: 1.0, // 1 秒攻击间隔
             windup_config: WindupConfig::Modern {
                 attack_cast_time: 0.25,
                 attack_total_time: 1.0,
@@ -425,7 +417,7 @@ mod tests {
             ..Default::default()
         };
 
-        // Modern formula: (0.25 / 1.0) * 1.0 = 0.25
+        // 新英雄公式: (0.25 / 1.0) * 1.0 = 0.25
         assert_eq!(attack.windup_time(), 0.25);
     }
 
@@ -442,31 +434,31 @@ mod tests {
             .world_mut()
             .spawn((
                 Attack {
-                    windup_config: WindupConfig::Fixed(0.1), // 0.1s windup
-                    base_attack_speed: 1.0,                  // 1 attack per second
+                    windup_config: WindupConfig::Legacy { attack_offset: 0.1 }, // 0.1秒前摇
+                    base_attack_speed: 1.0,                                     // 每秒1次攻击
                     ..Default::default()
                 },
                 Target(target_entity),
             ))
             .id();
 
-        // Start in idle state
+        // 开始时处于空闲状态
         {
             let attack_state = app.world().get::<AttackState>(attacker).unwrap();
             assert!(attack_state.is_idle());
         }
 
-        // Start attack target
+        // 开始攻击目标
         app.world_mut().trigger_targets(CommandAttackCast, attacker);
 
-        // Process observers and systems
+        // 处理观察者和系统
         app.update();
 
-        // Should be windup after the observer processes the command
+        // 观察者处理命令后应该处于前摇状态
         {
             let attack_state = app.world().get::<AttackState>(attacker).unwrap();
-            // Note: This test verifies the observer works, full state machine testing
-            // would require more complex setup with proper time simulation
+            // 注意: 这个测试验证观察者是否工作，完整的状态机测试
+            // 需要更复杂的设置和适当的时间模拟
             assert!(attack_state.is_windup());
         }
     }
@@ -474,12 +466,15 @@ mod tests {
     #[test]
     fn test_uncancellable_grace_period() {
         let attack = Attack {
-            windup_config: WindupConfig::Fixed(0.05), // 0.05s windup (less than grace period)
+            windup_config: WindupConfig::Modern {
+                attack_cast_time: 0.05,
+                attack_total_time: 0.95,
+            }, // 0.05秒前摇 (少于宽限期)
             base_attack_speed: 1.0,
             ..Default::default()
         };
 
-        // Windup time is less than grace period, so entire windup should be uncancellable
+        // 前摇时间少于宽限期，所以整个前摇都不可取消
         assert!(attack.windup_time() < UNCANCELLABLE_GRACE_PERIOD);
     }
 }
