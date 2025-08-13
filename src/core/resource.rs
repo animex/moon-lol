@@ -1,13 +1,13 @@
-use std::fs::File;
-
 use crate::{
     core::Configs,
     league::{
-        LeagueLoaderAnimationClip, LeagueLoaderAnimationGraph, LeagueLoaderImage,
-        LeagueLoaderMaterial, LeagueLoaderMesh, LeagueLoaderSkinnedMeshInverseBindposes,
+        get_struct_from_file, LeagueLoaderAnimationClip, LeagueLoaderAnimationGraph,
+        LeagueLoaderImage, LeagueLoaderMaterial, LeagueLoaderMesh,
+        LeagueLoaderSkinnedMeshInverseBindposes,
     },
 };
-use bevy::{prelude::*, scene::ron::de::from_reader};
+
+use bevy::prelude::*;
 
 pub struct PluginResource;
 
@@ -20,7 +20,7 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderAnimationGraph>();
         app.init_asset_loader::<LeagueLoaderSkinnedMeshInverseBindposes>();
 
-        let configs: Configs = from_reader(File::open("assets/configs.ron").unwrap()).unwrap();
+        let configs: Configs = get_struct_from_file("configs").unwrap();
         app.insert_resource(configs);
     }
 }

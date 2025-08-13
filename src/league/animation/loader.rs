@@ -6,7 +6,6 @@ use bevy::{
     animation::{graph::AnimationGraph, AnimationClip},
     asset::{AssetLoader, LoadContext},
     render::mesh::skinning::SkinnedMeshInverseBindposes,
-    scene::ron::de::from_bytes,
 };
 use binrw::BinRead;
 use std::io::Cursor;
@@ -54,7 +53,7 @@ impl AssetLoader for LeagueLoaderAnimationGraph {
     ) -> Result<Self::Asset, Self::Error> {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
-        let animation: ConfigAnimationGraph = from_bytes(&buf)?;
+        let animation: ConfigAnimationGraph = bincode::deserialize(&buf)?;
         let animation_clips = animation
             .clip_paths
             .iter()
@@ -83,7 +82,7 @@ impl AssetLoader for LeagueLoaderSkinnedMeshInverseBindposes {
     ) -> Result<Self::Asset, Self::Error> {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
-        let config: ConfigSkinnedMeshInverseBindposes = from_bytes(&buf)?;
+        let config: ConfigSkinnedMeshInverseBindposes = bincode::deserialize(&buf)?;
         Ok(SkinnedMeshInverseBindposes::from(config.inverse_bindposes))
     }
 }

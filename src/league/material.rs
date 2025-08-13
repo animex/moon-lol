@@ -2,7 +2,6 @@ use bevy::{
     asset::{AssetLoader, LoadContext},
     pbr::StandardMaterial,
     render::alpha::AlphaMode,
-    scene::ron::de::from_bytes,
     utils::default,
 };
 
@@ -26,7 +25,7 @@ impl AssetLoader for LeagueLoaderMaterial {
     ) -> Result<Self::Asset, Self::Error> {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
-        let material: LeagueMaterial = from_bytes(&buf)?;
+        let material: LeagueMaterial = bincode::deserialize(&buf)?;
         let image = load_context.load(material.texture_path);
         Ok(StandardMaterial {
             base_color_texture: Some(image),

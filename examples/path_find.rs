@@ -1,8 +1,7 @@
-use std::fs::File;
-
-use bevy::{math::vec3, scene::ron::de::from_reader};
+use bevy::math::vec3;
 use moon_lol::{
     core::{find_path, Configs},
+    league::get_struct_from_file,
     logging::setup_file_logging,
 };
 
@@ -12,7 +11,7 @@ fn main() {
     // Set up file logging
     setup_file_logging(&log_path);
 
-    let configs: Configs = from_reader(File::open("assets/configs.ron").unwrap()).unwrap();
+    let configs: Configs = get_struct_from_file("configs").unwrap();
     let path = find_path(
         &configs,
         configs.navigation_grid.get_center_pos(),

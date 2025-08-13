@@ -12,11 +12,6 @@ use std::{
     sync::Arc,
 };
 
-use crate::core::{
-    ConfigAnimationGraph, ConfigEnvironmentObject, ConfigGeometryObject, ConfigJoint,
-    ConfigNavigationGrid, ConfigNavigationGridCell, ConfigSkinnedMeshInverseBindposes, Configs,
-    Health,
-};
 use crate::league::{
     neg_mat_z, skinned_mesh_to_intermediate, submesh_to_intermediate, AiMeshNGrid,
     AnimationClipData, AnimationGraphData, LeagueBinCharacterRecord,
@@ -26,15 +21,23 @@ use crate::league::{
 use crate::league::{
     static_conversion::parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo, LeagueTexture,
 };
+use crate::{
+    core::{
+        ConfigAnimationGraph, ConfigEnvironmentObject, ConfigGeometryObject, ConfigJoint,
+        ConfigNavigationGrid, ConfigNavigationGridCell, ConfigSkinnedMeshInverseBindposes, Configs,
+        Health, Lane, Team,
+    },
+    entities::Barrack,
+};
 
+use bevy::image::TextureError;
 use bevy::transform::components::Transform;
-use bevy::{image::TextureError, scene::ron, scene::ron::de::SpannedError};
 use binrw::BinWrite;
 use binrw::{args, binread, io::NoSeek, BinRead, Endian};
 use cdragon_prop::{
     BinEmbed, BinEntry, BinHash, BinList, BinMap, BinString, BinStruct, PropError, PropFile,
 };
-use serde::Serialize;
+use serde::{de::DeserializeOwned, Serialize};
 use tokio::{fs::File as AsyncFile, io::AsyncWriteExt};
 use twox_hash::XxHash64;
 use zstd::Decoder;
@@ -44,12 +47,6 @@ pub enum LeagueLoaderError {
     #[error("Could not load mesh: {0}")]
     Io(#[from] std::io::Error),
 
-    #[error("Could not load material: {0}")]
-    RonSpanned(#[from] SpannedError),
-
-    #[error("Could not load material: {0}")]
-    RON(#[from] ron::Error),
-
     #[error("Could not load texture: {0}")]
     BinRW(#[from] binrw::Error),
 
@@ -58,6 +55,9 @@ pub enum LeagueLoaderError {
 
     #[error("Could not load prop file: {0}")]
     PropError(#[from] PropError),
+
+    #[error("Could not serialize: {0}")]
+    Bincode(#[from] bincode::Error),
 }
 
 #[binread]
@@ -248,9 +248,45 @@ impl LeagueLoader {
     }
 
     pub async fn save_configs(&self) -> Result<Configs, LeagueLoaderError> {
-        let mut configs = Configs::default();
-
         // 并行处理地图网格
+        let geometry_objects = self.save_mapgeo().await?;
+
+        let (environment_objects, barracks) = self.save_environment_objects().await?;
+
+        // 处理小兵路径（这部分不涉及文件 I/O，保持同步）
+        let minion_paths: Vec<LeagueMinionPath> = self
+            .materials_bin
+            .entries
+            .iter()
+            .filter(|v| v.ctype.hash == Self::hash_bin("MapPlaceableContainer"))
+            .map(|v| v.getv::<BinMap>(Self::hash_bin("items").into()).unwrap())
+            .flat_map(|v| v.downcast::<BinHash, BinStruct>().unwrap())
+            .filter(|v| v.1.ctype.hash == 0x3c995caf)
+            .map(|v| LeagueMinionPath::from(&v.1))
+            .collect();
+
+        let minion_paths = minion_paths
+            .into_iter()
+            .map(|v| (v.lane, v.path))
+            .collect::<HashMap<_, _>>();
+
+        let configs = Configs {
+            geometry_objects,
+            environment_objects,
+            minion_paths,
+            barracks,
+            navigation_grid: self.load_navigation_grid().await?,
+        };
+
+        // 保存最终配置文件
+        save_struct_to_file("configs", &configs).await?;
+
+        Ok(configs)
+    }
+
+    pub async fn save_mapgeo(&self) -> Result<Vec<ConfigGeometryObject>, LeagueLoaderError> {
+        let mut geometry_objects = Vec::new();
+
         for (i, map_mesh) in self.mapgeo.meshes.iter().enumerate() {
             if map_mesh.layer_transition_behavior != LayerTransitionBehavior::Unaffected {
                 continue;
@@ -287,12 +323,27 @@ impl LeagueLoader {
                 file.write_all(&buffer).await?;
                 file.flush().await?;
 
-                configs.geometry_objects.push(ConfigGeometryObject {
+                geometry_objects.push(ConfigGeometryObject {
                     mesh_path,
                     material_path,
                 });
             }
         }
+
+        Ok(geometry_objects)
+    }
+
+    pub async fn save_environment_objects(
+        &self,
+    ) -> Result<
+        (
+            Vec<(Transform, ConfigEnvironmentObject, Option<Health>)>,
+            Vec<(Transform, Team, Lane, Barrack)>,
+        ),
+        LeagueLoaderError,
+    > {
+        let mut environment_objects = Vec::new();
+        let mut barracks = Vec::new();
 
         // 处理环境对象和兵营
         for entry in self
@@ -315,7 +366,7 @@ impl LeagueLoader {
 
                     let environment_object = self.save_environment_object(&skin).await?;
 
-                    configs.environment_objects.push((
+                    environment_objects.push((
                         transform,
                         environment_object,
                         character_record
@@ -325,34 +376,13 @@ impl LeagueLoader {
                 }
                 0x71d0eabd => {
                     let barrack = self.save_barrack(&entry.1).await?;
-                    configs.barracks.push(barrack);
+                    barracks.push(barrack);
                 }
                 _ => {}
             }
         }
 
-        // 处理小兵路径（这部分不涉及文件 I/O，保持同步）
-        let minion_paths: Vec<LeagueMinionPath> = self
-            .materials_bin
-            .entries
-            .iter()
-            .filter(|v| v.ctype.hash == Self::hash_bin("MapPlaceableContainer"))
-            .map(|v| v.getv::<BinMap>(Self::hash_bin("items").into()).unwrap())
-            .flat_map(|v| v.downcast::<BinHash, BinStruct>().unwrap())
-            .filter(|v| v.1.ctype.hash == 0x3c995caf)
-            .map(|v| LeagueMinionPath::from(&v.1))
-            .collect();
-
-        for path in minion_paths {
-            configs.minion_paths.insert(path.lane, path.path);
-        }
-
-        configs.navigation_grid = self.load_navigation_grid().await?;
-
-        // 保存最终配置文件
-        save_struct_to_file("configs.ron", &configs).await?;
-
-        Ok(configs)
+        Ok((environment_objects, barracks))
     }
 
     pub async fn load_navigation_grid(&self) -> Result<ConfigNavigationGrid, LeagueLoaderError> {
@@ -384,18 +414,29 @@ impl LeagueLoader {
 
         let nav_grid = AiMeshNGrid::read(&mut reader).unwrap();
 
-        let min_grid_pos = nav_grid.header.min_grid_pos.unwrap().0;
-        let cell_size = nav_grid.header.cell_size.unwrap();
-        let x_len = nav_grid.header.x_cell_count.unwrap() as usize;
-        let y_len = nav_grid.header.y_cell_count.unwrap() as usize;
-        let mut cells: Vec<Vec<ConfigNavigationGridCell>> =
-            vec![vec![ConfigNavigationGridCell::default(); y_len]; x_len];
+        let min_grid_pos = nav_grid.header.min_bounds.0;
+        let cell_size = nav_grid.header.cell_size;
+        let x_len = nav_grid.header.x_cell_count as usize;
+        let y_len = nav_grid.header.z_cell_count as usize;
 
-        nav_grid.navigation_grid.iter().for_each(|v| {
-            cells[v.get_x()][v.get_z()].y = v.get_height();
-            cells[v.get_x()][v.get_z()].heuristic = v.get_heuristic();
-            cells[v.get_x()][v.get_z()].flags = v.get_flags();
-        });
+        let mut cells: Vec<ConfigNavigationGridCell> = Vec::new();
+
+        for (i, cell) in nav_grid.navigation_grid.iter().enumerate() {
+            cells.push(ConfigNavigationGridCell {
+                y: cell.center_height,
+                heuristic: cell.heuristic,
+                vision_pathing_flags: nav_grid.vision_pathing_flags[i],
+                river_region_flags: nav_grid.other_flags[i].river_region_flags,
+                jungle_quadrant_flags: nav_grid.other_flags[i].jungle_quadrant_flags,
+                main_region_flags: nav_grid.other_flags[i].main_region_flags,
+                nearest_lane_flags: nav_grid.other_flags[i].nearest_lane_flags,
+                poi_flags: nav_grid.other_flags[i].poi_flags,
+                ring_flags: nav_grid.other_flags[i].ring_flags,
+                srx_flags: nav_grid.other_flags[i].srx_flags,
+            });
+        }
+
+        let cells = cells.chunks(x_len).map(|v| v.to_vec()).collect();
 
         Ok(ConfigNavigationGrid {
             min_grid_pos,
@@ -524,11 +565,11 @@ impl LeagueLoader {
 
         let animation_graph = ConfigAnimationGraph { clip_paths };
 
-        let animation_graph_path = format!("ASSETS/{}/animation_graph.ron", skin);
+        let animation_graph_path = format!("ASSETS/{}/animation_graph", skin);
 
         save_struct_to_file(&animation_graph_path, &animation_graph).await?;
 
-        let material_path = format!("ASSETS/{}/material.ron", skin);
+        let material_path = format!("ASSETS/{}/material", skin);
         save_struct_to_file(&material_path, &material).await?;
         // 保存纹理和骨骼文件
         self.save_wad_entry_to_file(&texture_path).await?;
@@ -557,7 +598,7 @@ impl LeagueLoader {
             .map(|&v| league_skeleton.modern_data.joints[v as usize].inverse_bind_transform)
             .collect::<Vec<_>>();
 
-        let inverse_bind_pose_path = format!("ASSETS/{}/inverse_bind_pose.ron", skin);
+        let inverse_bind_pose_path = format!("ASSETS/{}/inverse_bind_pose", skin);
         save_struct_to_file(
             &inverse_bind_pose_path,
             &ConfigSkinnedMeshInverseBindposes {
@@ -858,9 +899,18 @@ pub async fn save_struct_to_file<T: Serialize>(
     path: &str,
     data: &T,
 ) -> Result<(), LeagueLoaderError> {
-    let serialized = ron::ser::to_string_pretty(data, Default::default())?;
-    let mut file = get_asset_writer(path).await?;
-    file.write_all(serialized.as_bytes()).await?;
+    let serialized = bincode::serialize(data)?;
+    let mut file = get_asset_writer(&format!("{}.bin", path)).await?;
+    file.write_all(&serialized).await?;
     file.flush().await?;
     Ok(())
+}
+
+pub fn get_struct_from_file<T: DeserializeOwned>(path: &str) -> Result<T, LeagueLoaderError> {
+    let path = format!("assets/{}.bin", path);
+    let mut file = File::open(path)?;
+    let mut data = Vec::new();
+    file.read_to_end(&mut data)?;
+    let data = bincode::deserialize(&data)?;
+    Ok(data)
 }

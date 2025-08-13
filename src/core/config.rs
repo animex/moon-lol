@@ -10,6 +10,10 @@ use serde::{Deserialize, Serialize};
 use crate::{
     core::{Health, Lane, Team},
     entities::Barrack,
+    league::{
+        JungleQuadrantFlags, MainRegionFlags, NearestLaneFlags, POIFlags, RingFlags,
+        RiverRegionFlags, UnknownSRXFlags, VisionPathingFlags,
+    },
 };
 
 #[derive(Resource, Default, Serialize, Deserialize)]
@@ -64,11 +68,18 @@ pub struct ConfigNavigationGrid {
     pub cells: Vec<Vec<ConfigNavigationGridCell>>,
 }
 
-#[derive(Clone, Default, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct ConfigNavigationGridCell {
     pub y: f32,
     pub heuristic: f32,
-    pub flags: u16,
+    pub vision_pathing_flags: VisionPathingFlags,
+    pub river_region_flags: RiverRegionFlags,
+    pub jungle_quadrant_flags: JungleQuadrantFlags,
+    pub main_region_flags: MainRegionFlags,
+    pub nearest_lane_flags: NearestLaneFlags,
+    pub poi_flags: POIFlags,
+    pub ring_flags: RingFlags,
+    pub srx_flags: UnknownSRXFlags,
 }
 
 impl ConfigNavigationGrid {

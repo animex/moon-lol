@@ -39,8 +39,28 @@ fn main() {
         .run();
 }
 
-// 常见的导航网格 flags
-const COMMON_FLAGS: &[u32] = &[1, 2, 4, 66, 256, 514, 1025, 1088, 2049, 2112, 3, 5184, 6208];
+// Common navigation grid flags
+const COMMON_FLAGS: &[u32] = &[
+    0 << 0,
+    1 << 0,
+    1 << 1,
+    1 << 2,
+    1 << 3,
+    1 << 4,
+    1 << 5,
+    1 << 6,
+    1 << 7,
+    1 << 8,
+    1 << 9,
+    1 << 10,
+    1 << 11,
+    1 << 12,
+    1 << 13,
+    1 << 14,
+    1 << 15,
+    1 << 16,
+    1 << 17,
+];
 
 #[derive(Resource, Default)]
 struct FlagFilters {
@@ -62,34 +82,24 @@ fn setup(
 ) {
     let navigation_grid = &configs.navigation_grid;
 
-    // 初始化显示所有网格点
+    // Initialize to show all grid points
     flag_filters.show_all = true;
 
-    let mesh = meshes.add(Sphere::new(navigation_grid.cell_size / 2.0));
+    let mesh = meshes.add(Plane3d::new(
+        vec3(0.0, 1.0, 0.0),
+        Vec2::splat(navigation_grid.cell_size / 2.0),
+    ));
+    let color = Color::srgb(1.0, 0.0, 0.0);
+    let material = materials.add(color);
 
     for (x, row) in navigation_grid.cells.iter().enumerate() {
         for (y, cell) in row.iter().enumerate() {
-            if cell.heuristic > 0.0 {
-                continue;
-            }
-
-            // 根据 flags 设置不同颜色
-            let color = match cell.flags {
-                1 => Color::srgb(0.0, 1.0, 0.0),   // 绿色 - 可行走
-                2 => Color::srgb(1.0, 0.0, 0.0),   // 红色 - 不可行走
-                4 => Color::srgb(0.0, 0.0, 1.0),   // 蓝色 - 特殊区域
-                66 => Color::srgb(1.0, 1.0, 0.0),  // 黄色
-                256 => Color::srgb(1.0, 0.0, 1.0), // 紫色
-                _ => Color::srgb(0.5, 0.5, 0.5),   // 灰色 - 其他
-            };
-
-            let material = materials.add(color);
             commands.spawn((
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(material),
+                MeshMaterial3d(material.clone()),
                 Transform::from_translation(navigation_grid.get_cell_pos(x, y)),
                 GridCell {
-                    flags: cell.flags as u32,
+                    flags: cell.vision_pathing_flags.bits() as u32,
                 },
                 Visibility::Visible,
             ));
@@ -98,16 +108,16 @@ fn setup(
 }
 
 fn ui_system(mut contexts: EguiContexts, mut flag_filters: ResMut<FlagFilters>) {
-    egui::Window::new("网格点过滤器").default_width(300.0).show(
-        contexts.ctx_mut().unwrap(),
-        |ui| {
-            ui.heading("显示控制");
+    egui::Window::new("Grid Point Filter")
+        .default_width(300.0)
+        .show(contexts.ctx_mut().unwrap(), |ui| {
+            ui.heading("Display Control");
 
-            ui.checkbox(&mut flag_filters.show_all, "显示所有网格点");
+            ui.checkbox(&mut flag_filters.show_all, "Show All Grid Points");
 
             if !flag_filters.show_all {
                 ui.separator();
-                ui.heading("按 Flag 过滤");
+                ui.heading("Filter by Flag");
 
                 for &flag in COMMON_FLAGS {
                     let mut enabled = flag_filters.enabled_flags.contains(&flag);
@@ -126,13 +136,13 @@ fn ui_system(mut contexts: EguiContexts, mut flag_filters: ResMut<FlagFilters>) 
                 ui.separator();
 
                 ui.horizontal(|ui| {
-                    if ui.button("全选").clicked() {
+                    if ui.button("Select All").clicked() {
                         for &flag in COMMON_FLAGS {
                             flag_filters.enabled_flags.insert(flag);
                         }
                     }
 
-                    if ui.button("全不选").clicked() {
+                    if ui.button("Deselect All").clicked() {
                         flag_filters.enabled_flags.clear();
                     }
                 });
@@ -140,15 +150,14 @@ fn ui_system(mut contexts: EguiContexts, mut flag_filters: ResMut<FlagFilters>) 
 
             ui.separator();
             ui.label(format!(
-                "当前显示的 flags: {:?}",
+                "Currently displayed flags: {:?}",
                 if flag_filters.show_all {
-                    "全部".to_string()
+                    "All".to_string()
                 } else {
                     format!("{:?}", flag_filters.enabled_flags)
                 }
             ));
-        },
-    );
+        });
 }
 
 fn update_grid_visibility(
@@ -163,7 +172,11 @@ fn update_grid_visibility(
         if flag_filters.show_all {
             *visibility = Visibility::Visible;
         } else {
-            *visibility = if flag_filters.enabled_flags.contains(&grid_cell.flags) {
+            *visibility = if flag_filters
+                .enabled_flags
+                .iter()
+                .all(|&flag| (grid_cell.flags & flag) != 0)
+            {
                 Visibility::Visible
             } else {
                 Visibility::Hidden

@@ -1,7 +1,4 @@
-use crate::{
-    core::{navigation, Configs},
-    system_debug,
-};
+use crate::core::{navigation, Configs};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
