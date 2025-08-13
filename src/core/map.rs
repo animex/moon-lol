@@ -1,9 +1,7 @@
 use crate::core::Configs;
 use crate::core::{ConfigEnvironmentObject, ConfigGeometryObject};
-use crate::core::{MovementPath, Target};
 use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
-use bevy::color::palettes;
 use bevy::prelude::*;
 use bevy::render::mesh::skinning::SkinnedMesh;
 
@@ -29,51 +27,6 @@ fn setup(mut commands: Commands, configs: Res<Configs>, asset_server: Res<AssetS
     spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
 
     spawn_environment_objects_from_configs(&mut commands, &asset_server, &configs);
-}
-
-pub fn draw_attack(
-    mut gizmos: Gizmos,
-    q_attack: Query<(&Transform, &Target)>,
-    q_movement_path: Query<(&Transform, &MovementPath)>,
-    q_target: Query<(&Transform, &Target)>,
-    q_transform: Query<&Transform>,
-) {
-    for (transform, target) in q_attack.iter() {
-        let Ok(target_transform) = q_transform.get(target.0) else {
-            continue;
-        };
-        gizmos.line(
-            transform.translation,
-            target_transform.translation,
-            Color::Srgba(palettes::tailwind::RED_500),
-        );
-    }
-
-    for (transform, movement_path) in q_movement_path.iter() {
-        let mut prev_pos = transform.translation;
-
-        // 绘制路径线段
-        for &path_point in &movement_path.0 {
-            let world_pos = Vec3::new(path_point.x, prev_pos.y, path_point.y);
-            gizmos.line(
-                prev_pos,
-                world_pos,
-                Color::Srgba(palettes::tailwind::GREEN_500),
-            );
-            prev_pos = world_pos;
-        }
-    }
-
-    for (transform, target) in q_target.iter() {
-        let Ok(target_transform) = q_transform.get(target.0) else {
-            continue;
-        };
-        gizmos.line(
-            transform.translation,
-            target_transform.translation,
-            Color::Srgba(palettes::tailwind::YELLOW_500),
-        );
-    }
 }
 
 /// 从Config中的ConfigEnvironmentObject生成环境对象实体

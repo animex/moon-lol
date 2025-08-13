@@ -1,8 +1,9 @@
 use crate::core::{
     Attack, Bounding, CommandMovementFollowPath, CommandMovementMoveTo, CommandTargetRemove,
-    CommandTargetSet, EventAttackDone, EventDead, EventMovementMoveEnd, EventSpawn, Target, Team,
+    CommandTargetSet, EventAttackDone, EventDead, EventMovementMoveEnd, EventSpawn, MovementState,
+    Target, Team,
 };
-use bevy::{app::Plugin, prelude::*};
+use bevy::{app::Plugin, color::palettes, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, Clone, Copy, Serialize, Deserialize)]
@@ -261,5 +262,50 @@ fn on_spawn(
             }
             _ => (),
         }
+    }
+}
+
+pub fn draw_attack(
+    mut gizmos: Gizmos,
+    q_attack: Query<(&Transform, &Target)>,
+    q_movement_path: Query<(&Transform, &MovementState)>,
+    q_target: Query<(&Transform, &Target)>,
+    q_transform: Query<&Transform>,
+) {
+    for (transform, target) in q_attack.iter() {
+        let Ok(target_transform) = q_transform.get(target.0) else {
+            continue;
+        };
+        gizmos.line(
+            transform.translation,
+            target_transform.translation,
+            Color::Srgba(palettes::tailwind::RED_500),
+        );
+    }
+
+    for (transform, movement_path) in q_movement_path.iter() {
+        let mut prev_pos = transform.translation;
+
+        // 绘制路径线段
+        for &path_point in &movement_path.path {
+            let world_pos = Vec3::new(path_point.x, prev_pos.y, path_point.y);
+            gizmos.line(
+                prev_pos,
+                world_pos,
+                Color::Srgba(palettes::tailwind::GREEN_500),
+            );
+            prev_pos = world_pos;
+        }
+    }
+
+    for (transform, target) in q_target.iter() {
+        let Ok(target_transform) = q_transform.get(target.0) else {
+            continue;
+        };
+        gizmos.line(
+            transform.translation,
+            target_transform.translation,
+            Color::Srgba(palettes::tailwind::YELLOW_500),
+        );
     }
 }

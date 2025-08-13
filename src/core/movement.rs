@@ -22,21 +22,36 @@ impl Plugin for PluginMovement {
 }
 
 #[derive(Component, Clone, Serialize, Deserialize)]
-#[require(MovementVelocity)]
+#[require(MovementState)]
 pub struct Movement {
     pub speed: f32,
 }
 
 #[derive(Component, Default)]
-pub struct MovementVelocity(pub Vec2);
-
-#[derive(Component)]
-pub struct MovementPath(pub Vec<Vec2>);
-
-#[derive(Component)]
-pub struct MovementPathState {
+pub struct MovementState {
+    pub path: Vec<Vec2>,
+    pub direction: Vec2,
+    pub velocity: Vec2,
     pub current_target_index: usize,
     pub completed: bool,
+}
+
+impl MovementState {
+    pub fn set_path(&mut self, path: Vec<Vec2>) {
+        self.path = path;
+        self.current_target_index = 0;
+        self.completed = false;
+        self.velocity = Vec2::ZERO;
+        self.direction = Vec2::ZERO;
+    }
+
+    pub fn clear_path(&mut self) {
+        self.path.clear();
+        self.current_target_index = 0;
+        self.completed = false;
+        self.velocity = Vec2::ZERO;
+        self.direction = Vec2::ZERO;
+    }
 }
 
 #[derive(Event, Debug)]
@@ -50,20 +65,14 @@ pub struct CommandMovementFollowPath(pub Vec<Vec2>);
 
 fn update_path_movement(
     mut commands: Commands,
-    mut query: Query<(
-        Entity,
-        &Movement,
-        &MovementPath,
-        &mut MovementPathState,
-        &mut MovementVelocity,
-    )>,
+    mut query: Query<(Entity, &Movement, &mut MovementState)>,
     mut q_transform: Query<&mut Transform>,
     timer: Res<Time<Fixed>>,
 ) {
     let dt = timer.delta_secs();
 
-    for (entity, movement, movement_path, mut path_state, mut velocity) in query.iter_mut() {
-        if path_state.completed || movement_path.0.is_empty() {
+    for (entity, movement, mut movement_state) in query.iter_mut() {
+        if movement_state.completed || movement_state.path.is_empty() {
             continue;
         }
 
@@ -71,68 +80,72 @@ fn update_path_movement(
         let current_pos = transform.translation.xz();
 
         // 找到当前应该前往的目标点
-        let target = find_next_target_point(&movement_path.0, &mut path_state, current_pos);
+        let target = find_next_target_point(&mut movement_state, current_pos);
 
         if let Some(target) = target {
             // 计算移动方向和速度
             let direction = target - current_pos;
             let distance = direction.length();
 
-            if distance > 1.0 {
+            if distance > movement.speed * dt {
                 // 还没到达目标点，继续移动
                 let normalized_direction = direction / distance;
-                velocity.0 = normalized_direction * movement.speed;
+                movement_state.direction = normalized_direction;
+                movement_state.velocity = normalized_direction * movement.speed;
 
                 // 更新位置
-                let new_pos = current_pos + velocity.0 * dt;
+                let new_pos = current_pos + movement_state.velocity * dt;
                 transform.translation.x = new_pos.x;
                 transform.translation.z = new_pos.y;
 
                 // 更新旋转朝向移动方向
-                if velocity.0.length() > 0.1 {
-                    transform.rotation = Quat::from_rotation_y(velocity.0.y.atan2(velocity.0.x));
+                if movement_state.velocity.length() > 0.1 {
+                    transform.rotation = Quat::from_rotation_y(
+                        movement_state.velocity.y.atan2(movement_state.velocity.x),
+                    );
                 }
             } else {
                 // 到达当前目标点
                 transform.translation.x = target.x;
                 transform.translation.z = target.y;
-                velocity.0 = Vec2::ZERO;
+                movement_state.velocity = Vec2::ZERO;
+                movement_state.direction = Vec2::ZERO;
 
-                let new_index = path_state.current_target_index + 1;
+                let new_index = movement_state.current_target_index + 1;
 
-                if new_index >= movement_path.0.len() {
+                if new_index >= movement_state.path.len() {
                     // 完成路径移动
-                    path_state.completed = true;
-                    commands.entity(entity).remove::<MovementPath>();
-                    commands.entity(entity).remove::<MovementPathState>();
+                    movement_state.completed = true;
+                    movement_state.clear_path();
                     commands.trigger_targets(EventMovementMoveEnd, entity);
                 } else {
                     // 更新路径状态到下一个点
-                    path_state.current_target_index = new_index;
+                    movement_state.current_target_index = new_index;
                 }
             }
         } else {
             // 没有有效的目标点，结束移动
-            path_state.completed = true;
-            velocity.0 = Vec2::ZERO;
-            commands.entity(entity).remove::<MovementPath>();
-            commands.entity(entity).remove::<MovementPathState>();
+            movement_state.completed = true;
+            movement_state.velocity = Vec2::ZERO;
+            movement_state.direction = Vec2::ZERO;
+            movement_state.clear_path();
             commands.trigger_targets(EventMovementMoveEnd, entity);
         }
     }
 }
 
 fn find_next_target_point(
-    path: &[Vec2],
-    path_state: &mut MovementPathState,
+    movement_state: &mut MovementState,
     current_position: Vec2,
 ) -> Option<Vec2> {
-    if path.is_empty() || path_state.current_target_index >= path.len() {
+    let path = &movement_state.path;
+
+    if path.is_empty() || movement_state.current_target_index >= path.len() {
         return None;
     }
 
     // 如果还没有开始移动，找到最近的前进方向的点
-    if path_state.current_target_index == 0 {
+    if movement_state.current_target_index == 0 {
         let mut closest_index = 0;
         let mut min_distance = f32::INFINITY;
 
@@ -160,64 +173,44 @@ fn find_next_target_point(
             }
         }
 
-        path_state.current_target_index = closest_index;
+        movement_state.current_target_index = closest_index;
     }
 
-    Some(path[path_state.current_target_index])
+    Some(path[movement_state.current_target_index])
 }
 
 fn command_movement_move_to(
     trigger: Trigger<CommandMovementMoveTo>,
-    mut commands: Commands,
     configs: Res<Configs>,
-    q_transform: Query<&Transform>,
+    mut q_transform: Query<(&Transform, &mut MovementState)>,
 ) {
     let entity = trigger.target();
     let destination = trigger.event().0;
 
     // 获取当前位置
-    if let Ok(transform) = q_transform.get(entity) {
+    if let Ok((transform, mut movement_state)) = q_transform.get_mut(entity) {
         let start_pos = transform.translation;
         let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
 
         // 使用A*算法规划路径，对于单点移动，创建长度为1的路径
         if let Some(path) = navigation::find_path(&configs, start_pos, end_pos) {
-            // 清除现有的路径移动状态
-            commands.entity(entity).remove::<MovementPath>();
-            commands.entity(entity).remove::<MovementPathState>();
-
-            // 设置新的路径（长度为1）
-            commands.entity(entity).insert(MovementPath(path));
-            commands.entity(entity).insert(MovementPathState {
-                current_target_index: 0,
-                completed: false,
-            });
+            // 设置新的路径
+            movement_state.set_path(path);
         }
     }
 }
 
 fn command_movement_follow_path(
     trigger: Trigger<CommandMovementFollowPath>,
-    mut commands: Commands,
+    mut q_transform: Query<(&Transform, &mut MovementState)>,
 ) {
     let entity = trigger.target();
     let path = trigger.event().0.clone();
 
-    system_debug!(
-        "action_set_move_path",
-        "Entity {:?} received path movement command with {} points",
-        entity,
-        path.len(),
-    );
-
     if !path.is_empty() {
-        // 清除现有的路径移动状态，设置新路径
-        commands.entity(entity).remove::<MovementPath>();
-        commands.entity(entity).remove::<MovementPathState>();
-        commands.entity(entity).insert(MovementPath(path));
-        commands.entity(entity).insert(MovementPathState {
-            current_target_index: 0,
-            completed: false,
-        });
+        // 设置新路径
+        if let Ok((_, mut movement_state)) = q_transform.get_mut(entity) {
+            movement_state.set_path(path);
+        }
     }
 }
