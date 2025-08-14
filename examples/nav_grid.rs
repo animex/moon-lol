@@ -4,7 +4,7 @@ use bevy::render::{
     RenderPlugin,
 };
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use moon_lol::core::{Configs, PluginCamera, PluginResource};
+use moon_lol::core::{ConfigMap, PluginCamera, PluginResource};
 use moon_lol::logging::PluginLogging;
 
 fn main() {
@@ -75,7 +75,7 @@ struct GridCell {
 
 fn setup(
     mut commands: Commands,
-    configs: Res<Configs>,
+    configs: Res<ConfigMap>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     mut flag_filters: ResMut<FlagFilters>,

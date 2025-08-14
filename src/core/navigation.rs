@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
-use crate::core::{Configs, Movement};
+use crate::core::{ConfigMap, Movement};
 use crate::league::VisionPathingFlags;
 
 pub struct PluginNavigaton;
@@ -24,7 +24,6 @@ struct AStarNode {
     pos: GridPos,
     g_cost: f32,
     h_cost: f32,
-    parent: Option<GridPos>,
 }
 
 impl AStarNode {
@@ -57,7 +56,7 @@ impl Ord for AStarNode {
     }
 }
 
-pub fn find_path(configs: &Configs, start: Vec3, end: Vec3) -> Option<Vec<Vec2>> {
+pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2>> {
     let grid = &configs.navigation_grid;
 
     let start_pos = world_to_grid(grid, start);
@@ -82,7 +81,6 @@ pub fn find_path(configs: &Configs, start: Vec3, end: Vec3) -> Option<Vec<Vec2>>
         pos: start_pos,
         g_cost: 0.0,
         h_cost: heuristic_cost(grid, start_pos, end_pos),
-        parent: None,
     };
 
     open_set.push(start_node);
@@ -141,37 +139,30 @@ pub fn find_path(configs: &Configs, start: Vec3, end: Vec3) -> Option<Vec<Vec2>>
 
         // 检查邻居
         for neighbor_pos in get_neighbors(grid, current.pos) {
-            // 如果邻居已经在closed_set中且有更好的g_cost，跳过
-            if let Some(&existing_g_cost) = closed_set.get(&neighbor_pos) {
-                let tentative_g_cost =
-                    current.g_cost + distance_cost(grid, current.pos, neighbor_pos);
-                if tentative_g_cost >= existing_g_cost {
-                    continue;
-                }
+            // 1. 如果邻居已在closed_set中，直接跳过。
+            if closed_set.contains_key(&neighbor_pos) {
+                continue;
             }
 
             let tentative_g_cost = current.g_cost + distance_cost(grid, current.pos, neighbor_pos);
 
-            // 检查是否找到了更好的路径
-            let mut should_add = true;
+            // 2. 检查是否需要更新 g_score
             if let Some(&existing_g_cost) = g_scores.get(&neighbor_pos) {
                 if tentative_g_cost >= existing_g_cost {
-                    should_add = false;
+                    continue; // 不是更优的路径，跳过
                 }
             }
 
-            if should_add {
-                let neighbor_node = AStarNode {
-                    pos: neighbor_pos,
-                    g_cost: tentative_g_cost,
-                    h_cost: heuristic_cost(grid, neighbor_pos, end_pos),
-                    parent: Some(current.pos),
-                };
+            // 找到了更优的路径，或第一次访问该节点
+            let neighbor_node = AStarNode {
+                pos: neighbor_pos,
+                g_cost: tentative_g_cost,
+                h_cost: heuristic_cost(grid, neighbor_pos, end_pos),
+            };
 
-                came_from.insert(neighbor_pos, current.pos);
-                g_scores.insert(neighbor_pos, tentative_g_cost);
-                open_set.push(neighbor_node);
-            }
+            came_from.insert(neighbor_pos, current.pos);
+            g_scores.insert(neighbor_pos, tentative_g_cost);
+            open_set.push(neighbor_node);
         }
     }
 
@@ -257,18 +248,17 @@ fn distance_cost(grid: &crate::core::ConfigNavigationGrid, from: GridPos, to: Gr
 }
 
 fn heuristic_cost(grid: &crate::core::ConfigNavigationGrid, from: GridPos, to: GridPos) -> f32 {
-    // 使用预制的启发式值加上欧几里得距离
-    // let cell_heuristic = -grid.cells[from.x][from.y].heuristic;
-    let cell_heuristic = 0.0;
-
     let dx = (to.x as i32 - from.x as i32).abs() as f32;
     let dy = (to.y as i32 - from.y as i32).abs() as f32;
     let euclidean_distance = (dx * dx + dy * dy).sqrt() * grid.cell_size;
 
-    cell_heuristic + euclidean_distance
+    // 引入一个非常小的权重来打破平局，p 应该很小
+    // 例如 1.0 / (地图最大距离)
+    const P: f32 = 1.0 / (300.0 * 300.0);
+    return euclidean_distance * (1.0 + P);
 }
 
-fn update(configs: Res<Configs>, mut q_movement: Query<&mut Transform, With<Movement>>) {
+fn update(configs: Res<ConfigMap>, mut q_movement: Query<&mut Transform, With<Movement>>) {
     for mut transform in q_movement.iter_mut() {
         let cell = configs
             .navigation_grid

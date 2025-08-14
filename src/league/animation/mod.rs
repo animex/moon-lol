@@ -1,5 +1,6 @@
 mod compressed;
 mod loader;
+mod saver;
 mod skeleton;
 mod uncompressed;
 
@@ -22,6 +23,8 @@ use bevy::{
     transform::components::Transform,
 };
 use binrw::binread;
+
+use crate::league::{neg_rotation_z, neg_vec_z};
 
 #[binread]
 #[derive(Debug)]
@@ -268,7 +271,10 @@ impl From<AnimationData> for AnimationClip {
                     AnimationTargetId(Uuid::from_u128(*join_hash as u128)),
                     AnimatableCurve::new(
                         animated_field!(Transform::translation),
-                        AnimatableKeyframeCurve::new(translates.clone().into_iter()).unwrap(),
+                        AnimatableKeyframeCurve::new(
+                            translates.iter().map(|(time, vec)| (*time, neg_vec_z(vec))),
+                        )
+                        .unwrap(),
                     ),
                 );
             }
@@ -278,7 +284,12 @@ impl From<AnimationData> for AnimationClip {
                     AnimationTargetId(Uuid::from_u128(*join_hash as u128)),
                     AnimatableCurve::new(
                         animated_field!(Transform::rotation),
-                        AnimatableKeyframeCurve::new(rotations.clone().into_iter()).unwrap(),
+                        AnimatableKeyframeCurve::new(
+                            rotations
+                                .iter()
+                                .map(|(time, quat)| (*time, neg_rotation_z(quat))),
+                        )
+                        .unwrap(),
                     ),
                 );
             }
@@ -309,17 +320,13 @@ mod tests {
     #[test]
     fn test_read() {
         let start = Instant::now();
-        let loader = LeagueLoader::new(
-            r"C:\Program Files (x86)\WeGameApps\英雄联盟\game",
-            r"DATA\FINAL\Maps\Shipping\Map11.wad.client",
-            r"data/maps/mapgeometry/map11/bloom.mapgeo",
-        )
-        .unwrap();
+        let loader = LeagueLoader::new(r"C:\Program Files (x86)\WeGameApps\英雄联盟\game").unwrap();
+        let map_loader = loader.get_map_loader("bloom").unwrap();
 
         println!("{:?}", start.elapsed());
 
-        for (_, entry) in loader.wad.entries.clone() {
-            let mut reader = loader.get_wad_entry_reader(&entry).unwrap();
+        for (_, entry) in map_loader.wad_loader.wad.entries.clone() {
+            let mut reader = map_loader.wad_loader.get_wad_entry_reader(&entry).unwrap();
             let mut buf = [0; 8];
             if reader.read_exact(&mut buf).is_err() {
                 continue;
@@ -331,7 +338,7 @@ mod tests {
                 continue;
             }
 
-            let mut reader = loader.get_wad_entry_reader(&entry).unwrap();
+            let mut reader = map_loader.wad_loader.get_wad_entry_reader(&entry).unwrap();
             let mut buf: Vec<u8> = Vec::new();
             reader.read_to_end(&mut buf).unwrap();
             let res = AnimationFile::read(&mut Cursor::new(buf));

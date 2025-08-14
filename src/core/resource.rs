@@ -1,10 +1,14 @@
 use crate::{
-    core::Configs,
+    core::{ConfigGame, ConfigMap},
     league::{
         get_struct_from_file, LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMaterial,
         LeagueLoaderMesh, LeagueLoaderSkinnedMeshInverseBindposes,
     },
 };
+
+pub const CONFIG_PATH_MAP: &str = "config_map";
+
+pub const CONFIG_PATH_GAME: &str = "config_game";
 
 use bevy::prelude::*;
 
@@ -18,7 +22,10 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderAnimationClip>();
         app.init_asset_loader::<LeagueLoaderSkinnedMeshInverseBindposes>();
 
-        let configs: Configs = get_struct_from_file("configs").unwrap();
+        let configs: ConfigMap = get_struct_from_file(CONFIG_PATH_MAP).unwrap();
         app.insert_resource(configs);
+
+        let game_configs: ConfigGame = get_struct_from_file(CONFIG_PATH_GAME).unwrap();
+        app.insert_resource(game_configs);
     }
 }

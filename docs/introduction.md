@@ -25,3 +25,47 @@ DATA/FINAL/Maps/Shipping/Map11.wad.client
 这些文件主要由模型文件、贴图文件、动画文件和配置文件组成，配置文件基本上都用 .bin 为后缀
 
 兵营 barrack
+
+# 左性坐标系 -> 右手坐标系
+
+英雄联盟是左手坐标系，而 bevy 是右手坐标系
+
+## vertex changes
+
+### position
+z = -z
+
+### normal
+z = -z
+
+### indices
+reverse()
+
+## transform changes
+
+### translation
+z = -z
+
+### rotation
+x = -x
+y = -y
+
+## joint changes
+
+### local transform
+
+apply transform changes
+
+### inverse bind pose matrix
+
+apply transform changes
+
+## animation changes
+
+### translation channel
+z = -z
+
+### rotation channel
+x = -x
+y = -y
+

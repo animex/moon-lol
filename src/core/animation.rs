@@ -23,13 +23,11 @@ impl Plugin for PluginAnimation {
 
 fn update_animation_move(
     trigger: Trigger<EventMovementStart>,
-    mut q_animation_move_state: Query<(&mut AnimationPlayer, &Animation, &MovementState)>,
+    mut query: Query<(&mut AnimationPlayer, &Animation, &MovementState)>,
 ) {
     let entity = trigger.target();
 
-    let Ok((mut animation_player, animation, movement_state)) =
-        q_animation_move_state.get_mut(entity)
-    else {
+    let Ok((mut animation_player, animation, movement_state)) = query.get_mut(entity) else {
         return;
     };
 

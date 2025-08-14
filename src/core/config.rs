@@ -17,9 +17,16 @@ use crate::{
 };
 
 #[derive(Resource, Default, Serialize, Deserialize)]
-pub struct Configs {
+pub struct ConfigGame {
+    pub legends: Vec<ConfigLegend>,
+}
+
+type ConfigLegend = (Transform, Team, ConfigCharacterSkin);
+
+#[derive(Resource, Default, Serialize, Deserialize)]
+pub struct ConfigMap {
     pub geometry_objects: Vec<ConfigGeometryObject>,
-    pub environment_objects: Vec<(Transform, ConfigEnvironmentObject, Option<Health>)>,
+    pub environment_objects: Vec<(Transform, ConfigCharacterSkin, Option<Health>)>,
     pub minion_paths: HashMap<Lane, Vec<Vec2>>,
     pub barracks: Vec<(Transform, Team, Lane, Barrack)>,
     pub navigation_grid: ConfigNavigationGrid,
@@ -32,7 +39,7 @@ pub struct ConfigGeometryObject {
 }
 
 #[derive(Clone, Serialize, Deserialize)]
-pub struct ConfigEnvironmentObject {
+pub struct ConfigCharacterSkin {
     pub clip_map: HashMap<u32, String>,
     pub inverse_bind_pose_path: String,
     pub joint_influences_indices: Vec<i16>,

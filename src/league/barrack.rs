@@ -4,7 +4,10 @@ use crate::{
         Barrack, BarracksMinionConfig, Minion, MinionUpgradeConfig, TimedWaveBehaviorInfo,
         WaveBehavior,
     },
-    league::{neg_mat_z, u16_to_lane, u32_option_to_team, LeagueLoader, LeagueLoaderError},
+    league::{
+        neg_mat_z, u16_to_lane, u32_option_to_team, LeagueLoader, LeagueLoaderError,
+        LeagueWadMapLoader,
+    },
 };
 use bevy::{math::Mat4, transform::components::Transform};
 use cdragon_prop::{
@@ -13,7 +16,7 @@ use cdragon_prop::{
 };
 use futures::future::join_all;
 
-impl LeagueLoader {
+impl LeagueWadMapLoader {
     pub async fn save_barrack(
         &self,
         value: &BinStruct,
@@ -22,8 +25,7 @@ impl LeagueLoader {
             .getv::<BinMatrix>(LeagueLoader::hash_bin("transform").into())
             .unwrap();
 
-        let mut transform = Mat4::from_cols_array_2d(&transform.0);
-        neg_mat_z(&mut transform);
+        let transform = neg_mat_z(&Mat4::from_cols_array_2d(&transform.0));
 
         let definition = value
             .getv::<BinStruct>(LeagueLoader::hash_bin("definition").into())
@@ -189,7 +191,9 @@ impl LeagueLoader {
             .map(|i| i.0.clone())
             .unwrap();
 
-        let character_record = self.load_character_record(&character_record_path);
+        let character_record = self
+            .wad_loader
+            .load_character_record(&character_record_path);
 
         let health = Health {
             value: character_record.base_hp.unwrap(),
@@ -210,7 +214,7 @@ impl LeagueLoader {
 
         let armor = Armor(character_record.base_armor.unwrap());
 
-        let environment_object = self.save_environment_object(&skin).await?;
+        let environment_object = self.wad_loader.save_environment_object(&skin).await?;
 
         Ok(BarracksMinionConfig {
             minion_type: match minion_type {

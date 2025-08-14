@@ -1,7 +1,9 @@
 use std::collections::HashMap;
 
-use crate::core::{Animation, Configs};
-use crate::core::{ConfigEnvironmentObject, ConfigGeometryObject};
+use crate::core::{Animation, CommandMovementMoveTo, ConfigMap, Movement};
+use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
+use crate::league::LeagueLoader;
+use crate::system_debug;
 use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
@@ -21,6 +23,7 @@ pub struct PluginMap;
 
 impl Plugin for PluginMap {
     fn build(&self, app: &mut App) {
+        app.add_plugins(MeshPickingPlugin);
         app.add_systems(Startup, setup);
     }
 }
@@ -29,9 +32,18 @@ fn setup(
     mut commands: Commands,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     asset_server: Res<AssetServer>,
-    configs: Res<Configs>,
+    configs: Res<ConfigMap>,
 ) {
-    spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
+    let geo_entity = commands
+        .spawn(Transform::default())
+        .observe(on_click_map)
+        .id();
+
+    let geo_entities = spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
+
+    for entity in geo_entities {
+        commands.entity(geo_entity).add_child(entity);
+    }
 
     spawn_environment_objects_from_configs(
         &mut commands,
@@ -47,7 +59,7 @@ pub fn spawn_environment_object(
     res_animation_graph: &mut ResMut<Assets<AnimationGraph>>,
     asset_server: &Res<AssetServer>,
     transform: Transform,
-    config_env_object: &ConfigEnvironmentObject,
+    config_env_object: &ConfigCharacterSkin,
 ) -> Entity {
     // 加载纹理
     let material_handle: Handle<StandardMaterial> =
@@ -98,8 +110,14 @@ pub fn spawn_environment_object(
 
     let graph_handle = res_animation_graph.add(animation_graph);
 
+    let mut player = AnimationPlayer::default();
+
+    if let Some(idle_node) = hash_to_node_index.get(&LeagueLoader::hash_bin("Idle1")) {
+        player.play(*idle_node).repeat();
+    }
+
     commands.entity(parent_entity).insert((
-        AnimationPlayer::default(),
+        player,
         Animation { hash_to_node_index },
         AnimationGraphHandle(graph_handle),
     ));
@@ -134,7 +152,7 @@ pub fn spawn_environment_objects_from_configs(
     commands: &mut Commands,
     res_animation_graph: &mut ResMut<Assets<AnimationGraph>>,
     asset_server: &Res<AssetServer>,
-    configs: &Configs,
+    configs: &ConfigMap,
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
 
@@ -180,7 +198,7 @@ pub fn spawn_geometry_object(
 pub fn spawn_geometry_objects_from_configs(
     commands: &mut Commands,
     asset_server: &Res<AssetServer>,
-    configs: &Configs,
+    configs: &ConfigMap,
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
 
@@ -188,11 +206,34 @@ pub fn spawn_geometry_objects_from_configs(
         let entity = spawn_geometry_object(
             commands,
             asset_server,
-            Transform::from_scale(Vec3::new(1.0, 1.0, -1.0)),
+            Transform::default(),
             config_geo_object,
         );
         entities.push(entity);
     }
 
     entities
+}
+
+pub fn on_click_map(
+    click: Trigger<Pointer<Pressed>>,
+    mut commands: Commands,
+    q_move: Query<Entity, With<Movement>>,
+) {
+    system_debug!("on_click_map", "Received click");
+
+    let Some(position) = click.hit.position else {
+        return;
+    };
+    let targets = q_move.iter().collect::<Vec<Entity>>();
+
+    system_debug!(
+        "on_click_map",
+        "Received click at position ({:.1}, {:.1}, {:.1})",
+        position.x,
+        position.y,
+        position.z,
+    );
+
+    commands.trigger_targets(CommandMovementMoveTo(position.xz()), targets);
 }

@@ -1,7 +1,7 @@
 use crate::{
     core::{
-        spawn_environment_object, Armor, Bounding, ConfigEnvironmentObject, Configs, Damage,
-        Health, Lane, Movement, Team,
+        spawn_environment_object, Armor, Bounding, ConfigCharacterSkin, ConfigMap, Damage, Health,
+        Lane, Movement, Team,
     },
     entities::{Minion, MinionPath},
 };
@@ -41,7 +41,7 @@ pub struct BarracksMinionConfig {
         Bounding,
         Damage,
         Armor,
-        ConfigEnvironmentObject,
+        ConfigCharacterSkin,
     ),
     pub wave_behavior: WaveBehavior,
     pub minion_upgrade_stats: MinionUpgradeConfig,
@@ -131,7 +131,7 @@ impl Plugin for PluginBarrack {
     }
 }
 
-fn setup(mut commands: Commands, res_game_config: Res<Configs>) {
+fn setup(mut commands: Commands, res_game_config: Res<ConfigMap>) {
     for (transform, team, lane, barrack) in res_game_config.barracks.clone().into_iter() {
         let initial_delay = barrack.initial_spawn_time_secs;
 
@@ -175,7 +175,7 @@ fn barracks_spawning_system(
     mut commands: Commands,
     mut query: Query<(&GlobalTransform, &Barrack, &mut BarrackState, &Team, &Lane)>,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
-    res_game_config: Res<Configs>,
+    res_game_config: Res<ConfigMap>,
     time: Res<Time>,
 ) {
     for (transform, barrack, mut state, team, lane) in query.iter_mut() {

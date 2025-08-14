@@ -1,0 +1,133 @@
+use std::{
+    collections::HashMap,
+    io::{self, Cursor},
+};
+
+use bevy::transform::components::Transform;
+use binrw::{BinRead, BinWrite};
+use tokio::io::AsyncWriteExt;
+
+use crate::core::{ConfigCharacterSkin, ConfigJoint, ConfigSkinnedMeshInverseBindposes};
+use crate::league::{
+    get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file, skinned_mesh_to_intermediate,
+    AnimationGraphData, LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton,
+    LeagueSkinnedMesh, LeagueSkinnedMeshInternal, LeagueWadLoader,
+};
+
+impl LeagueWadLoader {
+    pub async fn save_environment_object(
+        &self,
+        skin: &str,
+    ) -> Result<ConfigCharacterSkin, LeagueLoaderError> {
+        let (skin_character_data_properties, flat_map) = self.load_character_skin(&skin);
+
+        let texture_path = skin_character_data_properties
+            .skin_mesh_properties
+            .texture
+            .clone();
+        self.save_wad_entry_to_file(&texture_path).await?;
+
+        let material = LeagueMaterial {
+            texture_path: texture_path.clone(),
+        };
+
+        let skeleton_path = skin_character_data_properties
+            .skin_mesh_properties
+            .skeleton
+            .clone();
+        self.save_wad_entry_to_file(&skeleton_path).await?;
+
+        let mut reader = self
+            .get_wad_entry_no_seek_reader_by_path(
+                &skin_character_data_properties
+                    .skin_mesh_properties
+                    .simple_skin,
+            )
+            .unwrap();
+
+        let league_skinned_mesh =
+            LeagueSkinnedMesh::from(LeagueSkinnedMeshInternal::read(&mut reader).unwrap());
+
+        let league_skeleton = self
+            .get_wad_entry_reader_by_path(&skeleton_path)
+            .map(|mut v| LeagueSkeleton::read(&mut v).unwrap())
+            .unwrap();
+
+        let animation_graph_data: AnimationGraphData = flat_map
+            .get(
+                &skin_character_data_properties
+                    .skin_animation_properties
+                    .animation_graph_data,
+            )
+            .unwrap()
+            .into();
+
+        let clip_map = animation_graph_data
+            .clip_data_map
+            .into_iter()
+            .map(|(k, v)| (k, v.animation_resource_data.animation_file_path))
+            .collect::<HashMap<_, _>>();
+
+        // 保存动画文件
+        for (_, clip_path) in &clip_map {
+            self.save_wad_entry_to_file(clip_path).await?;
+        }
+
+        let material_path = get_bin_path(&format!("ASSETS/{}/material", skin));
+        save_struct_to_file(&material_path, &material).await?;
+
+        let mut submesh_paths = Vec::new();
+
+        for (i, range) in league_skinned_mesh.ranges.iter().enumerate() {
+            let mesh = skinned_mesh_to_intermediate(&league_skinned_mesh, i).unwrap();
+            let mesh_path = format!("ASSETS/{}/meshes/{}.mesh", skin, &range.name);
+
+            let mut file = get_asset_writer(&mesh_path).await?;
+            let mut buffer = Vec::new();
+            mesh.write(&mut Cursor::new(&mut buffer))
+                .map_err(|e| LeagueLoaderError::Io(io::Error::new(io::ErrorKind::Other, e)))?;
+            file.write_all(&buffer).await?;
+            file.flush().await?;
+
+            submesh_paths.push(mesh_path);
+        }
+
+        let inverse_bind_poses = league_skeleton
+            .modern_data
+            .influences
+            .iter()
+            .map(|&v| league_skeleton.modern_data.joints[v as usize].inverse_bind_transform)
+            .map(|v| neg_mat_z(&v))
+            .collect::<Vec<_>>();
+
+        let inverse_bind_pose_path = get_bin_path(&format!("ASSETS/{}/inverse_bind_pose", skin));
+        save_struct_to_file(
+            &inverse_bind_pose_path,
+            &ConfigSkinnedMeshInverseBindposes {
+                inverse_bindposes: inverse_bind_poses,
+            },
+        )
+        .await?;
+
+        Ok(ConfigCharacterSkin {
+            skin_scale: skin_character_data_properties
+                .skin_mesh_properties
+                .skin_scale,
+            material_path,
+            submesh_paths,
+            joint_influences_indices: league_skeleton.modern_data.influences,
+            inverse_bind_pose_path,
+            joints: league_skeleton
+                .modern_data
+                .joints
+                .iter()
+                .map(|joint| ConfigJoint {
+                    hash: LeagueLoader::hash_joint(&joint.name),
+                    transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
+                    parent_index: joint.parent_index,
+                })
+                .collect(),
+            clip_map,
+        })
+    }
+}

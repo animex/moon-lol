@@ -1,5 +1,7 @@
 use super::intermediate::IntermediateMesh;
-use crate::league::{ElementName, LeagueMapGeo, LeagueMapGeoMesh, Submesh};
+use crate::league::{
+    neg_array_z, reverse_indices, ElementName, LeagueMapGeo, LeagueMapGeoMesh, Submesh,
+};
 use std::collections::HashMap;
 
 /// 从静态mesh（submesh）创建中间结构
@@ -39,12 +41,12 @@ pub fn submesh_to_intermediate(
 
             // 添加位置数据
             if let Some(pos) = all_positions.get(global_index as usize) {
-                local_positions.push(*pos);
+                local_positions.push(neg_array_z(pos));
             }
 
             // 添加法线数据
             if let Some(normal) = all_normals.get(global_index as usize) {
-                local_normals.push(*normal);
+                local_normals.push(neg_array_z(normal));
             }
 
             // 添加UV数据
@@ -71,7 +73,7 @@ pub fn submesh_to_intermediate(
         intermediate_mesh.set_uvs(Some(local_uvs));
     }
 
-    intermediate_mesh.set_indices(local_indices);
+    intermediate_mesh.set_indices(reverse_indices(&local_indices));
     intermediate_mesh.set_material_info(Some(submesh.material_name.text.clone()));
 
     Some(intermediate_mesh)

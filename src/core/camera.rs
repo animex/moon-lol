@@ -1,5 +1,5 @@
 use crate::{
-    core::{map::MAP_HEIGHT, Configs, MAP_WIDTH},
+    core::{map::MAP_HEIGHT, ConfigMap, MAP_WIDTH},
     system_debug, system_info,
 };
 use bevy::{
@@ -131,7 +131,7 @@ fn edge_scroll_camera(window: Query<&Window>, mut camera: Query<&mut Transform, 
 
 fn camera_navigation_center(
     keyboard_input: Res<ButtonInput<KeyCode>>,
-    configs: Res<Configs>,
+    configs: Res<ConfigMap>,
     mut camera: Query<&mut Transform, With<Camera3d>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyM) {
