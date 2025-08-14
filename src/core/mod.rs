@@ -6,6 +6,7 @@ mod command;
 mod config;
 mod controller;
 mod damage;
+mod game;
 mod life;
 mod map;
 mod movement;
@@ -21,6 +22,7 @@ pub use command::*;
 pub use config::*;
 pub use controller::*;
 pub use damage::*;
+pub use game::*;
 pub use life::*;
 pub use map::*;
 pub use movement::*;
@@ -38,6 +40,7 @@ impl bevy::app::Plugin for PluginCore {
             PluginCamera,
             PluginController,
             PluginDamage,
+            PluginGame,
             PluginLife,
             PluginMap,
             PluginMovement,

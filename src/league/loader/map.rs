@@ -8,14 +8,14 @@ use binrw::{io::NoSeek, BinRead, BinWrite};
 use cdragon_prop::{BinEmbed, BinHash, BinList, BinMap, BinString, BinStruct, PropFile};
 use tokio::io::AsyncWriteExt;
 
-use crate::league::{static_conversion::parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo};
+use crate::league::{
+    get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file, submesh_to_intermediate,
+    AiMeshNGrid, LeagueBinMaybeCharacterMapRecord, LeagueLoader, LeagueLoaderError, LeagueMaterial,
+    LeagueMinionPath, LeagueWadLoader,
+};
 use crate::{
-    core::CONFIG_PATH_GAME,
-    league::{
-        get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file, submesh_to_intermediate,
-        AiMeshNGrid, LeagueBinMaybeCharacterMapRecord, LeagueLoader, LeagueLoaderError,
-        LeagueMaterial, LeagueMinionPath, LeagueWadLoader,
-    },
+    core::CONFIG_PATH_MAP,
+    league::{static_conversion::parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo},
 };
 use crate::{
     core::{
@@ -38,7 +38,7 @@ impl LeagueWadMapLoader {
         wad_loader: LeagueWadLoader,
         map: &str,
     ) -> Result<LeagueWadMapLoader, LeagueLoaderError> {
-        let map_geo_path = format!("data/maps/mapgeometry/{}.mapgeo", map);
+        let map_geo_path = format!("data/maps/mapgeometry/map11/{}.mapgeo", map);
 
         let entry = wad_loader
             .wad
@@ -48,7 +48,7 @@ impl LeagueWadMapLoader {
 
         let map_geo = LeagueMapGeo::read(&mut NoSeek::new(reader))?;
 
-        let map_materials_bin_path = format!("data/maps/mapgeometry/{}.materials.bin", map);
+        let map_materials_bin_path = format!("data/maps/mapgeometry/map11/{}.materials.bin", map);
 
         let entry = wad_loader
             .wad
@@ -243,7 +243,7 @@ impl LeagueWadMapLoader {
         };
 
         // 保存最终配置文件
-        let path = get_bin_path(CONFIG_PATH_GAME);
+        let path = get_bin_path(CONFIG_PATH_MAP);
         save_struct_to_file(&path, &configs).await?;
 
         Ok(configs)

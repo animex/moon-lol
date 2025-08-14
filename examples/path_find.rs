@@ -1,6 +1,6 @@
 use bevy::math::vec3;
 use moon_lol::{
-    core::{find_path, ConfigMap, CONFIG_PATH_GAME},
+    core::{find_path, ConfigMap, CONFIG_PATH_MAP},
     league::get_struct_from_file,
     logging::setup_file_logging,
 };
@@ -11,7 +11,7 @@ fn main() {
     // Set up file logging
     setup_file_logging(&log_path);
 
-    let configs: ConfigMap = get_struct_from_file(CONFIG_PATH_GAME).unwrap();
+    let configs: ConfigMap = get_struct_from_file(CONFIG_PATH_MAP).unwrap();
     let path = find_path(
         &configs,
         configs.navigation_grid.get_center_pos(),

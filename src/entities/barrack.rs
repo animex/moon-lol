@@ -1,7 +1,7 @@
 use crate::{
     core::{
-        spawn_environment_object, Armor, Bounding, ConfigCharacterSkin, ConfigMap, Damage, Health,
-        Lane, Movement, Team,
+        spawn_skin_entity, Armor, Bounding, ConfigCharacterSkin, ConfigMap, Damage, Health, Lane,
+        Movement, Team,
     },
     entities::{Minion, MinionPath},
 };
@@ -126,7 +126,7 @@ pub struct PluginBarrack;
 impl Plugin for PluginBarrack {
     fn build(&self, app: &mut App) {
         app.init_resource::<InhibitorState>();
-        app.add_systems(Startup, setup);
+        // app.add_systems(Startup, setup);
         app.add_systems(Update, barracks_spawning_system);
     }
 }
@@ -279,7 +279,7 @@ fn barracks_spawning_system(
                     movement.speed +=
                         (barrack.move_speed_increase_increment * move_speed_upgrade_count) as f32;
 
-                    let entity = spawn_environment_object(
+                    let entity = spawn_skin_entity(
                         &mut commands,
                         &mut res_animation_graph,
                         &asset_server,

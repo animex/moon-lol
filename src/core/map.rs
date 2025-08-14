@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::core::{Animation, CommandMovementMoveTo, ConfigMap, Movement};
+use crate::core::{Animation, CommandMovementMoveTo, ConfigMap, Controller, Movement};
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
 use crate::league::LeagueLoader;
 use crate::system_debug;
@@ -54,27 +54,26 @@ fn setup(
 }
 
 /// 从Config中的ConfigEnvironmentObject生成环境对象实体
-pub fn spawn_environment_object(
+pub fn spawn_skin_entity(
     commands: &mut Commands,
     res_animation_graph: &mut ResMut<Assets<AnimationGraph>>,
     asset_server: &Res<AssetServer>,
     transform: Transform,
-    config_env_object: &ConfigCharacterSkin,
+    skin: &ConfigCharacterSkin,
 ) -> Entity {
     // 加载纹理
-    let material_handle: Handle<StandardMaterial> =
-        asset_server.load(config_env_object.material_path.clone());
+    let material_handle: Handle<StandardMaterial> = asset_server.load(skin.material_path.clone());
 
     // 创建父实体
     let parent_entity = commands
-        .spawn(transform.with_scale(transform.scale * config_env_object.skin_scale.unwrap_or(1.0)))
+        .spawn(transform.with_scale(transform.scale * skin.skin_scale.unwrap_or(1.0)))
         .id();
 
     // 构建骨骼实体映射
-    let mut index_to_entity = vec![Entity::PLACEHOLDER; config_env_object.joints.len()];
+    let mut index_to_entity = vec![Entity::PLACEHOLDER; skin.joints.len()];
 
     // 创建骨骼实体
-    for (i, joint) in config_env_object.joints.iter().enumerate() {
+    for (i, joint) in skin.joints.iter().enumerate() {
         let ent = commands
             .spawn((
                 joint.transform,
@@ -88,7 +87,7 @@ pub fn spawn_environment_object(
     }
 
     // 建立骨骼父子关系
-    for (i, joint) in config_env_object.joints.iter().enumerate() {
+    for (i, joint) in skin.joints.iter().enumerate() {
         if joint.parent_index >= 0 {
             let parent_entity_joint = index_to_entity[joint.parent_index as usize];
             commands
@@ -102,7 +101,7 @@ pub fn spawn_environment_object(
     let mut animation_graph = AnimationGraph::new();
     let mut hash_to_node_index = HashMap::new();
 
-    for (hash, clip_path) in &config_env_object.clip_map {
+    for (hash, clip_path) in &skin.clip_map {
         let clip = asset_server.load(clip_path.clone());
         let node_index = animation_graph.add_clip(clip, 1.0, animation_graph.root);
         hash_to_node_index.insert(*hash, node_index);
@@ -123,7 +122,7 @@ pub fn spawn_environment_object(
     ));
 
     // 加载和创建mesh实体
-    for submesh_path in &config_env_object.submesh_paths {
+    for submesh_path in &skin.submesh_paths {
         let mesh_handle = asset_server.load(submesh_path.clone());
 
         let child = commands
@@ -132,8 +131,8 @@ pub fn spawn_environment_object(
                 Mesh3d(mesh_handle),
                 MeshMaterial3d(material_handle.clone()),
                 SkinnedMesh {
-                    inverse_bindposes: asset_server.load(&config_env_object.inverse_bind_pose_path),
-                    joints: config_env_object
+                    inverse_bindposes: asset_server.load(&skin.inverse_bind_pose_path),
+                    joints: skin
                         .joint_influences_indices
                         .iter()
                         .map(|&v| index_to_entity[v as usize])
@@ -157,7 +156,7 @@ pub fn spawn_environment_objects_from_configs(
     let mut entities = Vec::new();
 
     for (transform, config_env_object, _) in &configs.environment_objects {
-        let entity = spawn_environment_object(
+        let entity = spawn_skin_entity(
             commands,
             res_animation_graph,
             asset_server,
@@ -218,7 +217,7 @@ pub fn spawn_geometry_objects_from_configs(
 pub fn on_click_map(
     click: Trigger<Pointer<Pressed>>,
     mut commands: Commands,
-    q_move: Query<Entity, With<Movement>>,
+    q_move: Query<Entity, With<Controller>>,
 ) {
     system_debug!("on_click_map", "Received click");
 
