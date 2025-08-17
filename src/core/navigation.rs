@@ -9,53 +9,7 @@ pub struct PluginNavigaton;
 
 impl Plugin for PluginNavigaton {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-        app.add_systems(FixedPreUpdate, update);
-    }
-}
-
-fn setup(
-    mut commands: Commands,
-    configs: Res<ConfigMap>,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    let navigation_grid = &configs.navigation_grid;
-
-    let mesh = meshes.add(Plane3d::new(
-        vec3(0.0, 1.0, 0.0),
-        Vec2::splat(navigation_grid.cell_size / 2.0 - 5.0),
-    ));
-    let red_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(1.0, 0.0, 0.0),
-        unlit: true,
-        depth_bias: 100.0,
-        ..default()
-    });
-
-    let green_material = materials.add(StandardMaterial {
-        base_color: Color::srgb(0.0, 1.0, 0.0),
-        unlit: true,
-        depth_bias: 100.0,
-        ..default()
-    });
-
-    for (x, row) in navigation_grid.cells.iter().enumerate() {
-        for (y, cell) in row.iter().enumerate() {
-            commands.spawn((
-                Mesh3d(mesh.clone()),
-                MeshMaterial3d(
-                    if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
-                        red_material.clone()
-                    } else {
-                        green_material.clone()
-                    },
-                ),
-                Transform::from_translation(navigation_grid.get_cell_pos(x, y)),
-                Visibility::Visible,
-                Pickable::IGNORE,
-            ));
-        }
+        app.add_systems(Update, update);
     }
 }
 

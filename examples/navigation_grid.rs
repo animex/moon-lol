@@ -4,7 +4,9 @@ use bevy::render::{
     RenderPlugin,
 };
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use moon_lol::core::{ConfigMap, PluginCamera, PluginResource};
+use moon_lol::core::{ConfigMap, Map, PluginCore};
+use moon_lol::entities::PluginEntities;
+use moon_lol::league::VisionPathingFlags;
 use moon_lol::logging::PluginLogging;
 
 fn main() {
@@ -29,13 +31,14 @@ fn main() {
                     ..default()
                 }),
             EguiPlugin::default(),
-            PluginCamera,
-            PluginResource,
+            PluginCore,
+            PluginEntities,
         ))
         .init_resource::<FlagFilters>()
         .add_systems(Startup, setup)
         .add_systems(EguiPrimaryContextPass, ui_system)
         .add_systems(Update, update_grid_visibility)
+        .add_systems(Update, on_key_space)
         .run();
 }
 
@@ -87,22 +90,52 @@ fn setup(
 
     let mesh = meshes.add(Plane3d::new(
         vec3(0.0, 1.0, 0.0),
-        Vec2::splat(navigation_grid.cell_size / 2.0),
+        Vec2::splat(navigation_grid.cell_size / 2.0 - 5.0),
     ));
-    let color = Color::srgb(1.0, 0.0, 0.0);
-    let material = materials.add(color);
+
+    let red_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.0, 0.0),
+        unlit: true,
+        depth_bias: 100.0,
+        ..default()
+    });
+
+    let green_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 0.0),
+        unlit: true,
+        depth_bias: 100.0,
+        ..default()
+    });
 
     for (x, row) in navigation_grid.cells.iter().enumerate() {
         for (y, cell) in row.iter().enumerate() {
             commands.spawn((
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(material.clone()),
+                MeshMaterial3d(
+                    if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
+                        red_material.clone()
+                    } else {
+                        green_material.clone()
+                    },
+                ),
                 Transform::from_translation(navigation_grid.get_cell_pos(x, y)),
                 GridCell {
                     flags: cell.vision_pathing_flags.bits() as u32,
                 },
                 Visibility::Visible,
+                Pickable::IGNORE,
             ));
+        }
+    }
+}
+
+fn on_key_space(
+    keyboard_input: Res<ButtonInput<KeyCode>>,
+    mut q_map: Query<&mut Visibility, With<Map>>,
+) {
+    if keyboard_input.just_pressed(KeyCode::Space) {
+        for mut visibility in q_map.iter_mut() {
+            visibility.toggle_visible_hidden();
         }
     }
 }

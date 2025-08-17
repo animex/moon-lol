@@ -30,7 +30,6 @@ impl Plugin for PluginMap {
     fn build(&self, app: &mut App) {
         app.add_plugins(MeshPickingPlugin);
         app.add_systems(Startup, setup);
-        app.add_systems(Update, on_key_space);
     }
 }
 
@@ -44,7 +43,7 @@ fn setup(
 
     commands
         .entity(geo_entity)
-        .insert((Visibility::Hidden, Map))
+        .insert((Visibility::Visible, Map))
         .observe(on_click_map);
 
     let environment_entities = spawn_environment_objects_from_configs(
@@ -57,18 +56,7 @@ fn setup(
     for entity in environment_entities {
         commands
             .entity(entity)
-            .insert((Visibility::Hidden, Map, Pickable::IGNORE));
-    }
-}
-
-fn on_key_space(
-    keyboard_input: Res<ButtonInput<KeyCode>>,
-    mut q_map: Query<&mut Visibility, With<Map>>,
-) {
-    if keyboard_input.just_pressed(KeyCode::Space) {
-        for mut visibility in q_map.iter_mut() {
-            visibility.toggle_visible_hidden();
-        }
+            .insert((Visibility::Visible, Map, Pickable::IGNORE));
     }
 }
 
