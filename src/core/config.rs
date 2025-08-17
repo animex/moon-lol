@@ -59,6 +59,9 @@ pub enum ConfigCharacterSkinAnimation {
         component_name: String,
         field_name: String,
     },
+    SelectorClipData {
+        probably_nodes: Vec<(u32, f32)>,
+    },
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::f32;
 
 use crate::core::{
-    Animation, AnimationNode, AnimationState, CommandMovementMoveTo, ConfigCharacterSkinAnimation,
-    ConfigMap, Controller,
+    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandMovementMoveTo,
+    ConfigCharacterSkinAnimation, ConfigMap, Controller,
 };
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
 use crate::league::LeagueLoader;
@@ -121,35 +121,33 @@ pub fn spawn_skin_entity(
                 component_name,
                 field_name,
             } => {
-                let mut segments = Vec::new();
-
-                let node_index = animation_graph.add_blend(0.5, animation_graph.root);
-
-                for (node_hash, condition_value) in conditions {
-                    let ConfigCharacterSkinAnimation::AtomicClipData { clip_path } =
-                        skin.animation_map.get(node_hash).unwrap()
-                    else {
-                        panic!("no clip path for node hash: {}", node_hash);
-                    };
-
-                    let clip = asset_server.load(clip_path.clone());
-
-                    let clip_node_index = animation_graph.add_clip(
-                        clip,
-                        if segments.is_empty() { 1.0 } else { 0.0 },
-                        node_index,
-                    );
-
-                    segments.push((*condition_value, clip_node_index));
-                }
-
                 hash_to_node.insert(
                     *hash,
                     AnimationNode::ConditionFloat {
                         component_name: component_name.clone(),
                         field_name: field_name.clone(),
-                        segments,
-                        node_index,
+                        conditions: conditions
+                            .iter()
+                            .map(|(key, value)| AnimationNodeF32 {
+                                key: *key,
+                                value: *value,
+                            })
+                            .collect::<Vec<_>>(),
+                    },
+                );
+            }
+
+            ConfigCharacterSkinAnimation::SelectorClipData { probably_nodes } => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::Selector {
+                        probably_nodes: probably_nodes
+                            .iter()
+                            .map(|(key, value)| AnimationNodeF32 {
+                                key: *key,
+                                value: *value,
+                            })
+                            .collect::<Vec<_>>(),
                     },
                 );
             }

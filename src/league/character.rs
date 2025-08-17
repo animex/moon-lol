@@ -291,10 +291,8 @@ pub fn load_animation_map(
     let animation_graph_data = nodes
         .iter()
         .filter_map(|(k, v)| {
-            let hash_atomic_clip_data = LeagueLoader::hash_bin("AtomicClipData");
-            let hash_condition_float_clip_data = LeagueLoader::hash_bin("ConditionFloatClipData");
-            match v.ctype.hash {
-                _ if v.ctype.hash == hash_atomic_clip_data => Some((
+            if v.ctype.hash == LeagueLoader::hash_bin("AtomicClipData") {
+                return Some((
                     k.0.hash,
                     ConfigCharacterSkinAnimation::AtomicClipData {
                         clip_path: v
@@ -306,59 +304,87 @@ pub fn load_animation_map(
                             .map(|v| v.0.clone())
                             .unwrap(),
                     },
-                )),
-                _ if v.ctype.hash == hash_condition_float_clip_data => {
-                    let updater = v
-                        .getv::<BinStruct>(LeagueLoader::hash_bin("Updater").into())
-                        .unwrap();
+                ));
+            }
 
-                    let mut component_name = None;
-                    let mut field_name = None;
+            if v.ctype.hash == LeagueLoader::hash_bin("ConditionFloatClipData") {
+                let updater = v
+                    .getv::<BinStruct>(LeagueLoader::hash_bin("Updater").into())
+                    .unwrap();
 
-                    if updater.ctype.hash == LeagueLoader::hash_bin("MoveSpeedParametricUpdater") {
-                        component_name = Some("Movement".to_string());
-                        field_name = Some("speed".to_string());
-                    }
+                let mut component_name = None;
+                let mut field_name = None;
 
-                    let Some(component_name) = component_name else {
-                        return None;
-                    };
-                    let Some(field_name) = field_name else {
-                        return None;
-                    };
+                if updater.ctype.hash == LeagueLoader::hash_bin("MoveSpeedParametricUpdater") {
+                    component_name = Some("Movement".to_string());
+                    field_name = Some("speed".to_string());
+                }
 
-                    Some((
-                        k.0.hash,
-                        ConfigCharacterSkinAnimation::ConditionFloatClipData {
-                            conditions: v
-                                .getv::<BinList>(
-                                    LeagueLoader::hash_bin("mConditionFloatPairDataList").into(),
-                                )
-                                .unwrap()
-                                .downcast::<BinEmbed>()
-                                .unwrap()
-                                .iter()
-                                .map(|v| {
-                                    (
-                                        v.getv::<BinHash>(
-                                            LeagueLoader::hash_bin("mClipName").into(),
-                                        )
+                let Some(component_name) = component_name else {
+                    return None;
+                };
+                let Some(field_name) = field_name else {
+                    return None;
+                };
+
+                return Some((
+                    k.0.hash,
+                    ConfigCharacterSkinAnimation::ConditionFloatClipData {
+                        conditions: v
+                            .getv::<BinList>(
+                                LeagueLoader::hash_bin("mConditionFloatPairDataList").into(),
+                            )
+                            .unwrap()
+                            .downcast::<BinEmbed>()
+                            .unwrap()
+                            .iter()
+                            .map(|v| {
+                                (
+                                    v.getv::<BinHash>(LeagueLoader::hash_bin("mClipName").into())
                                         .unwrap()
                                         .0
                                         .hash,
-                                        v.getv::<BinFloat>(LeagueLoader::hash_bin("mValue").into())
-                                            .unwrap_or(&BinFloat(0.0))
-                                            .0,
-                                    )
-                                })
-                                .collect(),
-                            component_name,
-                            field_name,
-                        },
-                    ))
-                }
-                _ => None,
+                                    v.getv::<BinFloat>(LeagueLoader::hash_bin("mValue").into())
+                                        .unwrap_or(&BinFloat(0.0))
+                                        .0,
+                                )
+                            })
+                            .collect(),
+                        component_name,
+                        field_name,
+                    },
+                ));
             }
+
+            if v.ctype.hash == LeagueLoader::hash_bin("SelectorClipData") {
+                return Some((
+                    k.0.hash,
+                    ConfigCharacterSkinAnimation::SelectorClipData {
+                        probably_nodes: v
+                            .getv::<BinList>(LeagueLoader::hash_bin("mSelectorPairDataList").into())
+                            .unwrap()
+                            .downcast::<BinEmbed>()
+                            .unwrap()
+                            .iter()
+                            .map(|v| {
+                                (
+                                    v.getv::<BinHash>(LeagueLoader::hash_bin("mClipName").into())
+                                        .unwrap()
+                                        .0
+                                        .hash,
+                                    v.getv::<BinFloat>(
+                                        LeagueLoader::hash_bin("mProbability").into(),
+                                    )
+                                    .unwrap()
+                                    .0,
+                                )
+                            })
+                            .collect(),
+                    },
+                ));
+            }
+
+            None
         })
         .collect();
 

@@ -1,6 +1,10 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*, reflect::ReflectRef};
+use bevy::{ecs::query, prelude::*, reflect::ReflectRef};
+use rand::{
+    distr::{weighted::WeightedIndex, Distribution},
+    rng,
+};
 
 use crate::{
     core::{EventMovementEnd, EventMovementStart},
@@ -10,6 +14,32 @@ use crate::{
 #[derive(Component)]
 pub struct Animation {
     pub hash_to_node: HashMap<u32, AnimationNode>,
+}
+
+impl Animation {
+    pub fn play(&self, player: &mut AnimationPlayer, key: u32, weight: f32) {
+        let Some(node) = self.hash_to_node.get(&key) else {
+            return;
+        };
+
+        match node {
+            AnimationNode::Clip { node_index } => {
+                player.play(*node_index).set_weight(weight).repeat();
+            }
+            AnimationNode::ConditionFloat { conditions, .. } => {
+                for condition in conditions {
+                    self.play(player, condition.key, weight);
+                }
+            }
+            AnimationNode::Selector { probably_nodes } => {
+                let weights = probably_nodes.iter().map(|v| v.value).collect::<Vec<_>>();
+                let dist = WeightedIndex::new(weights).unwrap();
+                let index = dist.sample(&mut rng());
+
+                self.play(player, probably_nodes[index].key, weight);
+            }
+        }
+    }
 }
 
 #[derive(Component)]
@@ -25,9 +55,17 @@ pub enum AnimationNode {
     ConditionFloat {
         component_name: String,
         field_name: String,
-        segments: Vec<(f32, AnimationNodeIndex)>,
-        node_index: AnimationNodeIndex,
+        conditions: Vec<AnimationNodeF32>,
     },
+    Selector {
+        probably_nodes: Vec<AnimationNodeF32>,
+    },
+}
+
+#[derive(Clone)]
+pub struct AnimationNodeF32 {
+    pub key: u32,
+    pub value: f32,
 }
 
 pub struct PluginAnimation;
@@ -36,6 +74,7 @@ impl Plugin for PluginAnimation {
     fn build(&self, app: &mut App) {
         app.add_observer(on_movement_start);
         app.add_observer(on_movement_end);
+        app.add_systems(Update, on_animation_state_change);
         app.add_systems(Update, update_condition_animation);
     }
 }
@@ -60,11 +99,20 @@ fn on_movement_end(trigger: Trigger<EventMovementEnd>, mut query: Query<&mut Ani
     state.current_hash = LeagueLoader::hash_bin("Idle1");
 }
 
+fn on_animation_state_change(
+    mut query: Query<(&mut AnimationPlayer, &Animation, &AnimationState), Changed<AnimationState>>,
+) {
+    for (mut player, animation, state) in query.iter_mut() {
+        player.stop_all();
+        animation.play(&mut player, state.current_hash, 1.0);
+    }
+}
+
 fn update_condition_animation(world: &mut World) {
     let mut query = world.query::<(Entity, &Animation, &AnimationState)>();
-    let mut player_query = world.query::<&mut AnimationPlayer>();
+    let mut player_query = world.query::<(&mut AnimationPlayer, &Animation)>();
 
-    let iter = query
+    let play_list = query
         .iter(world)
         .filter_map(|(entity, animation, state)| {
             let Some(node) = animation
@@ -75,74 +123,65 @@ fn update_condition_animation(world: &mut World) {
                 return None;
             };
 
-            match node {
-                AnimationNode::Clip { node_index } => {
-                    return Some((entity, vec![(node_index, 1.0)]));
-                }
-                AnimationNode::ConditionFloat {
-                    component_name,
-                    field_name,
-                    segments,
-                    ..
-                } => {
-                    let Some(value) =
-                        get_reflect_component_value(world, entity, &component_name, &field_name)
-                    else {
-                        return None;
-                    };
+            let AnimationNode::ConditionFloat {
+                component_name,
+                field_name,
+                conditions,
+                ..
+            } = node
+            else {
+                return None;
+            };
 
-                    if segments.is_empty() {
-                        return None;
-                    }
+            let Some(value) =
+                get_reflect_component_value(world, entity, &component_name, &field_name)
+            else {
+                return None;
+            };
 
-                    if value < segments[0].0 {
-                        let (_, node_index) = segments[0];
-                        return Some((entity, vec![(node_index, 1.0)]));
-                    }
+            if conditions.is_empty() {
+                return None;
+            }
 
-                    if let Some((_, node_index)) = segments.last() {
-                        if value >= segments.last().unwrap().0 {
-                            return Some((entity, vec![(*node_index, 1.0)]));
-                        }
-                    }
+            if value < conditions[0].value {
+                return Some((entity, vec![(conditions[0].key, 1.0)]));
+            }
 
-                    let Some(window) = segments
-                        .windows(2)
-                        .find(|w| value >= w[0].0 && value < w[1].0)
-                    else {
-                        return None;
-                    };
-
-                    let lower = &window[0];
-                    let upper = &window[1];
-
-                    let (lower_threshold, lower_index) = *lower;
-                    let (upper_threshold, upper_index) = *upper;
-
-                    let range = upper_threshold - lower_threshold;
-
-                    let weight = if range > f32::EPSILON {
-                        ((value - lower_threshold) / range).clamp(0.0, 1.0)
-                    } else {
-                        0.0
-                    };
-
-                    return Some((
-                        entity,
-                        vec![(lower_index, 1.0 - weight), (upper_index, weight)],
-                    ));
+            if let Some(condition) = conditions.last() {
+                if value >= condition.value {
+                    return Some((entity, vec![(condition.key, 1.0)]));
                 }
             }
+
+            let Some(window) = conditions
+                .windows(2)
+                .find(|w| value >= w[0].value && value < w[1].value)
+            else {
+                return None;
+            };
+
+            let lower = &window[0];
+            let upper = &window[1];
+
+            let range = upper.value - lower.value;
+
+            let weight = if range > f32::EPSILON {
+                ((value - lower.value) / range).clamp(0.0, 1.0)
+            } else {
+                0.0
+            };
+
+            return Some((entity, vec![(lower.key, 1.0 - weight), (upper.key, weight)]));
         })
         .collect::<Vec<_>>();
 
-    for (entity, nodes) in iter {
-        let Ok(mut player) = player_query.get_mut(world, entity) else {
-            return;
+    for (entity, nodes) in play_list {
+        let Ok((mut player, animation)) = player_query.get_mut(world, entity) else {
+            continue;
         };
 
-        for (node_index, weight) in nodes {
-            player.play(node_index).set_weight(weight).repeat();
+        for (key, weight) in nodes {
+            animation.play(&mut player, key, weight);
         }
     }
 }
