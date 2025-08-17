@@ -2,7 +2,7 @@ use std::collections::HashMap;
 
 use bevy::{
     ecs::resource::Resource,
-    math::{Mat4, Vec2, Vec3},
+    math::{vec3, Mat4, Vec2, Vec3},
     transform::components::Transform,
 };
 use serde::{Deserialize, Serialize};
@@ -107,30 +107,44 @@ impl ConfigNavigationGrid {
         )
     }
 
-    pub fn get_cell_pos(&self, x: usize, y: usize) -> Vec3 {
+    pub fn get_cell_by_xy(&self, pos: (usize, usize)) -> &ConfigNavigationGridCell {
+        &self.cells[pos.0.clamp(0, self.x_len - 1)][pos.1.clamp(0, self.y_len - 1)]
+    }
+
+    pub fn get_cell_center_position_by_xy(&self, pos: (usize, usize)) -> Vec3 {
         let offset = self.get_offset();
         Vec3::new(
-            offset.x + y as f32 * self.cell_size,
-            self.cells[x][y].y + 5.0,
-            -(offset.y + x as f32 * self.cell_size),
+            offset.x + pos.1 as f32 * self.cell_size,
+            self.get_cell_by_xy(pos).y + 5.0,
+            -(offset.y + pos.0 as f32 * self.cell_size),
         )
     }
 
-    pub fn get_cell_xy_by_pos(&self, pos: Vec3) -> (usize, usize) {
+    pub fn get_cell_xy_by_position(&self, pos: Vec2) -> (usize, usize) {
         let offset = self.get_offset();
-        let x = ((-pos.z - offset.y) / self.cell_size).round() as usize;
+        let x = ((-pos.y - offset.y) / self.cell_size).round() as usize;
         let y = ((pos.x - offset.x) / self.cell_size).round() as usize;
 
         (x, y)
     }
 
-    pub fn get_cell_by_pos(&self, pos: Vec3) -> &ConfigNavigationGridCell {
-        let (x, y) = self.get_cell_xy_by_pos(pos);
-
-        &self.cells[x.clamp(0, self.x_len - 1)][y.clamp(0, self.y_len - 1)]
+    pub fn get_cell_by_position(&self, pos: Vec2) -> &ConfigNavigationGridCell {
+        self.get_cell_by_xy(self.get_cell_xy_by_position(pos))
     }
 
-    pub fn get_center_pos(&self) -> Vec3 {
+    pub fn get_world_position_by_position(&self, pos: Vec2) -> Vec3 {
+        vec3(pos.x, self.get_cell_by_position(pos).y, pos.y)
+    }
+
+    pub fn get_position_by_float_xy(&self, pos: Vec2) -> Vec2 {
+        let offset = self.get_offset();
+        Vec2::new(
+            offset.x + pos.y * self.cell_size,
+            -(offset.y + pos.x * self.cell_size),
+        )
+    }
+
+    pub fn get_map_center_position(&self) -> Vec3 {
         let offset = self.get_offset();
         Vec3::new(
             offset.x + self.cell_size * self.x_len as f32 / 2.0,

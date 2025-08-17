@@ -2,7 +2,7 @@ use std::collections::HashMap;
 use std::f32;
 
 use crate::core::{
-    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandMovementMoveTo,
+    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandNavigationTo,
     ConfigCharacterSkinAnimation, ConfigMap, Controller,
 };
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
@@ -279,5 +279,5 @@ pub fn on_click_map(
         position.z,
     );
 
-    commands.trigger_targets(CommandMovementMoveTo(position.xz()), targets);
+    commands.trigger_targets(CommandNavigationTo(position.xz()), targets);
 }

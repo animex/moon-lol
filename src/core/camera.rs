@@ -1,4 +1,4 @@
-use crate::{core::ConfigMap, system_debug, system_info};
+use crate::core::ConfigMap;
 use bevy::{
     input::keyboard::KeyCode, input::mouse::MouseWheel, prelude::*, window::CursorGrabMode,
 };
@@ -166,7 +166,7 @@ fn on_key_m(
     mut camera: Query<&mut CameraState, With<Camera3d>>,
 ) {
     if keyboard_input.just_pressed(KeyCode::KeyM) {
-        let center_pos = configs.navigation_grid.get_center_pos();
+        let center_pos = configs.navigation_grid.get_map_center_position();
 
         if let Ok(mut camera_state) = camera.single_mut() {
             camera_state.position = center_pos;

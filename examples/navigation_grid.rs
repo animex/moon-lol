@@ -1,10 +1,11 @@
+use bevy::color::palettes;
 use bevy::prelude::*;
 use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
 };
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-use moon_lol::core::{ConfigMap, Map, PluginCore};
+use moon_lol::core::{on_click_map, ConfigMap, Map, MovementState, PluginCore};
 use moon_lol::entities::PluginEntities;
 use moon_lol::league::VisionPathingFlags;
 use moon_lol::logging::PluginLogging;
@@ -39,6 +40,7 @@ fn main() {
         .add_systems(EguiPrimaryContextPass, ui_system)
         .add_systems(Update, update_grid_visibility)
         .add_systems(Update, on_key_space)
+        .add_systems(Update, draw_move_path)
         .run();
 }
 
@@ -109,22 +111,25 @@ fn setup(
 
     for (x, row) in navigation_grid.cells.iter().enumerate() {
         for (y, cell) in row.iter().enumerate() {
-            commands.spawn((
-                Mesh3d(mesh.clone()),
-                MeshMaterial3d(
-                    if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
-                        red_material.clone()
-                    } else {
-                        green_material.clone()
+            commands
+                .spawn((
+                    Mesh3d(mesh.clone()),
+                    MeshMaterial3d(
+                        if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
+                            red_material.clone()
+                        } else {
+                            green_material.clone()
+                        },
+                    ),
+                    Transform::from_translation(
+                        navigation_grid.get_cell_center_position_by_xy((x, y)),
+                    ),
+                    GridCell {
+                        flags: cell.vision_pathing_flags.bits() as u32,
                     },
-                ),
-                Transform::from_translation(navigation_grid.get_cell_pos(x, y)),
-                GridCell {
-                    flags: cell.vision_pathing_flags.bits() as u32,
-                },
-                Visibility::Visible,
-                Pickable::IGNORE,
-            ));
+                    Visibility::Visible,
+                ))
+                .observe(on_click_map);
         }
     }
 }
@@ -136,6 +141,27 @@ fn on_key_space(
     if keyboard_input.just_pressed(KeyCode::Space) {
         for mut visibility in q_map.iter_mut() {
             visibility.toggle_visible_hidden();
+        }
+    }
+}
+
+fn draw_move_path(
+    config_map: Res<ConfigMap>,
+    mut gizmos: Gizmos,
+    q_movement_path: Query<&MovementState>,
+) {
+    for movement_path in q_movement_path.iter() {
+        // 绘制路径线段
+        for path_point in movement_path.path.windows(2) {
+            gizmos.line(
+                config_map
+                    .navigation_grid
+                    .get_world_position_by_position(path_point[0]),
+                config_map
+                    .navigation_grid
+                    .get_world_position_by_position(path_point[1]),
+                Color::Srgba(palettes::tailwind::BLUE_500),
+            );
         }
     }
 }

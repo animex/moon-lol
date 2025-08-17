@@ -2,39 +2,11 @@ use bevy::prelude::*;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
-use crate::core::{ConfigMap, Movement};
 use crate::league::VisionPathingFlags;
-
-pub struct PluginNavigaton;
-
-impl Plugin for PluginNavigaton {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Update, update);
-    }
-}
-
-fn update(configs: Res<ConfigMap>, mut q_movement: Query<&mut Transform, With<Movement>>) {
-    for mut transform in q_movement.iter_mut() {
-        let cell = configs
-            .navigation_grid
-            .get_cell_by_pos(transform.translation);
-        transform.translation.y = cell.y;
-
-        if transform.translation.y < 0.0 {
-            transform.translation.y = 0.0;
-        }
-    }
-}
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash)]
-struct GridPos {
-    x: usize,
-    y: usize,
-}
 
 #[derive(Debug, Clone)]
 struct AStarNode {
-    pos: GridPos,
+    pos: (usize, usize),
     g_cost: f32,
     h_cost: f32,
 }
@@ -69,15 +41,18 @@ impl Ord for AStarNode {
     }
 }
 
-pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2>> {
-    let grid = &configs.navigation_grid;
-
+/// 使用A*算法找到网格路径
+pub fn find_grid_path(
+    grid: &crate::core::ConfigNavigationGrid,
+    start: Vec3,
+    end: Vec3,
+) -> Option<Vec<(usize, usize)>> {
     let start_pos = world_to_grid(grid, start);
     let end_pos = world_to_grid(grid, end);
 
     debug!(
         "A* pathfinding: start=({}, {}) end=({}, {})",
-        start_pos.x, start_pos.y, end_pos.x, end_pos.y
+        start_pos.0, start_pos.1, end_pos.0, end_pos.1
     );
 
     if !is_valid_pos(grid, start_pos) || !is_valid_pos(grid, end_pos) {
@@ -88,7 +63,7 @@ pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2
     let mut open_set = BinaryHeap::new();
     let mut closed_set = HashMap::new();
     let mut came_from = HashMap::new();
-    let mut g_scores = HashMap::new(); // 跟踪每个位置的最佳g_cost
+    let mut g_scores = HashMap::new();
 
     let start_node = AStarNode {
         pos: start_pos,
@@ -100,48 +75,35 @@ pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2
     g_scores.insert(start_pos, 0.0);
 
     let mut iterations = 0;
-    const MAX_ITERATIONS: usize = 10000; // 防止无限循环
+    const MAX_ITERATIONS: usize = 10000;
 
     while let Some(current) = open_set.pop() {
         iterations += 1;
 
         if iterations > MAX_ITERATIONS {
-            error!("A* pathfinding: Exceeded maximum iterations ({}), breaking to prevent infinite loop", MAX_ITERATIONS);
-            return None;
-        }
-
-        if iterations % 1000 == 0 {
-            debug!(
-                "A* pathfinding: Iteration {}, current=({}, {}), f_cost={:.2}",
-                iterations,
-                current.pos.x,
-                current.pos.y,
-                current.f_cost()
+            error!(
+                "A* pathfinding: Exceeded maximum iterations ({})",
+                MAX_ITERATIONS
             );
+            return None;
         }
 
         if current.pos == end_pos {
             debug!("A* pathfinding: Found path in {} iterations", iterations);
-            // 重建路径
+            // 重建网格路径
             let mut path = Vec::new();
             let mut current_pos = end_pos;
 
             while let Some(&parent_pos) = came_from.get(&current_pos) {
-                let world_pos = grid_to_world(grid, current_pos);
-                path.push(Vec2::new(world_pos.x, world_pos.z));
+                path.push(current_pos);
                 current_pos = parent_pos;
             }
-
-            // 添加起始点
-            let start_world = grid_to_world(grid, start_pos);
-            path.push(Vec2::new(start_world.x, start_world.z));
-
+            path.push(start_pos);
             path.reverse();
-            debug!("A* pathfinding: Generated path with {} points", path.len());
+
             return Some(path);
         }
 
-        // 如果这个节点已经在closed_set中且有更好的g_cost，跳过
         if let Some(&existing_g_cost) = closed_set.get(&current.pos) {
             if current.g_cost > existing_g_cost {
                 continue;
@@ -150,23 +112,19 @@ pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2
 
         closed_set.insert(current.pos, current.g_cost);
 
-        // 检查邻居
         for neighbor_pos in get_neighbors(grid, current.pos) {
-            // 1. 如果邻居已在closed_set中，直接跳过。
             if closed_set.contains_key(&neighbor_pos) {
                 continue;
             }
 
             let tentative_g_cost = current.g_cost + distance_cost(grid, current.pos, neighbor_pos);
 
-            // 2. 检查是否需要更新 g_score
             if let Some(&existing_g_cost) = g_scores.get(&neighbor_pos) {
                 if tentative_g_cost >= existing_g_cost {
-                    continue; // 不是更优的路径，跳过
+                    continue;
                 }
             }
 
-            // 找到了更优的路径，或第一次访问该节点
             let neighbor_node = AStarNode {
                 pos: neighbor_pos,
                 g_cost: tentative_g_cost,
@@ -186,67 +144,82 @@ pub fn find_path(configs: &ConfigMap, start: Vec3, end: Vec3) -> Option<Vec<Vec2
     None
 }
 
-fn world_to_grid(grid: &crate::core::ConfigNavigationGrid, world_pos: Vec3) -> GridPos {
-    let (x, y) = grid.get_cell_xy_by_pos(world_pos);
+fn world_to_grid(grid: &crate::core::ConfigNavigationGrid, world_pos: Vec3) -> (usize, usize) {
+    let (x, y) = grid.get_cell_xy_by_position(world_pos.xz());
 
-    GridPos { x, y }
+    (x, y)
 }
 
-fn grid_to_world(grid: &crate::core::ConfigNavigationGrid, grid_pos: GridPos) -> Vec3 {
-    grid.get_cell_pos(grid_pos.x, grid_pos.y)
+fn is_valid_pos(grid: &crate::core::ConfigNavigationGrid, pos: (usize, usize)) -> bool {
+    pos.0 < grid.x_len && pos.1 < grid.y_len
 }
 
-fn is_valid_pos(grid: &crate::core::ConfigNavigationGrid, pos: GridPos) -> bool {
-    pos.x < grid.x_len && pos.y < grid.y_len
+fn heuristic_cost(
+    grid: &crate::core::ConfigNavigationGrid,
+    from: (usize, usize),
+    to: (usize, usize),
+) -> f32 {
+    let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
+    let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
+    let euclidean_distance = (dx * dx + dy * dy).sqrt() * grid.cell_size;
+
+    // 引入一个非常小的权重来打破平局，p 应该很小
+    // 例如 1.0 / (地图最大距离)
+    const P: f32 = 1.0 / (300.0 * 300.0);
+    return euclidean_distance * (1.0 + P);
 }
 
-fn get_neighbors(grid: &crate::core::ConfigNavigationGrid, pos: GridPos) -> Vec<GridPos> {
+fn get_neighbors(
+    grid: &crate::core::ConfigNavigationGrid,
+    pos: (usize, usize),
+) -> Vec<(usize, usize)> {
     let mut neighbors = Vec::new();
 
     let directions = [
-        (-1, -1),
         (-1, 0),
-        (-1, 1),
         (0, -1),
         (0, 1),
-        (1, -1),
         (1, 0),
+        (-1, -1),
+        (-1, 1),
+        (1, -1),
         (1, 1),
     ];
 
     for (dx, dy) in directions {
-        let new_x = pos.x as i32 + dx;
-        let new_y = pos.y as i32 + dy;
+        let new_x = pos.0 as i32 + dx;
+        let new_y = pos.1 as i32 + dy;
 
         if new_x < 0 || new_y < 0 {
             continue;
         }
 
-        let pos = GridPos {
-            x: new_x as usize,
-            y: new_y as usize,
-        };
+        let new_pos = (new_x as usize, new_y as usize);
 
-        if !is_valid_pos(grid, pos) {
+        if !is_valid_pos(grid, new_pos) {
             continue;
         }
 
-        if grid.cells[pos.x][pos.y]
+        if grid.cells[new_pos.0][new_pos.1]
             .vision_pathing_flags
             .contains(VisionPathingFlags::Wall)
         {
             continue;
         }
 
-        neighbors.push(pos);
+        neighbors.push(new_pos);
     }
 
     neighbors
 }
 
-fn distance_cost(grid: &crate::core::ConfigNavigationGrid, from: GridPos, to: GridPos) -> f32 {
-    let dx = (to.x as i32 - from.x as i32).abs() as f32;
-    let dy = (to.y as i32 - from.y as i32).abs() as f32;
+fn distance_cost(
+    grid: &crate::core::ConfigNavigationGrid,
+    from: (usize, usize),
+    to: (usize, usize),
+) -> f32 {
+    let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
+    let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
 
     // 对角线移动成本更高
     if dx == 1.0 && dy == 1.0 {
@@ -254,15 +227,4 @@ fn distance_cost(grid: &crate::core::ConfigNavigationGrid, from: GridPos, to: Gr
     } else {
         grid.cell_size
     }
-}
-
-fn heuristic_cost(grid: &crate::core::ConfigNavigationGrid, from: GridPos, to: GridPos) -> f32 {
-    let dx = (to.x as i32 - from.x as i32).abs() as f32;
-    let dy = (to.y as i32 - from.y as i32).abs() as f32;
-    let euclidean_distance = (dx * dx + dy * dy).sqrt() * grid.cell_size;
-
-    // 引入一个非常小的权重来打破平局，p 应该很小
-    // 例如 1.0 / (地图最大距离)
-    const P: f32 = 1.0 / (300.0 * 300.0);
-    return euclidean_distance * (1.0 + P);
 }

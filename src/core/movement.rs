@@ -1,11 +1,5 @@
-use std::time::Instant;
-
 use core::f32;
 
-use crate::{
-    core::{navigation, ConfigMap},
-    system_debug,
-};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -16,9 +10,6 @@ impl Plugin for PluginMovement {
         app.register_type::<Movement>();
 
         app.add_systems(FixedUpdate, update_path_movement);
-
-        app.add_event::<CommandMovementMoveTo>();
-        app.add_observer(command_movement_move_to);
 
         app.add_event::<CommandMovementFollowPath>();
         app.add_observer(command_movement_follow_path);
@@ -70,9 +61,6 @@ pub struct EventMovementStart;
 
 #[derive(Event, Debug)]
 pub struct EventMovementEnd;
-
-#[derive(Event, Debug)]
-pub struct CommandMovementMoveTo(pub Vec2);
 
 #[derive(Event, Debug)]
 pub struct CommandMovementFollowPath(pub Vec<Vec2>);
@@ -192,36 +180,6 @@ fn find_next_target_point(
     }
 
     Some(path[movement_state.current_target_index])
-}
-
-fn command_movement_move_to(
-    trigger: Trigger<CommandMovementMoveTo>,
-    mut commands: Commands,
-    configs: Res<ConfigMap>,
-    mut q_transform: Query<(&Transform, &mut MovementState)>,
-) {
-    let entity = trigger.target();
-    let destination = trigger.event().0;
-
-    // 获取当前位置
-    if let Ok((transform, mut movement_state)) = q_transform.get_mut(entity) {
-        let start_pos = transform.translation;
-        let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
-
-        let start = Instant::now();
-        // 使用A*算法规划路径，对于单点移动，创建长度为1的路径
-        if let Some(path) = navigation::find_path(&configs, start_pos, end_pos) {
-            let duration = start.elapsed();
-            system_debug!(
-                "command_movement_move_to",
-                "Path found in {:.6}ms",
-                duration.as_millis()
-            );
-            // 设置新的路径
-            movement_state.set_path(path);
-            commands.trigger_targets(EventMovementStart, entity);
-        }
-    }
 }
 
 fn command_movement_follow_path(
