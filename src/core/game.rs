@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::core::{spawn_skin_entity, ConfigGame, Controller, Health, Movement};
 
+#[derive(Default)]
 pub struct PluginGame;
 
 impl Plugin for PluginGame {

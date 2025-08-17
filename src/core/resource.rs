@@ -12,6 +12,7 @@ pub const CONFIG_PATH_GAME: &str = "config_game";
 
 use bevy::prelude::*;
 
+#[derive(Default)]
 pub struct PluginResource;
 
 impl Plugin for PluginResource {

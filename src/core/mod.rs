@@ -30,24 +30,22 @@ pub use navigation::*;
 pub use resource::*;
 pub use ui::*;
 
-pub struct PluginCore;
+use bevy::app::plugin_group;
 
-impl bevy::app::Plugin for PluginCore {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_plugins((
-            PluginAnimation,
-            PluginAttack,
-            PluginCamera,
-            PluginController,
-            PluginDamage,
-            PluginGame,
-            PluginLife,
-            PluginMap,
-            PluginMovement,
-            PluginNavigaton,
-            PluginResource,
-            PluginTarget,
-            PluginUI,
-        ));
+plugin_group! {
+    pub struct PluginCore {
+        :PluginAnimation,
+        :PluginAttack,
+        :PluginCamera,
+        :PluginController,
+        :PluginDamage,
+        :PluginGame,
+        :PluginLife,
+        :PluginMap,
+        :PluginMovement,
+        :PluginNavigaton,
+        :PluginResource,
+        :PluginTarget,
+        :PluginUI,
     }
 }

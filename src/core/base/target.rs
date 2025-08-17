@@ -11,6 +11,7 @@ pub struct CommandTargetSet {
 #[derive(Event, Debug)]
 pub struct CommandTargetRemove;
 
+#[derive(Default)]
 pub struct PluginTarget;
 
 impl Plugin for PluginTarget {

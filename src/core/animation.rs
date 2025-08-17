@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{ecs::query, prelude::*, reflect::ReflectRef};
+use bevy::{prelude::*, reflect::ReflectRef};
 use rand::{
     distr::{weighted::WeightedIndex, Distribution},
     rng,
@@ -68,6 +68,7 @@ pub struct AnimationNodeF32 {
     pub value: f32,
 }
 
+#[derive(Default)]
 pub struct PluginAnimation;
 
 impl Plugin for PluginAnimation {

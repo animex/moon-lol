@@ -3,6 +3,7 @@ use core::f32;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+#[derive(Default)]
 pub struct PluginMovement;
 
 impl Plugin for PluginMovement {

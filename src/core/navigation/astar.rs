@@ -2,6 +2,7 @@ use bevy::prelude::*;
 use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
+use crate::core::ConfigNavigationGrid;
 use crate::league::VisionPathingFlags;
 
 #[derive(Debug, Clone)]
@@ -41,12 +42,28 @@ impl Ord for AStarNode {
     }
 }
 
+/// A* 搜索结果
+#[derive(Debug, Clone)]
+pub struct AStarResult {
+    pub path: Vec<(usize, usize)>,
+    pub visited_cells: Vec<(usize, usize)>,
+}
+
 /// 使用A*算法找到网格路径
 pub fn find_grid_path(
-    grid: &crate::core::ConfigNavigationGrid,
+    grid: &ConfigNavigationGrid,
     start: Vec3,
     end: Vec3,
 ) -> Option<Vec<(usize, usize)>> {
+    find_grid_path_with_result(grid, start, end).map(|result| result.path)
+}
+
+/// 使用A*算法找到网格路径，返回详细结果
+pub fn find_grid_path_with_result(
+    grid: &ConfigNavigationGrid,
+    start: Vec3,
+    end: Vec3,
+) -> Option<AStarResult> {
     let start_pos = world_to_grid(grid, start);
     let end_pos = world_to_grid(grid, end);
 
@@ -64,6 +81,7 @@ pub fn find_grid_path(
     let mut closed_set = HashMap::new();
     let mut came_from = HashMap::new();
     let mut g_scores = HashMap::new();
+    let mut visited_cells = Vec::new(); // 跟踪访问过的单元格
 
     let start_node = AStarNode {
         pos: start_pos,
@@ -88,6 +106,9 @@ pub fn find_grid_path(
             return None;
         }
 
+        // 记录访问过的单元格
+        visited_cells.push(current.pos);
+
         if current.pos == end_pos {
             debug!("A* pathfinding: Found path in {} iterations", iterations);
             // 重建网格路径
@@ -101,7 +122,10 @@ pub fn find_grid_path(
             path.push(start_pos);
             path.reverse();
 
-            return Some(path);
+            return Some(AStarResult {
+                path,
+                visited_cells,
+            });
         }
 
         if let Some(&existing_g_cost) = closed_set.get(&current.pos) {
@@ -141,24 +165,24 @@ pub fn find_grid_path(
         "A* pathfinding: No path found after {} iterations",
         iterations
     );
-    None
+    // 即使没有找到路径，也返回访问过的单元格信息
+    Some(AStarResult {
+        path: Vec::new(),
+        visited_cells,
+    })
 }
 
-fn world_to_grid(grid: &crate::core::ConfigNavigationGrid, world_pos: Vec3) -> (usize, usize) {
-    let (x, y) = grid.get_cell_xy_by_position(world_pos.xz());
+fn world_to_grid(grid: &ConfigNavigationGrid, world_pos: Vec3) -> (usize, usize) {
+    let (x, y) = grid.get_cell_xy_by_position(&world_pos.xz());
 
     (x, y)
 }
 
-fn is_valid_pos(grid: &crate::core::ConfigNavigationGrid, pos: (usize, usize)) -> bool {
+fn is_valid_pos(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> bool {
     pos.0 < grid.x_len && pos.1 < grid.y_len
 }
 
-fn heuristic_cost(
-    grid: &crate::core::ConfigNavigationGrid,
-    from: (usize, usize),
-    to: (usize, usize),
-) -> f32 {
+fn heuristic_cost(grid: &ConfigNavigationGrid, from: (usize, usize), to: (usize, usize)) -> f32 {
     let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
     let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
     let euclidean_distance = (dx * dx + dy * dy).sqrt() * grid.cell_size;
@@ -169,10 +193,7 @@ fn heuristic_cost(
     return euclidean_distance * (1.0 + P);
 }
 
-fn get_neighbors(
-    grid: &crate::core::ConfigNavigationGrid,
-    pos: (usize, usize),
-) -> Vec<(usize, usize)> {
+fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize, usize)> {
     let mut neighbors = Vec::new();
 
     let directions = [
@@ -200,10 +221,7 @@ fn get_neighbors(
             continue;
         }
 
-        if grid.cells[new_pos.0][new_pos.1]
-            .vision_pathing_flags
-            .contains(VisionPathingFlags::Wall)
-        {
+        if grid.get_cell_by_xy(new_pos).is_wall() {
             continue;
         }
 
@@ -213,11 +231,7 @@ fn get_neighbors(
     neighbors
 }
 
-fn distance_cost(
-    grid: &crate::core::ConfigNavigationGrid,
-    from: (usize, usize),
-    to: (usize, usize),
-) -> f32 {
+fn distance_cost(grid: &ConfigNavigationGrid, from: (usize, usize), to: (usize, usize)) -> f32 {
     let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
     let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
 

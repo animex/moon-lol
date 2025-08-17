@@ -99,6 +99,16 @@ pub struct ConfigNavigationGridCell {
     pub srx_flags: UnknownSRXFlags,
 }
 
+impl ConfigNavigationGridCell {
+    pub fn is_wall(&self) -> bool {
+        self.vision_pathing_flags.contains(VisionPathingFlags::Wall)
+    }
+
+    pub fn is_walkable(&self) -> bool {
+        !self.is_wall()
+    }
+}
+
 impl ConfigNavigationGrid {
     pub fn get_offset(&self) -> Vec2 {
         Vec2::new(
@@ -107,20 +117,16 @@ impl ConfigNavigationGrid {
         )
     }
 
-    pub fn get_cell_by_xy(&self, pos: (usize, usize)) -> &ConfigNavigationGridCell {
-        &self.cells[pos.0.clamp(0, self.x_len - 1)][pos.1.clamp(0, self.y_len - 1)]
-    }
-
     pub fn get_cell_center_position_by_xy(&self, pos: (usize, usize)) -> Vec3 {
         let offset = self.get_offset();
         Vec3::new(
             offset.x + pos.1 as f32 * self.cell_size,
-            self.get_cell_by_xy(pos).y + 5.0,
+            self.get_cell_by_xy(pos).y,
             -(offset.y + pos.0 as f32 * self.cell_size),
         )
     }
 
-    pub fn get_cell_xy_by_position(&self, pos: Vec2) -> (usize, usize) {
+    pub fn get_cell_xy_by_position(&self, pos: &Vec2) -> (usize, usize) {
         let offset = self.get_offset();
         let x = ((-pos.y - offset.y) / self.cell_size).round() as usize;
         let y = ((pos.x - offset.x) / self.cell_size).round() as usize;
@@ -128,15 +134,19 @@ impl ConfigNavigationGrid {
         (x, y)
     }
 
-    pub fn get_cell_by_position(&self, pos: Vec2) -> &ConfigNavigationGridCell {
+    pub fn get_cell_by_xy(&self, pos: (usize, usize)) -> &ConfigNavigationGridCell {
+        &self.cells[pos.0.clamp(0, self.x_len - 1)][pos.1.clamp(0, self.y_len - 1)]
+    }
+
+    pub fn get_cell_by_position(&self, pos: &Vec2) -> &ConfigNavigationGridCell {
         self.get_cell_by_xy(self.get_cell_xy_by_position(pos))
     }
 
-    pub fn get_world_position_by_position(&self, pos: Vec2) -> Vec3 {
+    pub fn get_world_position_by_position(&self, pos: &Vec2) -> Vec3 {
         vec3(pos.x, self.get_cell_by_position(pos).y, pos.y)
     }
 
-    pub fn get_position_by_float_xy(&self, pos: Vec2) -> Vec2 {
+    pub fn get_position_by_float_xy(&self, pos: &Vec2) -> Vec2 {
         let offset = self.get_offset();
         Vec2::new(
             offset.x + pos.y * self.cell_size,

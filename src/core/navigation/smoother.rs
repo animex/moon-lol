@@ -78,20 +78,20 @@ fn build_portals(points: &[(usize, usize)]) -> Vec<(Point, Point)> {
             // 对角线移动 (新增逻辑)
             // 虚拟传送门的顶点是相邻“障碍”单元格的中心
             (1, 1) => (
-                Point::new(p1f.y, p1f.x + 1.0),
-                Point::new(p1f.y + 1.0, p1f.x),
+                Point::new(p1f.y + 0.5, p1f.x + 0.5),
+                Point::new(p1f.y + 0.5, p1f.x + 0.5),
             ), // 右下
             (1, -1) => (
-                Point::new(p1f.y + 1.0, p1f.x),
-                Point::new(p1f.y, p1f.x - 1.0),
+                Point::new(p1f.y + 0.5, p1f.x - 0.5),
+                Point::new(p1f.y + 0.5, p1f.x - 0.5),
             ), // 左下
             (-1, -1) => (
-                Point::new(p1f.y, p1f.x - 1.0),
-                Point::new(p1f.y - 1.0, p1f.x),
+                Point::new(p1f.y - 0.5, p1f.x - 0.5),
+                Point::new(p1f.y - 0.5, p1f.x - 0.5),
             ), // 左上
             (-1, 1) => (
-                Point::new(p1f.y - 1.0, p1f.x),
-                Point::new(p1f.y, p1f.x + 1.0),
+                Point::new(p1f.y - 0.5, p1f.x + 0.5),
+                Point::new(p1f.y - 0.5, p1f.x + 0.5),
             ), // 右上
 
             _ => {

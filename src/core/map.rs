@@ -24,6 +24,7 @@ pub const MAP_OFFSET_Y: f32 = 520.0; // cam_MinY
 #[derive(Component)]
 pub struct Map;
 
+#[derive(Default)]
 pub struct PluginMap;
 
 impl Plugin for PluginMap {

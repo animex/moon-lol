@@ -3,6 +3,7 @@ use crate::core::Health;
 use crate::{system_debug, system_info};
 use bevy::{color::palettes, prelude::*};
 
+#[derive(Default)]
 pub struct PluginUI;
 
 impl Plugin for PluginUI {

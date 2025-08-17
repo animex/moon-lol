@@ -2,6 +2,7 @@ use bevy::prelude::*;
 
 use crate::core::Target;
 
+#[derive(Default)]
 pub struct PluginAttack;
 
 impl Plugin for PluginAttack {

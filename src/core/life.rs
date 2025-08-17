@@ -14,6 +14,7 @@ pub struct EventDead;
 #[derive(Event, Debug)]
 pub struct EventSpawn;
 
+#[derive(Default)]
 pub struct PluginLife;
 
 impl Plugin for PluginLife {

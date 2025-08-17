@@ -49,6 +49,7 @@ impl CameraState {
     }
 }
 
+#[derive(Default)]
 pub struct PluginCamera;
 
 impl Plugin for PluginCamera {

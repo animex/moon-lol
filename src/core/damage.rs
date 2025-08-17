@@ -407,6 +407,7 @@ pub fn cleanup_depleted_shields_system(
 }
 
 /// 伤害系统插件
+#[derive(Default)]
 pub struct PluginDamage;
 
 impl Plugin for PluginDamage {
