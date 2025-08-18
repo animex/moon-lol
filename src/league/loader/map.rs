@@ -3,7 +3,10 @@ use std::{
     io::{Cursor, Read},
 };
 
-use bevy::transform::components::Transform;
+use bevy::{
+    math::{vec2, Vec3Swizzles},
+    transform::components::Transform,
+};
 use binrw::{io::NoSeek, BinRead, BinWrite};
 use cdragon_prop::{BinEmbed, BinHash, BinList, BinMap, BinString, BinStruct, PropFile};
 use tokio::io::AsyncWriteExt;
@@ -281,18 +284,42 @@ impl LeagueWadMapLoader {
 
         let nav_grid = AiMeshNGrid::read(&mut reader).unwrap();
 
-        let min_grid_pos = nav_grid.header.min_bounds.0;
+        let min_bounds = nav_grid.header.min_bounds.0.xz();
+        let max_bounds = nav_grid.header.max_bounds.0.xz();
+
+        let min_position = vec2(min_bounds.x, -max_bounds.y);
+        let max_position = vec2(max_bounds.x, -min_bounds.y);
+
+        println!("min_position: {:?}", min_position);
+        println!("max_position: {:?}", max_position);
+
+        let width = max_position.x - min_position.x;
+        let height = max_position.y - min_position.y;
 
         let cell_size = nav_grid.header.cell_size;
 
+        println!(
+            "width: {:?}, x len: {:?}",
+            width,
+            (width + 50.0) / cell_size
+        );
+
+        println!(
+            "height: {:?}, y len: {:?}",
+            height,
+            (height + 50.0) / cell_size
+        );
+
         let x_len = nav_grid.header.x_cell_count as usize;
         let y_len = nav_grid.header.z_cell_count as usize;
+
+        println!("x_len: {:?}", x_len);
+        println!("y_len: {:?}", y_len);
 
         let mut cells: Vec<ConfigNavigationGridCell> = Vec::new();
 
         for (i, cell) in nav_grid.navigation_grid.iter().enumerate() {
             cells.push(ConfigNavigationGridCell {
-                y: cell.center_height,
                 heuristic: cell.heuristic,
                 vision_pathing_flags: nav_grid.vision_pathing_flags[i],
                 river_region_flags: nav_grid.other_flags[i].river_region_flags,
@@ -308,11 +335,15 @@ impl LeagueWadMapLoader {
         let cells = cells.chunks(x_len).map(|v| v.to_vec()).collect();
 
         Ok(ConfigNavigationGrid {
-            min_grid_pos,
+            min_position,
+            max_position,
             cell_size,
             x_len,
             y_len,
             cells,
+            height_x_len: nav_grid.height_samples.x_count as usize,
+            height_y_len: nav_grid.height_samples.z_count as usize,
+            height_samples: nav_grid.height_samples.samples,
         })
     }
 }

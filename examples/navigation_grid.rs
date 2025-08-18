@@ -1,7 +1,10 @@
 use std::time::Instant;
 
+use bevy::asset::RenderAssetUsages;
 use bevy::color::palettes;
+use bevy::image::ImageSampler;
 use bevy::prelude::*;
+use bevy::render::render_resource::{Extent3d, TextureDimension, TextureFormat};
 use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
@@ -52,6 +55,8 @@ fn main() {
         .add_systems(Update, draw_move_path)
         .add_systems(Update, update_astar_visualization)
         .add_observer(command_navigation_to)
+        // sample height
+        .add_systems(Startup, setup_sample_height_textured)
         .run();
 }
 
@@ -122,9 +127,15 @@ fn setup(
 
     for (x, row) in navigation_grid.cells.iter().enumerate() {
         for (y, cell) in row.iter().enumerate() {
+            let position = navigation_grid.get_cell_center_position_by_xy((x, y));
             commands
                 .spawn((
                     Mesh3d(mesh.clone()),
+                    // MeshMaterial3d(materials.add(StandardMaterial {
+                    //     base_color: Color::srgb(position.y / 100.0, 0.0, 0.0),
+                    //     unlit: true,
+                    //     ..default()
+                    // })),
                     MeshMaterial3d(
                         if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
                             red_material.clone()
@@ -132,9 +143,7 @@ fn setup(
                             green_material.clone()
                         },
                     ),
-                    Transform::from_translation(
-                        navigation_grid.get_cell_center_position_by_xy((x, y)),
-                    ),
+                    Transform::from_translation(position),
                     GridCell {
                         flags: cell.vision_pathing_flags.bits() as u32,
                     },
@@ -143,6 +152,118 @@ fn setup(
                 .observe(on_click_map);
         }
     }
+}
+
+fn setup_sample_height_textured(
+    mut commands: Commands,
+    configs: Res<ConfigMap>,
+    mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    mut images: ResMut<Assets<Image>>, // 新增：用于创建贴图的资源
+) {
+    let navigation_grid = &configs.navigation_grid;
+
+    // 1. 计算高度图的尺寸和颜色范围
+    let width = navigation_grid.height_x_len;
+    let height = navigation_grid.height_samples.len() / width;
+
+    if width == 0 || height == 0 {
+        return; // 避免除零错误
+    }
+
+    let max_sample_height = navigation_grid
+        .height_samples
+        .iter()
+        .copied()
+        .max_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap_or(1.0);
+    let min_sample_height = navigation_grid
+        .height_samples
+        .iter()
+        .copied()
+        .min_by(|a, b| a.partial_cmp(b).unwrap())
+        .unwrap_or(0.0);
+
+    let height_range = max_sample_height - min_sample_height;
+    // 如果所有高度都一样，防止除零
+    let height_range = if height_range == 0.0 {
+        1.0
+    } else {
+        height_range
+    };
+
+    // 2. 创建图像数据 (像素字节)
+    // 我们将为每个高度样本创建一个像素。格式为 RGBA8。
+    let mut image_data = Vec::with_capacity(width * height * 4);
+    for h_val in &navigation_grid.height_samples {
+        let normalized_height = (h_val - min_sample_height) / height_range;
+
+        // 将 0.0-1.0 的浮点数颜色转换为 0-255 的 u8 字节
+        let r = (normalized_height * 255.0) as u8;
+        let g = 0;
+        let b = 0;
+        let a = 255; // Alpha通道，255表示完全不透明
+
+        image_data.extend_from_slice(&[r, g, b, a]);
+    }
+
+    // 3. 从原始数据创建 Bevy Image 资源
+    let mut image = Image::new(
+        Extent3d {
+            width: width as u32,
+            height: height as u32,
+            depth_or_array_layers: 1,
+        },
+        TextureDimension::D2,
+        image_data,
+        // 使用 sRGB 格式以获得正确的颜色显示
+        TextureFormat::Rgba8UnormSrgb,
+        RenderAssetUsages::default(),
+    );
+
+    // 使用最近邻采样，避免像素模糊，让网格看起来更清晰
+    image.sampler = ImageSampler::nearest();
+
+    let image_handle = images.add(image);
+
+    // 4. 创建一个大的平面网格来承载贴图
+    let cell_size = 2.0;
+    let plane_width = width as f32 * cell_size;
+    let plane_z_height = height as f32 * cell_size;
+
+    let plane_mesh = meshes.add(Plane3d::new(
+        Vec3::Y, // 法线朝上
+        Vec2::new(plane_width, plane_z_height) / 2.0,
+    ));
+
+    // 5. 创建使用该贴图的材质
+    let plane_material = materials.add(StandardMaterial {
+        base_color_texture: Some(image_handle),
+        unlit: true, // 不受光照影响，以显示原始颜色
+        ..default()
+    });
+
+    // 6. 生成单个实体
+    // 将平面的中心点对齐到网格的中心，以匹配原来的坐标系
+    let transform = Transform::from_xyz(
+        (plane_width - cell_size) / 2.0,
+        0.0,
+        -((plane_z_height - cell_size) / 2.0),
+    );
+
+    commands.spawn((
+        Mesh3d(plane_mesh),
+        MeshMaterial3d(plane_material),
+        transform,
+    ));
+    // commands.spawn(PbrBundle {
+    //     mesh: plane_mesh,
+    //     material: plane_material,
+    //     transform,
+    //     ..default()
+    // });
+
+    // 注意：原来的 .observe(on_click_map) 逻辑需要改变，见下方说明
 }
 
 fn on_key_space(
