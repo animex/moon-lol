@@ -1,97 +1,61 @@
-// src/funnel.rs
+use bevy::math::{vec2, Vec2};
 
-use std::ops::{Add, Sub};
-
-/// 代表一个二维点或向量
-#[derive(Clone, Copy, Debug, PartialEq)]
-struct Point {
-    y: f32,
-    x: f32,
-}
-
-impl Point {
-    fn new(y: f32, x: f32) -> Self {
-        Point { y, x }
-    }
-
-    /// 计算两个向量的二维叉乘
-    /// self: 向量 apex -> p1
-    /// other: 向量 apex -> p2
-    /// 返回值 > 0: other 在 self 的左侧 (逆时针)
-    /// 返回值 < 0: other 在 self 的右侧 (顺时针)
-    /// 返回值 = 0: 共线
-    fn cross(&self, other: &Point) -> f32 {
-        self.x * other.y - self.y * other.x
-    }
-}
-
-impl Sub for Point {
-    type Output = Point;
-    fn sub(self, other: Point) -> Point {
-        Point::new(self.y - other.y, self.x - other.x)
-    }
-}
-
-impl Add for Point {
-    type Output = Point;
-    fn add(self, other: Point) -> Point {
-        Point::new(self.y + other.y, self.x + other.x)
-    }
+fn rotate(v: Vec2) -> Vec2 {
+    vec2(v.y, v.x)
 }
 
 /// 将网格路径转换为传送门（portal）列表
-/// [已更新] 现在支持对角线移动
-fn build_portals(points: &[(usize, usize)]) -> Vec<(Point, Point)> {
+fn build_portals(points: &Vec<Vec2>) -> Vec<(Vec2, Vec2)> {
     let mut portals = Vec::new();
     if points.len() < 2 {
         return portals;
     }
 
     for i in 0..points.len() - 1 {
-        let p1 = points[i];
-        let p2 = points[i + 1];
+        let p1 = (points[i] - 0.5).round() + 0.5;
+        let p2 = (points[i + 1] - 0.5).round() + 0.5;
 
-        let p1f = Point::new(p1.0 as f32, p1.1 as f32);
+        let p1f = rotate(p1);
 
-        let dy = p2.0 as i32 - p1.0 as i32;
-        let dx = p2.1 as i32 - p1.1 as i32;
+        let dy = (p2.x - p1.x) as i32;
+        let dx = (p2.y - p1.y) as i32;
 
         let (left, right) = match (dy, dx) {
             // 水平和垂直移动 (逻辑不变)
             (0, 1) => (
-                Point::new(p1f.y - 0.5, p1f.x + 0.5),
-                Point::new(p1f.y + 0.5, p1f.x + 0.5),
+                rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
+                rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
             ), // 右
             (0, -1) => (
-                Point::new(p1f.y + 0.5, p1f.x - 0.5),
-                Point::new(p1f.y - 0.5, p1f.x - 0.5),
+                rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
+                rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
             ), // 左
             (1, 0) => (
-                Point::new(p1f.y + 0.5, p1f.x + 0.5),
-                Point::new(p1f.y + 0.5, p1f.x - 0.5),
+                rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
+                rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
             ), // 下
             (-1, 0) => (
-                Point::new(p1f.y - 0.5, p1f.x - 0.5),
-                Point::new(p1f.y - 0.5, p1f.x + 0.5),
+                rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
+                rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
             ), // 上
 
             // 对角线移动 (新增逻辑)
             // 虚拟传送门的顶点是相邻“障碍”单元格的中心
             (1, 1) => (
-                Point::new(p1f.y + 0.5, p1f.x + 0.5),
-                Point::new(p1f.y + 0.5, p1f.x + 0.5),
+                rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
+                rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
             ), // 右下
             (1, -1) => (
-                Point::new(p1f.y + 0.5, p1f.x - 0.5),
-                Point::new(p1f.y + 0.5, p1f.x - 0.5),
+                rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
+                rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
             ), // 左下
             (-1, -1) => (
-                Point::new(p1f.y - 0.5, p1f.x - 0.5),
-                Point::new(p1f.y - 0.5, p1f.x - 0.5),
+                rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
+                rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
             ), // 左上
             (-1, 1) => (
-                Point::new(p1f.y - 0.5, p1f.x + 0.5),
-                Point::new(p1f.y - 0.5, p1f.x + 0.5),
+                rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
+                rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
             ), // 右上
 
             _ => {
@@ -115,10 +79,10 @@ fn build_portals(points: &[(usize, usize)]) -> Vec<(Point, Point)> {
 ///
 /// # Returns
 /// 一个简化后的路径点向量 `(y, x)`。
-pub fn simplify_path(points: &Vec<(usize, usize)>) -> Vec<(f32, f32)> {
+pub fn simplify_path(points: &Vec<Vec2>) -> Vec<Vec2> {
     // 1. 处理边缘情况
     if points.len() < 3 {
-        return points.iter().map(|p| (p.0 as f32, p.1 as f32)).collect();
+        return points.clone();
     }
 
     let mut simplified_points = Vec::new();
@@ -127,11 +91,8 @@ pub fn simplify_path(points: &Vec<(usize, usize)>) -> Vec<(f32, f32)> {
     let mut portals = build_portals(points);
 
     // 3. 设置起点和终点
-    let start_pos = Point::new(points[0].0 as f32, points[0].1 as f32);
-    let end_pos = Point::new(
-        points.last().unwrap().0 as f32,
-        points.last().unwrap().1 as f32,
-    );
+    let start_pos = rotate(points.first().unwrap().clone());
+    let end_pos = rotate(points.last().unwrap().clone());
 
     // 添加一个零宽度的终点传送门，以确保算法能处理到路径末端
     portals.push((end_pos, end_pos));
@@ -154,11 +115,11 @@ pub fn simplify_path(points: &Vec<(usize, usize)>) -> Vec<(f32, f32)> {
 
         // 如果 new_right 在 right_tentacle 的左侧或共线 (叉乘 <= 0),
         // 表示漏斗在右侧没有变宽。
-        if vec_r.cross(&vec_nr) <= 0.0 {
+        if vec_r.perp_dot(vec_nr) <= 0.0 {
             // 向量：apex -> left_tentacle
             let vec_l = left_tentacle - apex;
             // 检查 new_right 是否仍在 left_tentacle 的右侧
-            if vec_l.cross(&vec_nr) >= 0.0 {
+            if vec_l.perp_dot(vec_nr) >= 0.0 {
                 // new_right 仍在漏斗内，收紧右触手
                 right_tentacle = new_right;
             } else {
@@ -189,9 +150,9 @@ pub fn simplify_path(points: &Vec<(usize, usize)>) -> Vec<(f32, f32)> {
         let vec_l = left_tentacle - apex;
         let vec_nl = new_left - apex;
 
-        if vec_l.cross(&vec_nl) >= 0.0 {
+        if vec_l.perp_dot(vec_nl) >= 0.0 {
             let vec_r = right_tentacle - apex;
-            if vec_r.cross(&vec_nl) <= 0.0 {
+            if vec_r.perp_dot(vec_nl) <= 0.0 {
                 left_tentacle = new_left;
             } else {
                 simplified_points.push(right_tentacle);
@@ -217,5 +178,5 @@ pub fn simplify_path(points: &Vec<(usize, usize)>) -> Vec<(f32, f32)> {
     simplified_points.push(end_pos);
 
     // 8. 转换为用户期望的输出格式
-    simplified_points.into_iter().map(|p| (p.y, p.x)).collect()
+    simplified_points.into_iter().map(|v| rotate(v)).collect()
 }

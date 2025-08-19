@@ -152,10 +152,9 @@ impl ConfigNavigationGrid {
     }
 
     pub fn get_position_by_float_xy(&self, pos: &Vec2) -> Vec2 {
-        let offset = self.get_first_cell_center_position();
         Vec2::new(
-            offset.x + pos.x * self.cell_size,
-            offset.y + pos.y * self.cell_size,
+            self.min_position.x + pos.x * self.cell_size,
+            self.min_position.y + pos.y * self.cell_size,
         )
     }
 

@@ -2,9 +2,11 @@ mod astar;
 mod smoother;
 
 pub use astar::*;
+use bevy::reflect::List;
 pub use smoother::*;
 
 use bevy::prelude::*;
+use std::collections::HashSet;
 use std::time::Instant;
 
 use crate::core::{CommandMovementFollowPath, ConfigNavigationGrid, Movement};
@@ -62,35 +64,116 @@ pub fn find_path(grid: &ConfigNavigationGrid, start: Vec3, end: Vec3) -> Option<
     // 首先使用A*找到网格路径
     let grid_path = find_grid_path(grid, start, end)?;
 
-    return Some(post_process_path(
-        grid,
-        &simplify_path(&grid_path),
-        &start,
-        &end,
-    ));
+    return Some(post_process_path(grid, &grid_path, &start, &end));
 }
 
 pub fn post_process_path(
     grid: &ConfigNavigationGrid,
-    path: &Vec<(f32, f32)>,
+    path: &Vec<(usize, usize)>,
     start: &Vec3,
     end: &Vec3,
 ) -> Vec<Vec2> {
-    let mut simplified_path = path
-        .iter()
-        .map(|(x, y)| grid.get_position_by_float_xy(&Vec2::new(*x, *y)))
+    let mut path = path
+        .into_iter()
+        .map(|(x, y)| vec2(*x as f32 + 0.5, *y as f32 + 0.5))
         .collect::<Vec<_>>();
 
-    simplified_path.remove(0);
-    simplified_path.insert(0, start.xz());
+    path.remove(0);
+    path.insert(0, (start.xz() - grid.min_position) / grid.cell_size);
 
-    simplified_path.pop();
-    simplified_path.push(end.xz());
+    path.pop();
+    path.push((end.xz() - grid.min_position) / grid.cell_size);
+
+    let mut path = simplify_path(&path);
+
+    println!("simplify_path: {:?}", path);
+
+    let path = split_path(&path, &|xy| grid.get_cell_by_xy(xy).is_wall());
+
+    println!("split_path: {:?}", path);
+
+    let mut path = path
+        .into_iter()
+        .map(|v| grid.get_position_by_float_xy(&v))
+        .collect::<Vec<_>>();
+
+    println!("path: {:?}", path);
 
     // 路径优化：从后往前，检测两点之间的格子，根据 grid.get_cell_by_position().is_walkable() 判断该格子是否可走，来优化路径
-    optimize_path_line_of_sight_improved(grid, &mut simplified_path);
+    optimize_path_line_of_sight_improved(grid, &mut path);
 
-    return simplified_path;
+    return path;
+}
+
+/// 主函数，接收原始路径并返回一个插入了关键叉点的新路径。
+pub fn split_path(path: &Vec<Vec2>, is_obstacle: &impl Fn((usize, usize)) -> bool) -> Vec<Vec2> {
+    if path.len() < 2 {
+        return path.clone();
+    }
+
+    let mut result = Vec::new();
+    result.push(path[0]);
+
+    for points in path.windows(2) {
+        let p1 = points[0];
+        let p2 = points[1];
+
+        if p1.x == p2.x {
+            let dirction = (p1.y - p2.y).signum();
+
+            let mut y = p2.y;
+
+            while (y - p1.y).abs() > 1.0 {
+                let new_y = y + dirction;
+
+                let grid_y = (y + dirction / 2.0).round();
+
+                // let is_obstacle_corner =
+                //     is_obstacle(((p1.x + 1.0) as usize, (grid_y + 1.0) as usize))
+                //         || is_obstacle(((p1.x + 1.0) as usize, (grid_y - 1.0) as usize))
+                //         || is_obstacle(((p1.x - 1.0) as usize, (grid_y + 1.0) as usize))
+                //         || is_obstacle(((p1.x - 1.0) as usize, (grid_y - 1.0) as usize));
+
+                // println!(
+                //     "x: {}, y: {}, is_obstacle_corner: {}",
+                //     p1.x, grid_y, is_obstacle_corner
+                // );
+
+                // if is_obstacle_corner {
+                result.push(vec2(p1.x, grid_y));
+                // break;
+                // }
+
+                y = new_y;
+            }
+        }
+
+        if p1.y == p2.y {
+            let dirction = (p1.x - p2.x).signum();
+            let mut x = p2.x;
+
+            while (x - p1.x).abs() > 1.0 {
+                let new_x = x + dirction;
+
+                let grid_x = (x + dirction / 2.0).round();
+
+                // if is_obstacle(((grid_x + 1.0) as usize, (p1.y + 1.0) as usize))
+                //     || is_obstacle(((grid_x + 1.0) as usize, (p1.y - 1.0) as usize))
+                //     || is_obstacle(((grid_x - 1.0) as usize, (p1.y + 1.0) as usize))
+                //     || is_obstacle(((grid_x - 1.0) as usize, (p1.y - 1.0) as usize))
+                // {
+                result.push(vec2(grid_x, p1.y));
+                //     break;
+                // }
+
+                x = new_x;
+            }
+        }
+
+        result.push(p2);
+    }
+
+    result
 }
 
 pub fn has_line_of_sight(
@@ -201,25 +284,25 @@ fn optimize_path_line_of_sight_improved(grid: &ConfigNavigationGrid, path: &mut 
             let start_pos = path[current_index] - grid.min_position;
             let end_pos = path[lookahead_index] - grid.min_position;
 
-            println!(
-                "{} -> {} 开始检测 起点: {:?}, 终点: {:?}",
-                current_index, lookahead_index, start_pos, end_pos
-            );
+            // println!(
+            //     "{} -> {} 开始检测 起点: {:?}, 终点: {:?}",
+            //     current_index, lookahead_index, start_pos, end_pos
+            // );
             if has_line_of_sight(start_pos, end_pos, grid.cell_size, |x, y| {
                 let res = grid.get_cell_by_xy((x, y)).is_walkable();
-                println!(
-                    "检测 x: {}, y: {} 结果{}障碍物",
-                    x,
-                    y,
-                    if res { "没有" } else { "存在" }
-                );
+                // println!(
+                //     "检测 x: {}, y: {} 结果{}障碍物",
+                //     x,
+                //     y,
+                //     if res { "没有" } else { "存在" }
+                // );
                 res
             }) {
                 // 如果能看到更远的点，就更新索引
                 furthest_visible_index = lookahead_index;
             } else {
                 // 一旦视线被阻挡，就停止向更远的地方看
-                println!("{} -> {} 存在障碍物", current_index, lookahead_index);
+                // println!("{} -> {} 存在障碍物", current_index, lookahead_index);
                 break;
             }
         }
