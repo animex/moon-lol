@@ -10,12 +10,16 @@ impl Plugin for PluginMovement {
     fn build(&self, app: &mut App) {
         app.register_type::<Movement>();
 
-        app.add_systems(FixedUpdate, update_path_movement);
+        app.add_event::<CommandMovementStart>();
+        app.add_event::<EventMovementStart>();
+        app.add_observer(command_movement_start);
 
-        app.add_event::<CommandMovementFollowPath>();
-        app.add_observer(command_movement_follow_path);
+        app.add_event::<CommandMovementStop>();
+        app.add_observer(command_movement_stop);
 
         app.add_event::<EventMovementEnd>();
+
+        app.add_systems(FixedUpdate, update_path_movement);
     }
 }
 
@@ -34,6 +38,18 @@ pub struct MovementState {
     pub current_target_index: usize,
     pub completed: bool,
 }
+
+#[derive(Event, Debug)]
+pub struct CommandMovementStart(pub Vec<Vec2>);
+
+#[derive(Event, Debug)]
+pub struct CommandMovementStop;
+
+#[derive(Event, Debug)]
+pub struct EventMovementStart;
+
+#[derive(Event, Debug)]
+pub struct EventMovementEnd;
 
 impl MovementState {
     pub fn set_path(&mut self, path: Vec<Vec2>) {
@@ -56,15 +72,6 @@ impl MovementState {
         self.current_target_index < self.path.len() - 1
     }
 }
-
-#[derive(Event, Debug)]
-pub struct EventMovementStart;
-
-#[derive(Event, Debug)]
-pub struct EventMovementEnd;
-
-#[derive(Event, Debug)]
-pub struct CommandMovementFollowPath(pub Vec<Vec2>);
 
 fn update_path_movement(
     mut commands: Commands,
@@ -157,8 +164,8 @@ fn update_path_movement(
     }
 }
 
-fn command_movement_follow_path(
-    trigger: Trigger<CommandMovementFollowPath>,
+fn command_movement_start(
+    trigger: Trigger<CommandMovementStart>,
     mut commands: Commands,
     mut q_transform: Query<(&Transform, &mut MovementState)>,
 ) {
@@ -171,5 +178,17 @@ fn command_movement_follow_path(
             movement_state.set_path(path);
             commands.trigger_targets(EventMovementStart, entity);
         }
+    }
+}
+
+fn command_movement_stop(
+    trigger: Trigger<CommandMovementStop>,
+    mut commands: Commands,
+    mut q_movement: Query<&mut MovementState>,
+) {
+    let entity = trigger.target();
+    if let Ok(mut movement_state) = q_movement.get_mut(entity) {
+        movement_state.clear_path();
+        commands.trigger_targets(EventMovementEnd, entity);
     }
 }

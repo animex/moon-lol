@@ -1,8 +1,9 @@
 mod animation;
 mod attack;
+mod attack_auto;
 mod base;
+mod behavior;
 mod camera;
-mod command;
 mod config;
 mod controller;
 mod damage;
@@ -14,12 +15,12 @@ mod navigation;
 mod resource;
 mod ui;
 
-
 pub use animation::*;
 pub use attack::*;
+pub use attack_auto::*;
 pub use base::*;
+pub use behavior::*;
 pub use camera::*;
-pub use command::*;
 pub use config::*;
 pub use controller::*;
 pub use damage::*;
@@ -37,6 +38,8 @@ plugin_group! {
     pub struct PluginCore {
         :PluginAnimation,
         :PluginAttack,
+        :PluginAttackAuto,
+        :PluginBehavior,
         :PluginCamera,
         :PluginController,
         :PluginDamage,
@@ -46,7 +49,7 @@ plugin_group! {
         :PluginMovement,
         :PluginNavigaton,
         :PluginResource,
-        :PluginTarget,
+        :PluginState,
         :PluginUI,
     }
 }

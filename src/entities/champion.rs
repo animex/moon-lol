@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 
-use crate::core::Team;
+use crate::core::State;
 
 #[derive(Component, Default)]
-#[require(Transform, Team)]
-pub struct Champion {}
+#[require(State)]
+pub struct Champion;

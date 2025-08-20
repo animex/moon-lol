@@ -9,8 +9,8 @@ use bevy::render::{
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 use moon_lol::core::{
     find_grid_path_with_result, on_click_map, post_process_path, AStarResult, CameraState,
-    CommandMovementFollowPath, CommandNavigationTo, ConfigNavigationGrid, Map, Movement,
-    PluginCore, PluginNavigaton,
+    CommandMovementStart, CommandNavigationTo, ConfigNavigationGrid, Map, Movement, PluginCore,
+    PluginNavigaton,
 };
 use moon_lol::entities::PluginEntities;
 use moon_lol::league::VisionPathingFlags;
@@ -341,7 +341,7 @@ fn command_navigation_to(
 
             astar_vis.optimized_path = world_path.clone();
 
-            commands.trigger_targets(CommandMovementFollowPath(world_path), entity);
+            commands.trigger_targets(CommandMovementStart(world_path), entity);
         }
     }
 }

@@ -1,7 +1,7 @@
 use bevy::prelude::*;
 use std::time::Instant;
 
-use crate::core::{find_grid_path, CommandMovementFollowPath, ConfigNavigationGrid, Movement};
+use crate::core::{find_grid_path, CommandMovementStart, ConfigNavigationGrid, Movement};
 use crate::system_debug;
 
 #[derive(Event, Debug)]
@@ -46,7 +46,7 @@ fn command_movement_move_to(
                 start.elapsed().as_millis()
             );
 
-            commands.trigger_targets(CommandMovementFollowPath(result), entity);
+            commands.trigger_targets(CommandMovementStart(result), entity);
         }
     }
 }
@@ -65,6 +65,10 @@ pub fn post_process_path(
     start: &Vec3,
     end: &Vec3,
 ) -> Vec<Vec2> {
+    if path.is_empty() {
+        return Vec::new();
+    }
+
     let mut path = path
         .iter()
         .map(|&(x, y)| vec2(x as f32 + 0.5, y as f32 + 0.5))

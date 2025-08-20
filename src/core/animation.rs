@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, time::Duration};
 
 use bevy::{prelude::*, reflect::ReflectRef};
 use rand::{
@@ -6,10 +6,7 @@ use rand::{
     rng,
 };
 
-use crate::{
-    core::{EventAttackCast, EventMovementEnd, EventMovementStart},
-    league::LeagueLoader,
-};
+use crate::{core::State, league::LeagueLoader};
 
 #[derive(Component)]
 pub struct Animation {
@@ -40,11 +37,49 @@ impl Animation {
             }
         }
     }
+
+    pub fn stop(&self, player: &mut AnimationPlayer, key: u32) {
+        let Some(node) = self.hash_to_node.get(&key) else {
+            return;
+        };
+
+        match node {
+            AnimationNode::Clip { node_index } => {
+                player.stop(*node_index);
+            }
+            AnimationNode::ConditionFloat { conditions, .. } => {
+                for condition in conditions {
+                    self.stop(player, condition.key);
+                }
+            }
+            AnimationNode::Selector { probably_nodes } => {
+                for node in probably_nodes {
+                    self.stop(player, node.key);
+                }
+            }
+        }
+    }
 }
 
 #[derive(Component)]
 pub struct AnimationState {
     pub current_hash: u32,
+    pub last_hash: u32,
+}
+
+impl AnimationState {
+    pub fn update(&mut self, hash: u32) {
+        self.last_hash = self.current_hash;
+        self.current_hash = hash;
+    }
+}
+
+#[derive(Component)]
+pub struct AnimationTransitionOut {
+    pub hash: u32,
+    pub weight: f32,
+    pub duration: Duration,
+    pub start_time: f32,
 }
 
 #[derive(Clone)]
@@ -73,53 +108,84 @@ pub struct PluginAnimation;
 
 impl Plugin for PluginAnimation {
     fn build(&self, app: &mut App) {
-        app.add_observer(on_movement_start);
-        app.add_observer(on_movement_end);
-        app.add_observer(on_command_attack_cast);
+        app.add_systems(Update, on_state_change);
         app.add_systems(Update, on_animation_state_change);
+        app.add_systems(Update, update_transition_out);
         app.add_systems(Update, update_condition_animation);
     }
 }
 
-fn on_movement_start(trigger: Trigger<EventMovementStart>, mut query: Query<&mut AnimationState>) {
-    let entity = trigger.target();
-
-    let Ok(mut state) = query.get_mut(entity) else {
-        return;
-    };
-
-    state.current_hash = LeagueLoader::hash_bin("Run");
-}
-
-fn on_movement_end(trigger: Trigger<EventMovementEnd>, mut query: Query<&mut AnimationState>) {
-    let entity = trigger.target();
-
-    let Ok(mut state) = query.get_mut(entity) else {
-        return;
-    };
-
-    state.current_hash = LeagueLoader::hash_bin("Idle1");
-}
-
-fn on_command_attack_cast(
-    trigger: Trigger<EventAttackCast>,
-    mut query: Query<&mut AnimationState>,
-) {
-    let entity = trigger.target();
-
-    let Ok(mut state) = query.get_mut(entity) else {
-        return;
-    };
-
-    state.current_hash = LeagueLoader::hash_bin("Attack1");
+fn on_state_change(mut query: Query<(&State, &mut AnimationState), Changed<State>>) {
+    for (state, mut animation_state) in query.iter_mut() {
+        match state {
+            State::Idle => {
+                animation_state.update(LeagueLoader::hash_bin("Idle1"));
+            }
+            State::Moving => {
+                animation_state.update(LeagueLoader::hash_bin("Run"));
+            }
+            State::Attacking => {
+                animation_state.update(LeagueLoader::hash_bin("Attack1"));
+            }
+        }
+    }
 }
 
 fn on_animation_state_change(
-    mut query: Query<(&mut AnimationPlayer, &Animation, &AnimationState), Changed<AnimationState>>,
+    mut query: Query<
+        (Entity, &mut AnimationPlayer, &Animation, &AnimationState),
+        Changed<AnimationState>,
+    >,
+    q_transition_out: Query<&AnimationTransitionOut>,
+    mut commands: Commands,
+    time: Res<Time>,
 ) {
-    for (mut player, animation, state) in query.iter_mut() {
-        player.stop_all();
+    for (entity, mut player, animation, state) in query.iter_mut() {
+        if state.current_hash == state.last_hash {
+            continue;
+        }
+
+        if let Ok(transition_out) = q_transition_out.get(entity) {
+            animation.stop(&mut player, transition_out.hash);
+        }
+
+        commands.entity(entity).insert(AnimationTransitionOut {
+            hash: state.last_hash,
+            weight: 1.0,
+            duration: Duration::from_millis(200),
+            start_time: time.elapsed_secs(),
+        });
+
         animation.play(&mut player, state.current_hash, 1.0);
+    }
+}
+
+fn update_transition_out(
+    mut commands: Commands,
+    mut query: Query<(
+        Entity,
+        &mut AnimationPlayer,
+        &Animation,
+        &AnimationTransitionOut,
+    )>,
+    time: Res<Time>,
+) {
+    for (entity, mut player, animation, transition_out) in query.iter_mut() {
+        let now = time.elapsed_secs();
+
+        let elapsed = now - transition_out.start_time;
+
+        let duration = transition_out.duration.as_secs_f32();
+
+        if elapsed > duration {
+            animation.stop(&mut player, transition_out.hash);
+            commands.entity(entity).remove::<AnimationTransitionOut>();
+            continue;
+        }
+
+        let weight = transition_out.weight * (1.0 - (elapsed / duration));
+
+        animation.play(&mut player, transition_out.hash, weight);
     }
 }
 

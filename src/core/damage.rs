@@ -3,6 +3,21 @@ use crate::{system_debug, system_info, system_warn};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+/// 伤害系统插件
+#[derive(Default)]
+pub struct PluginDamage;
+
+impl Plugin for PluginDamage {
+    fn build(&self, app: &mut App) {
+        app.add_event::<CommandDamageCreate>();
+        app.add_event::<EventDamageCreate>();
+        app.add_observer(on_command_damage_create);
+
+        app.add_systems(FixedUpdate, update_damage_reductions_system);
+        app.add_systems(FixedUpdate, cleanup_depleted_shields_system);
+    }
+}
+
 #[derive(Component, Clone, Serialize, Deserialize)]
 pub struct Damage(pub f32);
 
@@ -22,15 +37,20 @@ pub enum DamageType {
 
 /// 伤害事件，包含伤害来源、目标、伤害类型和数值
 #[derive(Event, Debug)]
-pub struct DamageEvent {
+pub struct CommandDamageCreate {
     /// 伤害来源实体
     pub source: Entity,
-    /// 伤害目标实体
-    pub target: Entity,
     /// 伤害类型
     pub damage_type: DamageType,
     /// 伤害数值
     pub amount: f32,
+}
+
+#[derive(Event, Debug)]
+pub struct EventDamageCreate {
+    pub source: Entity,
+    pub damage_type: DamageType,
+    pub damage_result: DamageResult,
 }
 
 /// 白色护盾组件 - 可以抵挡所有类型的伤害
@@ -40,6 +60,49 @@ pub struct WhiteShield {
     pub current: f32,
     /// 最大护盾值
     pub max: f32,
+}
+
+/// 魔法护盾组件 - 只能抵挡魔法伤害
+#[derive(Component, Debug, Default)]
+pub struct MagicShield {
+    /// 当前护盾值
+    pub current: f32,
+    /// 最大护盾值
+    pub max: f32,
+}
+
+/// 伤害减免buff容器组件
+#[derive(Component, Debug, Default)]
+pub struct DamageReductions {
+    pub buffs: Vec<DamageReduction>,
+}
+
+/// 伤害减免buff组件
+#[derive(Component, Debug, Clone)]
+pub struct DamageReduction {
+    /// 减免百分比 (0.0 - 1.0)
+    pub percentage: f32,
+    /// 减免的伤害类型，None表示对所有类型有效
+    pub damage_type: Option<DamageType>,
+    /// buff持续时间（秒），None表示永久
+    pub duration: Option<f32>,
+    /// buff剩余时间
+    pub remaining_time: Option<f32>,
+}
+
+/// 伤害计算结果
+#[derive(Debug)]
+pub struct DamageResult {
+    /// 最终造成的伤害
+    pub final_damage: f32,
+    /// 被白色护盾吸收的伤害
+    pub white_shield_absorbed: f32,
+    /// 被魔法护盾吸收的伤害
+    pub magic_shield_absorbed: f32,
+    /// 被减免的伤害
+    pub reduced_damage: f32,
+    /// 原始伤害
+    pub original_damage: f32,
 }
 
 impl WhiteShield {
@@ -63,15 +126,6 @@ impl WhiteShield {
     }
 }
 
-/// 魔法护盾组件 - 只能抵挡魔法伤害
-#[derive(Component, Debug, Default)]
-pub struct MagicShield {
-    /// 当前护盾值
-    pub current: f32,
-    /// 最大护盾值
-    pub max: f32,
-}
-
 impl MagicShield {
     pub fn new(amount: f32) -> Self {
         Self {
@@ -91,19 +145,6 @@ impl MagicShield {
     pub fn is_depleted(&self) -> bool {
         self.current <= 0.0
     }
-}
-
-/// 伤害减免buff组件
-#[derive(Component, Debug, Clone)]
-pub struct DamageReduction {
-    /// 减免百分比 (0.0 - 1.0)
-    pub percentage: f32,
-    /// 减免的伤害类型，None表示对所有类型有效
-    pub damage_type: Option<DamageType>,
-    /// buff持续时间（秒），None表示永久
-    pub duration: Option<f32>,
-    /// buff剩余时间
-    pub remaining_time: Option<f32>,
 }
 
 impl DamageReduction {
@@ -133,12 +174,6 @@ impl DamageReduction {
             *remaining -= delta_time;
         }
     }
-}
-
-/// 伤害减免buff容器组件
-#[derive(Component, Debug, Default)]
-pub struct DamageReductions {
-    pub buffs: Vec<DamageReduction>,
 }
 
 impl DamageReductions {
@@ -172,21 +207,6 @@ impl DamageReductions {
             buff.update_time(delta_time);
         }
     }
-}
-
-/// 伤害计算结果
-#[derive(Debug)]
-pub struct DamageResult {
-    /// 最终造成的伤害
-    pub final_damage: f32,
-    /// 被白色护盾吸收的伤害
-    pub white_shield_absorbed: f32,
-    /// 被魔法护盾吸收的伤害
-    pub magic_shield_absorbed: f32,
-    /// 被减免的伤害
-    pub reduced_damage: f32,
-    /// 原始伤害
-    pub original_damage: f32,
 }
 
 /// 核心伤害计算函数
@@ -251,8 +271,9 @@ pub fn calculate_damage(
 }
 
 /// 伤害系统 - 处理伤害事件
-pub fn damage_system(
-    mut damage_events: EventReader<DamageEvent>,
+pub fn on_command_damage_create(
+    trigger: Trigger<CommandDamageCreate>,
+    mut commands: Commands,
     mut query: Query<(
         &mut Health,
         Option<&mut WhiteShield>,
@@ -260,65 +281,68 @@ pub fn damage_system(
         Option<&DamageReductions>,
     )>,
 ) {
-    let event_count = damage_events.len();
-    if event_count > 0 {
-        system_debug!("damage_system", "Processing {} damage events", event_count);
-    }
+    system_debug!(
+        "damage_system",
+        "Processing damage event: source={:?}, target={:?}, type={:?}, amount={:.1}",
+        trigger.source,
+        trigger.target(),
+        trigger.damage_type,
+        trigger.amount
+    );
 
-    for event in damage_events.read() {
-        system_debug!(
-            "damage_system",
-            "Processing damage event: source={:?}, target={:?}, type={:?}, amount={:.1}",
-            event.source,
-            event.target,
-            event.damage_type,
-            event.amount
+    if let Ok((mut health, white_shield, magic_shield, damage_reductions)) =
+        query.get_mut(trigger.target())
+    {
+        let health_before = health.value;
+        let result = calculate_damage(
+            trigger.damage_type,
+            trigger.amount,
+            white_shield,
+            magic_shield,
+            damage_reductions,
         );
 
-        if let Ok((mut health, white_shield, magic_shield, damage_reductions)) =
-            query.get_mut(event.target)
-        {
-            let health_before = health.value;
-            let result = calculate_damage(
-                event.damage_type,
-                event.amount,
-                white_shield,
-                magic_shield,
-                damage_reductions,
-            );
+        // 应用最终伤害到生命值
+        health.value -= result.final_damage;
 
-            // 应用最终伤害到生命值
-            health.value -= result.final_damage;
+        system_info!("damage_system",
+            "Damage applied: {:?} -> {:?}, Type: {:?}, Original: {:.1}, Final: {:.1}, Health: {:.1} -> {:.1}, Shields: W{:.1}/M{:.1}, Reduced: {:.1}",
+            trigger.source,
+            trigger.target(),
+            trigger.damage_type,
+            result.original_damage,
+            result.final_damage,
+            health_before,
+            health.value,
+            result.white_shield_absorbed,
+            result.magic_shield_absorbed,
+            result.reduced_damage
+        );
 
-            system_info!("damage_system",
-                "Damage applied: {:?} -> {:?}, Type: {:?}, Original: {:.1}, Final: {:.1}, Health: {:.1} -> {:.1}, Shields: W{:.1}/M{:.1}, Reduced: {:.1}",
-                event.source,
-                event.target,
-                event.damage_type,
-                result.original_damage,
-                result.final_damage,
-                health_before,
-                health.value,
-                result.white_shield_absorbed,
-                result.magic_shield_absorbed,
-                result.reduced_damage
-            );
+        // 触发伤害生效事件
+        commands.trigger_targets(
+            EventDamageCreate {
+                source: trigger.source,
+                damage_type: trigger.damage_type,
+                damage_result: result,
+            },
+            trigger.target(),
+        );
 
-            if health.value <= 0.0 {
-                system_warn!(
-                    "damage_system",
-                    "Entity {:?} health dropped to {:.1} (death threshold)",
-                    event.target,
-                    health.value
-                );
-            }
-        } else {
+        if health.value <= 0.0 {
             system_warn!(
                 "damage_system",
-                "Failed to find target entity {:?} for damage event",
-                event.target
+                "Entity {:?} health dropped to {:.1} (death threshold)",
+                trigger.target(),
+                health.value
             );
         }
+    } else {
+        system_warn!(
+            "damage_system",
+            "Failed to find target entity {:?} for damage event",
+            trigger.target()
+        );
     }
 }
 
@@ -403,42 +427,6 @@ pub fn cleanup_depleted_shields_system(
             removed_white,
             removed_magic
         );
-    }
-}
-
-/// 伤害系统插件
-#[derive(Default)]
-pub struct PluginDamage;
-
-impl Plugin for PluginDamage {
-    fn build(&self, app: &mut App) {
-        app
-            // 注册伤害事件
-            .add_event::<DamageEvent>()
-            // 添加系统
-            .add_systems(
-                FixedUpdate,
-                (
-                    damage_system,
-                    update_damage_reductions_system,
-                    cleanup_depleted_shields_system,
-                ),
-            );
-    }
-}
-
-/// 便利函数：创建伤害事件
-pub fn create_damage_event(
-    source: Entity,
-    target: Entity,
-    damage_type: DamageType,
-    amount: f32,
-) -> DamageEvent {
-    DamageEvent {
-        source,
-        target,
-        damage_type,
-        amount,
     }
 }
 

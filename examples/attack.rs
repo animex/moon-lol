@@ -1,13 +1,13 @@
-use bevy::input::common_conditions::input_just_pressed;
 use bevy::prelude::*;
 use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
 };
 use moon_lol::core::{
-    spawn_skin_entity, Attack, CommandAttackCast, ConfigGame, ConfigNavigationGrid, Controller,
-    Focus, Health, Movement, PluginGame, Target, Team, WindupConfig,
+    spawn_skin_entity, Attack, ConfigGame, ConfigNavigationGrid, Controller, Focus, Health,
+    Movement, PluginGame, Team, WindupConfig,
 };
+use moon_lol::entities::Fiora;
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
@@ -38,17 +38,6 @@ fn main() {
             PluginEntities,
         ))
         .add_systems(Startup, setup)
-        .add_systems(
-            Update,
-            (|mut commands: Commands, q_controller: Query<(Entity, &Controller)>| {
-                println!("key pressed A");
-                for (entity, _) in q_controller.iter() {
-                    println!("attack cast");
-                    commands.trigger_targets(CommandAttackCast, entity);
-                }
-            })
-            .run_if(input_just_pressed(KeyCode::KeyA)),
-        )
         .run();
 }
 
@@ -79,6 +68,7 @@ pub fn setup(
                     value: 600.0,
                     max: 600.0,
                 },
+                Fiora,
             ))
             .log_components();
 
@@ -109,7 +99,7 @@ pub fn setup(
                     windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
                     windup_modifier: 1.0,
                 },
-                Target(chaos_entity),
+                Fiora,
             ))
             .log_components();
     }

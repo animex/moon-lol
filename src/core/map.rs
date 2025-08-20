@@ -2,8 +2,8 @@ use std::collections::HashMap;
 use std::f32;
 
 use crate::core::{
-    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandNavigationTo,
-    ConfigCharacterSkinAnimation, ConfigMap, Controller,
+    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandBehaviorAttack,
+    CommandBehaviorMoveTo, ConfigCharacterSkinAnimation, ConfigMap, Controller, Team,
 };
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
 use crate::league::LeagueLoader;
@@ -162,6 +162,7 @@ pub fn spawn_skin_entity(
         AnimationGraphHandle(graph_handle),
         Animation { hash_to_node },
         AnimationState {
+            last_hash: LeagueLoader::hash_bin("Idle1"),
             current_hash: LeagueLoader::hash_bin("Idle1"),
         },
     ));
@@ -280,5 +281,40 @@ pub fn on_click_map(
         position.z,
     );
 
-    commands.trigger_targets(CommandNavigationTo(position.xz()), targets);
+    commands.trigger_targets(CommandBehaviorMoveTo(position.xz()), targets);
+}
+
+pub fn on_move_map(
+    trigger: Trigger<Pointer<Move>>,
+    mut commands: Commands,
+    res_input: Res<ButtonInput<KeyCode>>,
+    q_controller: Query<Entity, With<Controller>>,
+    q_chaos: Query<(Entity, &Transform), With<Team>>,
+) {
+    if !res_input.just_pressed(KeyCode::KeyA) {
+        return;
+    }
+
+    let Some(position) = trigger.hit.position else {
+        return;
+    };
+
+    let mut min_distance = f32::MAX;
+    let mut target = None;
+
+    for (entity, transform) in q_chaos.iter() {
+        let distance = position.distance(transform.translation);
+        if distance < min_distance {
+            min_distance = distance;
+            target = Some(entity);
+        }
+    }
+
+    let Some(target) = target else {
+        return;
+    };
+
+    for entity in q_controller.iter() {
+        commands.trigger_targets(CommandBehaviorAttack { target }, entity);
+    }
 }

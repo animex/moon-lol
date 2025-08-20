@@ -16,6 +16,9 @@ use crate::{
     },
 };
 
+pub const GAME_TICK_DURATION: f32 = 0.033; // 30 FPS
+pub const UNCANCELLABLE_GRACE_PERIOD: f32 = 2.0 * GAME_TICK_DURATION; // 0.066 秒
+
 #[derive(Resource, Default, Serialize, Deserialize)]
 pub struct ConfigGame {
     pub legends: Vec<ConfigLegend>,

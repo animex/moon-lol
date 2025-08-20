@@ -1,13 +1,13 @@
 use crate::core::{
-    Attack, Bounding, CommandMovementFollowPath, CommandNavigationTo, CommandTargetRemove,
-    CommandTargetSet, EventAttackDone, EventDead, EventMovementEnd, EventSpawn, MovementState,
-    Target, Team,
+    Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart,
+    CommandNavigationTo, EventAttackEnd, EventDead, EventMovementEnd, EventSpawn, MovementState,
+    State, Team,
 };
 use bevy::{app::Plugin, prelude::*};
 use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[require(MinionState, Team, AggroInfo)]
+#[require(MinionState, AggroInfo, State)]
 pub enum Minion {
     Siege,
     Melee,
@@ -123,7 +123,7 @@ pub fn action_continue_minion_path(
     };
 
     commands.trigger_targets(
-        CommandMovementFollowPath(minion_path.0.clone()),
+        CommandMovementStart(minion_path.0.clone()),
         trigger.target(),
     );
 }
@@ -184,10 +184,12 @@ fn on_found_aggro_target(
         match *minion_state {
             MinionState::MovingOnPath => {
                 *minion_state = MinionState::AttackingTarget;
-                let action = CommandTargetSet {
-                    target: event.target,
-                };
-                commands.trigger_targets(action, trigger.target());
+                commands.trigger_targets(
+                    CommandBehaviorAttack {
+                        target: event.target,
+                    },
+                    trigger.target(),
+                );
             }
             _ => (),
         }
@@ -195,7 +197,7 @@ fn on_found_aggro_target(
 }
 
 pub fn action_attack_damage(
-    trigger: Trigger<EventAttackDone>,
+    trigger: Trigger<EventAttackEnd>,
     mut q_minion: Query<(Entity, &Team, &Transform, &mut AggroInfo), With<Minion>>,
     q_transform: Query<&Transform>,
     q_team: Query<&Team>,
@@ -228,19 +230,22 @@ pub fn action_attack_damage(
 fn on_target_dead(
     trigger: Trigger<EventDead>,
     mut commands: Commands,
-    mut q_minion_state: Query<(&mut MinionState, &Target)>,
+    mut q_minion_state: Query<(&mut MinionState, &AttackState)>,
 ) {
     let dead_entity = trigger.target();
 
-    for (mut minion_state, target) in q_minion_state.iter_mut() {
-        if target.0 != dead_entity {
+    for (mut minion_state, attack_state) in q_minion_state.iter_mut() {
+        let Some(target) = attack_state.target else {
+            continue;
+        };
+
+        if target != dead_entity {
             continue;
         }
 
         match *minion_state {
             MinionState::AttackingTarget => {
                 *minion_state = MinionState::MovingOnPath;
-                commands.trigger_targets(CommandTargetRemove, trigger.target());
                 commands.trigger_targets(CommandMinionContinuePath, trigger.target());
             }
             _ => (),

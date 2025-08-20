@@ -119,8 +119,6 @@ pub struct InhibitorState {
     pub inhibitors_down: usize,
 }
 
-// --- Bevy 插件和系统 ---
-
 pub struct PluginBarrack;
 
 impl Plugin for PluginBarrack {
