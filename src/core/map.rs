@@ -111,10 +111,19 @@ pub fn spawn_skin_entity(
 
     for (hash, clip) in &skin.animation_map {
         match clip {
-            ConfigCharacterSkinAnimation::AtomicClipData { clip_path } => {
+            ConfigCharacterSkinAnimation::AtomicClipData {
+                clip_path,
+                duration,
+            } => {
                 let clip = asset_server.load(clip_path.clone());
                 let node_index = animation_graph.add_clip(clip, 1.0, animation_graph.root);
-                hash_to_node.insert(*hash, AnimationNode::Clip { node_index });
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::Clip {
+                        node_index,
+                        duration: *duration,
+                    },
+                );
             }
 
             ConfigCharacterSkinAnimation::ConditionFloatClipData {
@@ -164,6 +173,7 @@ pub fn spawn_skin_entity(
         AnimationState {
             last_hash: LeagueLoader::hash_bin("Idle1"),
             current_hash: LeagueLoader::hash_bin("Idle1"),
+            current_duration: 1.0,
         },
     ));
 

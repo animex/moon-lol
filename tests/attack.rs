@@ -503,11 +503,8 @@ mod tests {
     /// Modern模式下的攻速缩放测试
     #[test]
     fn test_modern_windup_with_attack_speed_scaling() {
-        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.25, 1.0));
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            bonus_attack_speed: 1.0,
-            ..harness.attack_component().clone()
-        });
+        let mut harness = TestHarness::new()
+            .with_attacker(Attack::new(0.0, 0.25, 1.0).with_bonus_attack_speed(1.0));
 
         let target = harness.target;
 
@@ -692,11 +689,8 @@ mod tests {
     /// 复杂场景：多目标切换和取消序列
     #[test]
     fn test_multi_target_switching_and_cancellation_sequence() {
-        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.2, 1.0));
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 2.0,
-            ..harness.attack_component().clone()
-        });
+        let mut harness = TestHarness::new()
+            .with_attacker(Attack::new(0.0, 0.2, 1.0).with_bonus_attack_speed(2.0));
 
         let target_a = harness.target;
         let target_b = harness.spawn_target();

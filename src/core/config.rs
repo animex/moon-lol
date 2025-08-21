@@ -55,6 +55,7 @@ pub struct ConfigCharacterSkin {
 pub enum ConfigCharacterSkinAnimation {
     AtomicClipData {
         clip_path: String,
+        duration: f32,
     },
     ConditionFloatClipData {
         conditions: Vec<(u32, f32)>,

@@ -1,20 +1,19 @@
 use std::io::{self, Cursor};
 
-use bevy::transform::components::Transform;
+use bevy::prelude::*;
 use binrw::{BinRead, BinWrite};
+use cdragon_prop::{BinEmbed, BinEntry, BinFloat, BinHash, BinList, BinMap, BinString, BinStruct};
+use std::collections::HashMap;
 use tokio::io::AsyncWriteExt;
 
+use crate::core::{
+    ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
+    ConfigSkinnedMeshInverseBindposes,
+};
 use crate::league::{
     get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file, skinned_mesh_to_intermediate,
-    LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton, LeagueSkinnedMesh,
-    LeagueSkinnedMeshInternal, LeagueWadLoader,
-};
-use crate::{
-    core::{
-        ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
-        ConfigSkinnedMeshInverseBindposes,
-    },
-    league::load_animation_map,
+    AnimationData, AnimationFile, LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton,
+    LeagueSkinnedMesh, LeagueSkinnedMeshInternal, LeagueWadLoader,
 };
 
 impl LeagueWadLoader {
@@ -56,7 +55,7 @@ impl LeagueWadLoader {
             .map(|mut v| LeagueSkeleton::read(&mut v).unwrap())
             .unwrap();
 
-        let animation_map = load_animation_map(
+        let animation_map = self.load_animation_map(
             flat_map
                 .get(
                     &skin_character_data_properties
@@ -69,7 +68,7 @@ impl LeagueWadLoader {
         // 保存动画文件
         for (_, animation) in &animation_map {
             match animation {
-                ConfigCharacterSkinAnimation::AtomicClipData { clip_path } => {
+                ConfigCharacterSkinAnimation::AtomicClipData { clip_path, .. } => {
                     self.save_wad_entry_to_file(clip_path).await?;
                 }
                 _ => {}
@@ -132,5 +131,129 @@ impl LeagueWadLoader {
                 .collect(),
             animation_map,
         })
+    }
+
+    pub fn load_animation_map(
+        &self,
+        value: &BinEntry,
+    ) -> Result<HashMap<u32, ConfigCharacterSkinAnimation>, LeagueLoaderError> {
+        let nodes = value
+            .getv::<BinMap>(LeagueLoader::hash_bin("mClipDataMap").into())
+            .unwrap()
+            .downcast::<BinHash, BinStruct>()
+            .unwrap();
+
+        let animation_graph_data = nodes
+            .iter()
+            .filter_map(|(k, v)| {
+                if v.ctype.hash == LeagueLoader::hash_bin("AtomicClipData") {
+                    let clip_path = v
+                        .getv::<BinEmbed>(LeagueLoader::hash_bin("mAnimationResourceData").into())
+                        .unwrap()
+                        .getv::<BinString>(LeagueLoader::hash_bin("mAnimationFilePath").into())
+                        .map(|v| v.0.clone())
+                        .unwrap();
+
+                    let buffer = self.get_wad_entry_buffer_by_path(&clip_path).unwrap();
+                    let file = AnimationFile::read(&mut Cursor::new(buffer)).unwrap();
+                    let data = AnimationData::from(file);
+
+                    return Some((
+                        k.0.hash,
+                        ConfigCharacterSkinAnimation::AtomicClipData {
+                            clip_path,
+                            duration: data.duration,
+                        },
+                    ));
+                }
+
+                if v.ctype.hash == LeagueLoader::hash_bin("ConditionFloatClipData") {
+                    let updater = v
+                        .getv::<BinStruct>(LeagueLoader::hash_bin("Updater").into())
+                        .unwrap();
+
+                    let mut component_name = None;
+                    let mut field_name = None;
+
+                    if updater.ctype.hash == LeagueLoader::hash_bin("MoveSpeedParametricUpdater") {
+                        component_name = Some("Movement".to_string());
+                        field_name = Some("speed".to_string());
+                    }
+
+                    let Some(component_name) = component_name else {
+                        return None;
+                    };
+                    let Some(field_name) = field_name else {
+                        return None;
+                    };
+
+                    return Some((
+                        k.0.hash,
+                        ConfigCharacterSkinAnimation::ConditionFloatClipData {
+                            conditions: v
+                                .getv::<BinList>(
+                                    LeagueLoader::hash_bin("mConditionFloatPairDataList").into(),
+                                )
+                                .unwrap()
+                                .downcast::<BinEmbed>()
+                                .unwrap()
+                                .iter()
+                                .map(|v| {
+                                    (
+                                        v.getv::<BinHash>(
+                                            LeagueLoader::hash_bin("mClipName").into(),
+                                        )
+                                        .unwrap()
+                                        .0
+                                        .hash,
+                                        v.getv::<BinFloat>(LeagueLoader::hash_bin("mValue").into())
+                                            .unwrap_or(&BinFloat(0.0))
+                                            .0,
+                                    )
+                                })
+                                .collect(),
+                            component_name,
+                            field_name,
+                        },
+                    ));
+                }
+
+                if v.ctype.hash == LeagueLoader::hash_bin("SelectorClipData") {
+                    return Some((
+                        k.0.hash,
+                        ConfigCharacterSkinAnimation::SelectorClipData {
+                            probably_nodes: v
+                                .getv::<BinList>(
+                                    LeagueLoader::hash_bin("mSelectorPairDataList").into(),
+                                )
+                                .unwrap()
+                                .downcast::<BinEmbed>()
+                                .unwrap()
+                                .iter()
+                                .map(|v| {
+                                    (
+                                        v.getv::<BinHash>(
+                                            LeagueLoader::hash_bin("mClipName").into(),
+                                        )
+                                        .unwrap()
+                                        .0
+                                        .hash,
+                                        v.getv::<BinFloat>(
+                                            LeagueLoader::hash_bin("mProbability").into(),
+                                        )
+                                        .unwrap()
+                                        .0,
+                                    )
+                                })
+                                .collect(),
+                        },
+                    ));
+                }
+
+                None
+            })
+            .collect();
+
+        Ok(animation_graph_data)
     }
 }

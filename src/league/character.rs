@@ -1,14 +1,10 @@
-use crate::{
-    core::ConfigCharacterSkinAnimation,
-    league::{LeagueLoader, LeagueLoaderError},
-};
 use bevy::math::Mat4;
 use bevy::prelude::*;
 use cdragon_prop::{
-    BinEmbed, BinEntry, BinFloat, BinHash, BinLink, BinList, BinMap, BinMatrix, BinString,
-    BinStruct, BinU32,
+    BinEmbed, BinEntry, BinFloat, BinHash, BinLink, BinMatrix, BinString, BinStruct, BinU32,
 };
-use std::collections::HashMap;
+
+use crate::league::LeagueLoader;
 
 #[derive(Debug, Clone)]
 pub struct LeagueBinCharacterRecord {
@@ -277,116 +273,4 @@ impl From<&BinEmbed> for SkinAnimationProperties {
             animation_graph_data,
         }
     }
-}
-
-pub fn load_animation_map(
-    value: &BinEntry,
-) -> Result<HashMap<u32, ConfigCharacterSkinAnimation>, LeagueLoaderError> {
-    let nodes = value
-        .getv::<BinMap>(LeagueLoader::hash_bin("mClipDataMap").into())
-        .unwrap()
-        .downcast::<BinHash, BinStruct>()
-        .unwrap();
-
-    let animation_graph_data = nodes
-        .iter()
-        .filter_map(|(k, v)| {
-            if v.ctype.hash == LeagueLoader::hash_bin("AtomicClipData") {
-                return Some((
-                    k.0.hash,
-                    ConfigCharacterSkinAnimation::AtomicClipData {
-                        clip_path: v
-                            .getv::<BinEmbed>(
-                                LeagueLoader::hash_bin("mAnimationResourceData").into(),
-                            )
-                            .unwrap()
-                            .getv::<BinString>(LeagueLoader::hash_bin("mAnimationFilePath").into())
-                            .map(|v| v.0.clone())
-                            .unwrap(),
-                    },
-                ));
-            }
-
-            if v.ctype.hash == LeagueLoader::hash_bin("ConditionFloatClipData") {
-                let updater = v
-                    .getv::<BinStruct>(LeagueLoader::hash_bin("Updater").into())
-                    .unwrap();
-
-                let mut component_name = None;
-                let mut field_name = None;
-
-                if updater.ctype.hash == LeagueLoader::hash_bin("MoveSpeedParametricUpdater") {
-                    component_name = Some("Movement".to_string());
-                    field_name = Some("speed".to_string());
-                }
-
-                let Some(component_name) = component_name else {
-                    return None;
-                };
-                let Some(field_name) = field_name else {
-                    return None;
-                };
-
-                return Some((
-                    k.0.hash,
-                    ConfigCharacterSkinAnimation::ConditionFloatClipData {
-                        conditions: v
-                            .getv::<BinList>(
-                                LeagueLoader::hash_bin("mConditionFloatPairDataList").into(),
-                            )
-                            .unwrap()
-                            .downcast::<BinEmbed>()
-                            .unwrap()
-                            .iter()
-                            .map(|v| {
-                                (
-                                    v.getv::<BinHash>(LeagueLoader::hash_bin("mClipName").into())
-                                        .unwrap()
-                                        .0
-                                        .hash,
-                                    v.getv::<BinFloat>(LeagueLoader::hash_bin("mValue").into())
-                                        .unwrap_or(&BinFloat(0.0))
-                                        .0,
-                                )
-                            })
-                            .collect(),
-                        component_name,
-                        field_name,
-                    },
-                ));
-            }
-
-            if v.ctype.hash == LeagueLoader::hash_bin("SelectorClipData") {
-                return Some((
-                    k.0.hash,
-                    ConfigCharacterSkinAnimation::SelectorClipData {
-                        probably_nodes: v
-                            .getv::<BinList>(LeagueLoader::hash_bin("mSelectorPairDataList").into())
-                            .unwrap()
-                            .downcast::<BinEmbed>()
-                            .unwrap()
-                            .iter()
-                            .map(|v| {
-                                (
-                                    v.getv::<BinHash>(LeagueLoader::hash_bin("mClipName").into())
-                                        .unwrap()
-                                        .0
-                                        .hash,
-                                    v.getv::<BinFloat>(
-                                        LeagueLoader::hash_bin("mProbability").into(),
-                                    )
-                                    .unwrap()
-                                    .0,
-                                )
-                            })
-                            .collect(),
-                    },
-                ));
-            }
-
-            None
-        })
-        .collect();
-
-    Ok(animation_graph_data)
 }
