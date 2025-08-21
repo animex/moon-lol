@@ -119,6 +119,7 @@ pub struct InhibitorState {
     pub inhibitors_down: usize,
 }
 
+#[derive(Default)]
 pub struct PluginBarrack;
 
 impl Plugin for PluginBarrack {

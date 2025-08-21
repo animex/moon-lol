@@ -16,14 +16,13 @@ pub use nexus::*;
 pub use shpere::*;
 pub use turret::*;
 
-use bevy::app::{App, Plugin};
+use bevy::app::plugin_group;
 
-pub struct PluginEntities;
-
-impl Plugin for PluginEntities {
-    fn build(&self, app: &mut App) {
-        app.add_plugins(PluginMinion);
-        app.add_plugins(PluginBarrack);
-        app.add_plugins(PluginDebugSphere);
+plugin_group! {
+    pub struct PluginEntities {
+        :PluginBarrack,
+        :PluginDebugSphere,
+        :PluginFiora,
+        :PluginMinion,
     }
 }

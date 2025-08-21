@@ -25,7 +25,7 @@ impl Plugin for PluginAttack {
 }
 
 /// 攻击组件 - 包含攻击的基础属性
-#[derive(Component, Clone)]
+#[derive(Debug, Component, Clone)]
 pub struct Attack {
     pub range: f32,
     /// 基础攻击速度 (1级时的每秒攻击次数)
@@ -93,20 +93,39 @@ pub struct EventAttackEnd {
 #[derive(Event, Debug)]
 pub struct EventAttackReady;
 
-impl Default for Attack {
-    fn default() -> Self {
+impl Attack {
+    pub fn new(range: f32, windup_duration_secs: f32, total_duration_secs: f32) -> Self {
         Self {
-            range: 125.0,
-            base_attack_speed: 0.625,
+            range,
+            base_attack_speed: 1.0 / total_duration_secs,
             bonus_attack_speed: 0.0,
             attack_speed_cap: 2.5,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
+            windup_config: WindupConfig::Modern {
+                attack_cast_time: windup_duration_secs,
+                attack_total_time: total_duration_secs,
+            },
             windup_modifier: 1.0,
         }
     }
-}
 
-impl Attack {
+    pub fn from_legacy(range: f32, base_attack_speed: f32, windup_offset: f32) -> Self {
+        Self {
+            range,
+            base_attack_speed,
+            bonus_attack_speed: 0.0,
+            attack_speed_cap: 2.5,
+            windup_config: WindupConfig::Legacy {
+                attack_offset: windup_offset,
+            },
+            windup_modifier: 1.0,
+        }
+    }
+
+    pub fn with_bonus_attack_speed(mut self, bonus_attack_speed: f32) -> Self {
+        self.bonus_attack_speed = bonus_attack_speed;
+        self
+    }
+
     /// 计算当前总攻击速度
     pub fn current_attack_speed(&self) -> f32 {
         (self.base_attack_speed * (1.0 + self.bonus_attack_speed)).min(self.attack_speed_cap)

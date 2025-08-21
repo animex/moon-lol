@@ -6,6 +6,7 @@ pub struct DebugSphere {
     pub color: Color,
 }
 
+#[derive(Default)]
 pub struct PluginDebugSphere;
 
 impl Plugin for PluginDebugSphere {

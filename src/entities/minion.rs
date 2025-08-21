@@ -1,10 +1,25 @@
 use crate::core::{
-    Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart,
-    CommandNavigationTo, EventAttackEnd, EventDead, EventMovementEnd, EventSpawn, MovementState,
-    State, Team,
+    Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart, DamageType,
+    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, MovementState, State, Team,
 };
 use bevy::{app::Plugin, prelude::*};
 use serde::{Deserialize, Serialize};
+
+#[derive(Default)]
+pub struct PluginMinion;
+
+impl Plugin for PluginMinion {
+    fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_event::<EventMinionFoundTarget>();
+        app.add_event::<EventMinionChasingTimeout>();
+        app.add_event::<ChasingTooMuch>();
+        app.add_systems(FixedPostUpdate, minion_aggro);
+        app.add_observer(on_spawn);
+        app.add_observer(action_continue_minion_path);
+        app.add_observer(on_found_aggro_target);
+        app.add_observer(on_target_dead);
+    }
+}
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
 #[require(MinionState, AggroInfo, State)]
@@ -46,21 +61,6 @@ pub struct ChasingTooMuch;
 
 pub const AGGRO_RANGE: f32 = 500.0;
 
-pub struct PluginMinion;
-
-impl Plugin for PluginMinion {
-    fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_event::<EventMinionFoundTarget>();
-        app.add_event::<EventMinionChasingTimeout>();
-        app.add_event::<ChasingTooMuch>();
-        app.add_systems(FixedPostUpdate, minion_aggro);
-        app.add_observer(on_spawn);
-        app.add_observer(action_continue_minion_path);
-        app.add_observer(on_found_aggro_target);
-        app.add_observer(on_target_dead);
-    }
-}
-
 pub fn minion_aggro(
     mut commands: Commands,
     q_minion: Query<(Entity, &Team, &Transform, &AggroInfo), With<Minion>>,
@@ -73,7 +73,7 @@ pub fn minion_aggro(
 
         // 遍历所有可攻击单位筛选目标
         for (attackable_entity, attackable_team, attackable_transform) in q_attackable.iter() {
-            // 忽略友方和死亡单位
+            // 忽略友方单位
             if attackable_team == minion_team {
                 continue;
             }
@@ -115,15 +115,21 @@ pub fn minion_aggro(
 
 pub fn action_continue_minion_path(
     trigger: Trigger<CommandMinionContinuePath>,
-    q_minion_path: Query<&MinionPath>,
+    query: Query<(&Transform, &MinionPath)>,
     mut commands: Commands,
 ) {
-    let Ok(minion_path) = q_minion_path.get(trigger.target()) else {
+    let Ok((transform, minion_path)) = query.get(trigger.target()) else {
+        return;
+    };
+
+    let Some(closest_index) =
+        find_closest_point_index(&minion_path.0.clone(), transform.translation.xz())
+    else {
         return;
     };
 
     commands.trigger_targets(
-        CommandMovementStart(minion_path.0.clone()),
+        CommandMovementStart(minion_path.0[closest_index..].to_vec()),
         trigger.target(),
     );
 }
@@ -171,13 +177,11 @@ fn on_found_aggro_target(
     if is_in_attack_range {
         commands.trigger_targets(EventMovementEnd, trigger.target());
     } else {
-        // 获取目标位置并设置为移动目标
-        if let Ok(target_transform) = q_transform.get(event.target) {
-            commands.trigger_targets(
-                CommandNavigationTo(target_transform.translation.xz()),
-                trigger.target(),
-            );
-        }
+        commands
+            .entity(trigger.target())
+            .trigger(CommandBehaviorAttack {
+                target: event.target,
+            });
     }
 
     if let Ok(mut minion_state) = q_minion_state.get_mut(entity) {
@@ -196,34 +200,43 @@ fn on_found_aggro_target(
     }
 }
 
-pub fn action_attack_damage(
-    trigger: Trigger<EventAttackEnd>,
-    mut q_minion: Query<(Entity, &Team, &Transform, &mut AggroInfo), With<Minion>>,
+pub fn on_team_get_damage(
+    trigger: Trigger<EventDamageCreate>,
+    mut q_minion: Query<(&Team, &Transform, &mut AggroInfo), With<Minion>>,
     q_transform: Query<&Transform>,
     q_team: Query<&Team>,
 ) {
-    let self_entity = trigger.target();
-    let Ok(self_transform) = q_transform.get(self_entity) else {
+    let source = trigger.source;
+    let target = trigger.target();
+
+    if trigger.damage_type != DamageType::Physical {
+        return;
+    }
+
+    let Ok(source_transform) = q_transform.get(source) else {
         return;
     };
-    let Ok(self_team) = q_team.get(self_entity) else {
+
+    let Ok(target_team) = q_team.get(target) else {
         return;
     };
-    for (_, minion_team, minion_transform, mut aggro_info) in q_minion.iter_mut() {
-        if self_team == minion_team {
+
+    for (minion_team, minion_transform, mut aggro_info) in q_minion.iter_mut() {
+        if target_team != minion_team {
             continue;
         }
 
         let distance = minion_transform
             .translation
-            .distance(self_transform.translation);
+            .distance(source_transform.translation);
+
         if distance >= AGGRO_RANGE {
             continue;
         }
 
-        let aggro = aggro_info.aggros.get(&self_entity).copied().unwrap_or(0.0);
+        let aggro = aggro_info.aggros.get(&source).copied().unwrap_or(0.0);
 
-        aggro_info.aggros.insert(self_entity, aggro + 10.0);
+        aggro_info.aggros.insert(source, aggro + 10.0);
     }
 }
 
@@ -270,47 +283,37 @@ fn on_spawn(
     }
 }
 
-fn find_next_target_point(
-    movement_state: &mut MovementState,
-    current_position: Vec2,
-) -> Option<Vec2> {
-    let path = &movement_state.path;
-
-    if path.is_empty() || movement_state.current_target_index >= path.len() {
+fn find_closest_point_index(path: &Vec<Vec2>, position: Vec2) -> Option<usize> {
+    if path.is_empty() {
         return None;
     }
 
-    // 如果还没有开始移动，找到最近的前进方向的点
-    if movement_state.current_target_index == 0 {
-        let mut closest_index = 0;
-        let mut min_distance = f32::INFINITY;
+    let mut closest_index = 0;
+    let mut min_distance = f32::INFINITY;
 
-        for (i, &point) in path.iter().enumerate() {
-            let distance = current_position.distance(point);
-            if distance < min_distance {
-                min_distance = distance;
-                closest_index = i;
-            }
+    for (i, &point) in path.iter().enumerate() {
+        let distance = position.distance(point);
+        if distance < min_distance {
+            min_distance = distance;
+            closest_index = i;
         }
-
-        // 确保不往回走，如果找到的最近点不是第一个点，检查是否应该选择下一个点
-        if closest_index > 0 {
-            let prev_point = path[closest_index - 1];
-            let curr_point = path[closest_index];
-
-            // 计算从前一个点到当前点的方向向量
-            let path_direction = (curr_point - prev_point).normalize();
-            // 计算从前一个点到当前位置的向量
-            let position_direction = (current_position - prev_point).normalize();
-
-            // 如果当前位置在路径方向的前方，选择当前点；否则选择下一个点（如果存在）
-            if path_direction.dot(position_direction) > 0.0 && closest_index + 1 < path.len() {
-                closest_index += 1;
-            }
-        }
-
-        movement_state.current_target_index = closest_index;
     }
 
-    Some(path[movement_state.current_target_index])
+    // 确保不往回走，如果找到的最近点不是第一个点，检查是否应该选择下一个点
+    if closest_index > 0 {
+        let prev_point = path[closest_index - 1];
+        let curr_point = path[closest_index];
+
+        // 计算从前一个点到当前点的方向向量
+        let path_direction = (curr_point - prev_point).normalize();
+        // 计算从前一个点到当前位置的向量
+        let position_direction = (position - prev_point).normalize();
+
+        // 如果当前位置在路径方向的前方，选择当前点；否则选择下一个点（如果存在）
+        if path_direction.dot(position_direction) > 0.0 && closest_index + 1 < path.len() {
+            closest_index += 1;
+        }
+    }
+
+    Some(closest_index)
 }

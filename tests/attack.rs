@@ -122,17 +122,6 @@ mod tests {
             self.app.world().get::<Attack>(self.attacker).unwrap()
         }
 
-        /// 获取当前时间
-        fn current_time(&self) -> f32 {
-            self.app.world().resource::<Time<Fixed>>().elapsed_secs()
-        }
-
-        /// 移除目标实体（模拟死亡）
-        fn kill_target(&mut self, target: Entity) -> &mut Self {
-            self.app.world_mut().entity_mut(target).despawn();
-            self
-        }
-
         // ===== 断言方法 (Assertion Methods) - 返回 &mut Self =====
 
         /// 断言攻击状态为空闲
@@ -194,11 +183,7 @@ mod tests {
     /// 目标 1：完整的攻击循环
     #[test]
     fn test_complete_attack_cycle() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         let target = harness.target;
 
@@ -217,14 +202,9 @@ mod tests {
     /// 目标 2：连续攻击同一目标
     #[test]
     fn test_consecutive_attacks_same_target() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         let target = harness.target;
-        let initial_time = harness.current_time();
 
         harness
             .attack()
@@ -253,11 +233,7 @@ mod tests {
     #[test]
     fn test_cancel_attack_during_cancellable_windup() {
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .then_expect_windup("攻击命令应该触发前摇状态")
             .advance_time(0.1)
@@ -274,11 +250,7 @@ mod tests {
     fn test_attack_reset_during_cooldown() {
         let target = TestHarness::new().target;
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
             .then_expect_cooldown("应该进入后摇状态")
@@ -291,11 +263,7 @@ mod tests {
     #[test]
     fn test_attack_reset_event_triggering() {
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
             .then_expect_cooldown("应该进入后摇状态")
@@ -308,15 +276,7 @@ mod tests {
     /// 目标 7：攻速变化对攻击时间的影响
     #[test]
     fn test_attack_speed_impact_on_timing() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 0.625,
-            bonus_attack_speed: 0.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.25,
-                attack_total_time: 1.0,
-            },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.25, 1.0));
 
         let initial_attack = harness.attack_component().clone();
         harness
@@ -354,12 +314,7 @@ mod tests {
     /// 目标 8：攻击速度达到上限
     #[test]
     fn test_attack_speed_cap() {
-        let attack = Attack {
-            base_attack_speed: 0.625,
-            bonus_attack_speed: 10.0,
-            attack_speed_cap: 2.5,
-            ..Default::default()
-        };
+        let attack = Attack::from_legacy(0.0, 0.625, 0.0).with_bonus_attack_speed(10.0);
 
         let min_interval = 1.0 / 2.5;
 
@@ -397,11 +352,7 @@ mod tests {
         let test_cases = [(0.1, 0.4), (-0.1, 0.2), (0.0, 0.3)];
 
         for (attack_offset, expected_windup) in test_cases {
-            let attack = Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset },
-                ..Default::default()
-            };
+            let attack = Attack::new(0.0, 0.3 + attack_offset, 1.0);
             let harness = TestHarness::new().with_attacker(attack);
             let actual_windup = harness.attack_component().windup_duration_secs();
             assert!(
@@ -424,13 +375,10 @@ mod tests {
         ];
 
         for (attack_cast_time, attack_total_time, base_speed, expected_windup) in test_cases {
+            let attack = Attack::new(0.0, attack_cast_time, attack_total_time);
             let attack = Attack {
                 base_attack_speed: base_speed,
-                windup_config: WindupConfig::Modern {
-                    attack_cast_time,
-                    attack_total_time,
-                },
-                ..Default::default()
+                ..attack
             };
             let harness = TestHarness::new().with_attacker(attack);
             let actual_windup = harness.attack_component().windup_duration_secs();
@@ -449,14 +397,10 @@ mod tests {
         let test_cases = [(1.0, 0.3), (0.5, 0.15), (1.5, 0.45), (0.1, 0.03)];
 
         for (modifier, expected_windup) in test_cases {
+            let attack = Attack::new(0.0, 0.3, 1.0);
             let attack = Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Modern {
-                    attack_cast_time: 0.3,
-                    attack_total_time: 1.0,
-                },
                 windup_modifier: modifier,
-                ..Default::default()
+                ..attack
             };
             let harness = TestHarness::new().with_attacker(attack);
             let actual_windup = harness.attack_component().windup_duration_secs();
@@ -470,11 +414,10 @@ mod tests {
         }
 
         // 测试Legacy模式下的修正系数
+        let legacy_attack = Attack::new(0.0, 0.3 + 0.1, 1.0);
         let legacy_attack = Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.1 },
             windup_modifier: 0.8,
-            ..Default::default()
+            ..legacy_attack
         };
         let expected_legacy = (0.3 + 0.1) * 0.8;
         let harness = TestHarness::new().with_attacker(legacy_attack);
@@ -492,13 +435,7 @@ mod tests {
     /// 攻击速度计算验证
     #[test]
     fn test_attack_speed_calculations() {
-        let attack = Attack {
-            base_attack_speed: 0.625,
-            bonus_attack_speed: 1.0,
-            attack_speed_cap: 2.5,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        };
+        let attack = Attack::from_legacy(0.0, 0.625, 0.0).with_bonus_attack_speed(1.0);
 
         let harness = TestHarness::new().with_attacker(attack);
 
@@ -524,14 +461,11 @@ mod tests {
     /// 浮点数精度测试
     #[test]
     fn test_floating_point_precision() {
+        let attack = Attack::new(0.0, 0.25, 1.0);
         let attack = Attack {
             base_attack_speed: 0.625,
             bonus_attack_speed: 0.6,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.25,
-                attack_total_time: 1.0,
-            },
-            ..Default::default()
+            ..attack
         };
 
         let expected_speed = 0.625 * (1.0 + 0.6);
@@ -559,11 +493,7 @@ mod tests {
     #[test]
     fn test_attack_reset_during_windup() {
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .then_expect_windup("攻击命令应该触发前摇状态")
             .reset()
@@ -573,14 +503,10 @@ mod tests {
     /// Modern模式下的攻速缩放测试
     #[test]
     fn test_modern_windup_with_attack_speed_scaling() {
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.25, 1.0));
         let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
             bonus_attack_speed: 1.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.25,
-                attack_total_time: 1.0,
-            },
-            ..Default::default()
+            ..harness.attack_component().clone()
         });
 
         let target = harness.target;
@@ -608,13 +534,10 @@ mod tests {
     /// 不可取消宽限期测试
     #[test]
     fn test_uncancellable_grace_period() {
+        let attack = Attack::new(0.0, 0.05, 0.95);
         let attack = Attack {
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.05,
-                attack_total_time: 0.95,
-            },
             base_attack_speed: 1.0,
-            ..Default::default()
+            ..attack
         };
 
         assert!(attack.windup_duration_secs() < UNCANCELLABLE_GRACE_PERIOD);
@@ -626,11 +549,7 @@ mod tests {
     /// 期望：当前攻击仍攻击目标A，但下一次自动攻击应该攻击目标B
     #[test]
     fn test_new_target_command_during_uncancellable_period() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         let target_a = harness.target;
         let target_b = harness.spawn_target();
@@ -660,11 +579,7 @@ mod tests {
     /// 期望：会立即取消当前攻击，重新开始攻击目标B且重新计时
     #[test]
     fn test_new_target_command_during_cancellable_period() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         let target_a = harness.target;
         let target_b = harness.spawn_target();
@@ -692,11 +607,7 @@ mod tests {
     #[test]
     fn test_cancel_attack_during_cooldown() {
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
             .then_expect_cooldown("前摇结束后应该进入后摇状态")
@@ -710,7 +621,7 @@ mod tests {
     #[test]
     fn test_cancel_and_reset_in_idle_state() {
         TestHarness::new()
-            .with_attacker(Attack::default())
+            .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .then_expect_idle("初始状态应该是空闲")
             .cancel()
             .then_expect_idle("空闲状态下取消命令不应改变状态")
@@ -721,11 +632,7 @@ mod tests {
     /// 演示：continue_attack控制测试
     #[test]
     fn test_continue_attack_control() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         // 正常攻击循环
         harness
@@ -746,11 +653,7 @@ mod tests {
     /// 复杂场景：走位攻击和目标切换组合
     #[test]
     fn test_complex_kiting_and_target_switching_scenario() {
-        let mut harness = TestHarness::new().with_attacker(Attack {
-            base_attack_speed: 1.0,
-            windup_config: WindupConfig::Legacy { attack_offset: 0.0 },
-            ..Default::default()
-        });
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
         let initial_target = harness.target;
         let new_target = harness.spawn_target();
@@ -789,13 +692,10 @@ mod tests {
     /// 复杂场景：多目标切换和取消序列
     #[test]
     fn test_multi_target_switching_and_cancellation_sequence() {
+        let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.2, 1.0));
         let mut harness = TestHarness::new().with_attacker(Attack {
             base_attack_speed: 2.0,
-            windup_config: WindupConfig::Modern {
-                attack_cast_time: 0.2,
-                attack_total_time: 1.0,
-            },
-            ..Default::default()
+            ..harness.attack_component().clone()
         });
 
         let target_a = harness.target;
@@ -831,14 +731,7 @@ mod tests {
     #[test]
     fn test_attack_speed_scaling_with_precise_timing() {
         TestHarness::new()
-            .with_attacker(Attack {
-                base_attack_speed: 1.0,
-                windup_config: WindupConfig::Modern {
-                    attack_cast_time: 0.25,
-                    attack_total_time: 1.0,
-                },
-                ..Default::default()
-            })
+            .with_attacker(Attack::new(0.0, 0.25, 1.0))
             .attack()
             .then_expect_windup("开始基础攻速攻击")
             .then_custom_assert(

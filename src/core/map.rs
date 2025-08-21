@@ -7,7 +7,6 @@ use crate::core::{
 };
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
 use crate::league::LeagueLoader;
-use crate::system_debug;
 use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
