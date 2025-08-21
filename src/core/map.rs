@@ -45,7 +45,8 @@ fn setup(
     commands
         .entity(geo_entity)
         .insert((Visibility::Visible, Map))
-        .observe(on_click_map);
+        .observe(on_click_map)
+        .observe(on_move_map);
 
     let environment_entities = spawn_environment_objects_from_configs(
         &mut commands,
@@ -284,7 +285,7 @@ pub fn on_click_map(
     commands.trigger_targets(CommandBehaviorMoveTo(position.xz()), targets);
 }
 
-pub fn on_move_map(
+fn on_move_map(
     trigger: Trigger<Pointer<Move>>,
     mut commands: Commands,
     res_input: Res<ButtonInput<KeyCode>>,
@@ -315,6 +316,8 @@ pub fn on_move_map(
     };
 
     for entity in q_controller.iter() {
-        commands.trigger_targets(CommandBehaviorAttack { target }, entity);
+        commands
+            .entity(entity)
+            .trigger(CommandBehaviorAttack { target });
     }
 }

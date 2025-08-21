@@ -39,7 +39,10 @@ fn on_command_attack_auto_start(trigger: Trigger<CommandAttackAutoStart>, mut co
 }
 
 fn on_command_attack_auto_stop(trigger: Trigger<CommandAttackAutoStop>, mut commands: Commands) {
-    commands.entity(trigger.target()).trigger(CommandAttackStop);
+    commands
+        .entity(trigger.target())
+        .remove::<AttackAuto>()
+        .trigger(CommandAttackStop);
 }
 
 fn update_attack_auto(

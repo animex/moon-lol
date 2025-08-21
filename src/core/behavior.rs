@@ -1,8 +1,8 @@
 use bevy::prelude::*;
 
 use crate::core::{
-    CommandAttackAutoStart, CommandAttackStop, CommandMovementStop, CommandNavigationTo,
-    EventAttackStart, EventMovementStart,
+    CommandAttackAutoStart, CommandAttackAutoStop, CommandAttackStop, CommandMovementStop,
+    CommandNavigationTo, EventAttackStart, EventMovementStart,
 };
 
 #[derive(Default)]
@@ -13,7 +13,6 @@ impl Plugin for PluginBehavior {
         app.add_event::<CommandBehaviorAttack>();
         app.add_event::<CommandBehaviorMoveTo>();
 
-        app.add_observer(on_movement_start);
         app.add_observer(on_attack_cast);
 
         app.add_observer(command_attack);
@@ -29,24 +28,19 @@ pub struct CommandBehaviorAttack {
 #[derive(Event)]
 pub struct CommandBehaviorMoveTo(pub Vec2);
 
-fn on_movement_start(trigger: Trigger<EventMovementStart>, mut commands: Commands) {
-    commands.trigger_targets(CommandAttackStop, trigger.target());
-}
-
 fn on_attack_cast(trigger: Trigger<EventAttackStart>, mut commands: Commands) {
     commands.trigger_targets(CommandMovementStop, trigger.target());
 }
 
 fn command_attack(trigger: Trigger<CommandBehaviorAttack>, mut commands: Commands) {
-    commands.trigger_targets(
-        CommandAttackAutoStart {
+    commands
+        .entity(trigger.target())
+        .trigger(CommandAttackAutoStart {
             target: trigger.target,
-        },
-        trigger.target(),
-    );
+        });
 }
 
 fn command_move_to(trigger: Trigger<CommandBehaviorMoveTo>, mut commands: Commands) {
-    commands.trigger_targets(CommandAttackStop, trigger.target());
+    commands.trigger_targets(CommandAttackAutoStop, trigger.target());
     commands.trigger_targets(CommandNavigationTo(trigger.0), trigger.target());
 }
