@@ -31,6 +31,7 @@ impl Plugin for PluginMap {
     fn build(&self, app: &mut App) {
         app.add_plugins(MeshPickingPlugin);
         app.add_systems(Startup, setup);
+        app.add_systems(Update, on_map_move);
     }
 }
 
@@ -45,8 +46,7 @@ fn setup(
     commands
         .entity(geo_entity)
         .insert((Visibility::Visible, Map))
-        .observe(on_click_map)
-        .observe(on_move_map);
+        .observe(on_click_map);
 
     let environment_entities = spawn_environment_objects_from_configs(
         &mut commands,
@@ -267,55 +267,74 @@ pub fn on_click_map(
     mut commands: Commands,
     q_move: Query<Entity, With<Controller>>,
 ) {
-    system_debug!("on_click_map", "Received click");
-
     let Some(position) = click.hit.position else {
         return;
     };
     let targets = q_move.iter().collect::<Vec<Entity>>();
 
-    system_debug!(
-        "on_click_map",
-        "Received click at position ({:.1}, {:.1}, {:.1})",
-        position.x,
-        position.y,
-        position.z,
-    );
-
     commands.trigger_targets(CommandBehaviorMoveTo(position.xz()), targets);
 }
 
-fn on_move_map(
-    trigger: Trigger<Pointer<Move>>,
+fn on_map_move(
     mut commands: Commands,
     res_input: Res<ButtonInput<KeyCode>>,
-    q_controller: Query<Entity, With<Controller>>,
-    q_chaos: Query<(Entity, &Transform), With<Team>>,
+    q_controller: Query<(Entity, &Team), With<Controller>>,
+    q_target: Query<(Entity, &Transform, &Team)>,
+    q_map: Query<Entity, With<Map>>,
+    window: Single<&Window>,
+    camera: Single<(&Camera, &GlobalTransform)>,
+    q_children: Query<&ChildOf>,
+    mut ray_cast: MeshRayCast,
 ) {
     if !res_input.just_pressed(KeyCode::KeyA) {
         return;
     }
 
-    let Some(position) = trigger.hit.position else {
+    let Some(viewport_position) = window.cursor_position() else {
         return;
     };
 
-    let mut min_distance = f32::MAX;
-    let mut target = None;
+    let (camera, camera_transform) = *camera;
 
-    for (entity, transform) in q_chaos.iter() {
-        let distance = position.distance(transform.translation);
-        if distance < min_distance {
-            min_distance = distance;
-            target = Some(entity);
+    let Ok(ray) = camera.viewport_to_world(camera_transform, viewport_position) else {
+        return;
+    };
+
+    let filter = |v| {
+        for ancestor in q_children.iter_ancestors(v) {
+            if q_map.contains(ancestor) {
+                return true;
+            }
         }
-    }
+        false
+    };
 
-    let Some(target) = target else {
+    let mesh_ray_cast_settings = MeshRayCastSettings::default().with_filter(&filter);
+
+    let hits = ray_cast.cast_ray(ray, &mesh_ray_cast_settings);
+
+    let Some(hit) = hits.first() else {
         return;
     };
 
-    for entity in q_controller.iter() {
+    let position = hit.1.point;
+
+    for (entity, team) in q_controller.iter() {
+        let mut min_distance = f32::MAX;
+        let mut target = None;
+
+        for (entity, transform, target_team) in q_target.iter() {
+            let distance = position.distance(transform.translation);
+            if distance < min_distance && target_team != team {
+                min_distance = distance;
+                target = Some(entity);
+            }
+        }
+
+        let Some(target) = target else {
+            continue;
+        };
+
         commands
             .entity(entity)
             .trigger(CommandBehaviorAttack { target });
