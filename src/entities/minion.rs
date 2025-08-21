@@ -1,6 +1,6 @@
 use crate::core::{
     Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart, DamageType,
-    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, MovementState, State, Team,
+    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, State, Team,
 };
 use bevy::{app::Plugin, prelude::*};
 use serde::{Deserialize, Serialize};
