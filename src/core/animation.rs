@@ -82,6 +82,26 @@ pub struct AnimationTransitionOut {
     pub start_time: f32,
 }
 
+/// 动画时间同步组件 - 用于将动画时间与组件的时间属性同步
+#[derive(Component)]
+pub struct AnimationTimingSync {
+    /// 目标组件名称
+    pub component_name: String,
+    /// 目标字段名称（返回时间长度的方法或字段）
+    pub duration_field: String,
+    /// 动画哈希值映射 - 指定哪些动画需要同步时间
+    pub synced_animations: Vec<u32>,
+}
+
+/// 动画速度控制组件 - 存储当前动画的播放速度
+#[derive(Component)]
+pub struct AnimationSpeed {
+    /// 当前播放速度倍率 (1.0 = 正常速度, 2.0 = 2倍速度)
+    pub speed_multiplier: f32,
+    /// 上一帧的速度倍率，用于检测变化
+    pub last_speed_multiplier: f32,
+}
+
 #[derive(Clone)]
 pub enum AnimationNode {
     Clip {
@@ -112,6 +132,8 @@ impl Plugin for PluginAnimation {
         app.add_systems(Update, on_animation_state_change);
         app.add_systems(Update, update_transition_out);
         app.add_systems(Update, update_condition_animation);
+        app.add_systems(Update, update_animation_timing_sync);
+        app.add_systems(Update, apply_animation_speed);
     }
 }
 
@@ -293,4 +315,112 @@ fn get_reflect_component_value(
         return None;
     };
     Some(*value)
+}
+/// 更新动画时间同步 - 根据组件的时间属性调整动画播放速度
+fn update_animation_timing_sync(world: &mut World) {
+    let mut query = world.query::<(Entity, &AnimationTimingSync, &AnimationState)>();
+
+    let sync_updates = query
+        .iter(world)
+        .filter_map(|(entity, timing_sync, animation_state)| {
+            // 检查当前动画是否需要同步
+            if !timing_sync
+                .synced_animations
+                .contains(&animation_state.current_hash)
+            {
+                return None;
+            }
+
+            // 获取目标组件的时间长度
+            let duration = get_reflect_component_value(
+                world,
+                entity,
+                &timing_sync.component_name,
+                &timing_sync.duration_field,
+            )?;
+
+            // 计算速度倍率 - 假设基础动画时长为1秒，根据实际时长调整
+            // 如果攻击时间为0.5秒，则动画应该播放2倍速度
+            let speed_multiplier = if duration > 0.0 { 1.0 / duration } else { 1.0 };
+
+            Some((entity, speed_multiplier))
+        })
+        .collect::<Vec<_>>();
+
+    let mut commands = world.commands();
+    for (entity, speed_multiplier) in sync_updates {
+        // 更新或插入 AnimationSpeed 组件
+        if let Ok(mut entity_commands) = commands.get_entity(entity) {
+            entity_commands.insert(AnimationSpeed {
+                speed_multiplier,
+                last_speed_multiplier: 0.0, // 强制更新
+            });
+        }
+    }
+}
+
+/// 应用动画速度 - 将计算出的速度应用到 AnimationPlayer
+fn apply_animation_speed(
+    mut query: Query<(&mut AnimationPlayer, &mut AnimationSpeed), Changed<AnimationSpeed>>,
+) {
+    for (mut player, mut animation_speed) in query.iter_mut() {
+        // 检查速度是否发生变化
+        if (animation_speed.speed_multiplier - animation_speed.last_speed_multiplier).abs()
+            < f32::EPSILON
+        {
+            continue;
+        }
+
+        // 应用新的播放速度到所有活跃的动画
+        for (_, active_animation) in player.playing_animations_mut() {
+            active_animation.set_speed(animation_speed.speed_multiplier);
+        }
+
+        // 更新上一帧的速度
+        animation_speed.last_speed_multiplier = animation_speed.speed_multiplier;
+    }
+}
+
+impl AnimationTimingSync {
+    /// 创建攻击动画时间同步配置
+    pub fn for_attack() -> Self {
+        Self {
+            component_name: "Attack".to_string(),
+            duration_field: "total_duration_secs".to_string(),
+            synced_animations: vec![
+                LeagueLoader::hash_bin("Attack1"),
+                LeagueLoader::hash_bin("Attack2"),
+                LeagueLoader::hash_bin("Attack3"),
+                LeagueLoader::hash_bin("Crit"),
+            ],
+        }
+    }
+
+    /// 创建自定义动画时间同步配置
+    pub fn new(component_name: String, duration_field: String, animations: Vec<&str>) -> Self {
+        Self {
+            component_name,
+            duration_field,
+            synced_animations: animations
+                .iter()
+                .map(|name| LeagueLoader::hash_bin(name))
+                .collect(),
+        }
+    }
+
+    /// 添加需要同步的动画
+    pub fn with_animation(mut self, animation_name: &str) -> Self {
+        self.synced_animations
+            .push(LeagueLoader::hash_bin(animation_name));
+        self
+    }
+}
+
+impl Default for AnimationSpeed {
+    fn default() -> Self {
+        Self {
+            speed_multiplier: 1.0,
+            last_speed_multiplier: 1.0,
+        }
+    }
 }
