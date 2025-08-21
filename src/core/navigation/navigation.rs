@@ -13,7 +13,7 @@ pub struct PluginNavigaton;
 impl Plugin for PluginNavigaton {
     fn build(&self, app: &mut App) {
         app.add_systems(Update, update);
-        app.add_observer(command_movement_move_to);
+        app.add_observer(on_command_navigation_to);
     }
 }
 
@@ -23,7 +23,7 @@ fn update(grid: Res<ConfigNavigationGrid>, mut q_movement: Query<&mut Transform,
     }
 }
 
-fn command_movement_move_to(
+fn on_command_navigation_to(
     trigger: Trigger<CommandNavigationTo>,
     mut commands: Commands,
     grid: Res<ConfigNavigationGrid>,
@@ -33,22 +33,44 @@ fn command_movement_move_to(
     let destination = trigger.event().0;
 
     // 获取当前位置
-    if let Ok(transform) = q_transform.get_mut(entity) {
-        let start_pos = transform.translation;
-        let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
+    let Ok(transform) = q_transform.get_mut(entity) else {
+        return;
+    };
 
-        let start = Instant::now();
-        // 使用A*算法规划路径，对于单点移动，创建长度为1的路径
-        if let Some(result) = find_path(&grid, start_pos, end_pos) {
-            system_debug!(
-                "command_movement_move_to",
-                "Path found in {:.6}ms",
-                start.elapsed().as_millis()
-            );
+    let start_pos = transform.translation;
+    let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
 
-            commands.trigger_targets(CommandMovementStart(result), entity);
-        }
+    let start = Instant::now();
+
+    // 检查起点和终点是否可直达
+    let start_grid_pos = (start_pos.xz() - grid.min_position) / grid.cell_size;
+    let end_grid_pos = (end_pos.xz() - grid.min_position) / grid.cell_size;
+
+    let is_walkable_fn = |x, y| grid.get_cell_by_xy((x, y)).is_walkable();
+
+    if has_line_of_sight(start_grid_pos, end_grid_pos, &is_walkable_fn) {
+        system_debug!(
+            "command_movement_move_to",
+            "Direct path found in {:.6}ms",
+            start.elapsed().as_millis()
+        );
+        let direct_path = vec![start_pos.xz(), end_pos.xz()];
+        commands.trigger_targets(CommandMovementStart(direct_path), entity);
+        return;
     }
+
+    // 如果不可直达，则使用A*算法规划路径
+    let Some(result) = find_path(&grid, start_pos, end_pos) else {
+        return;
+    };
+
+    system_debug!(
+        "command_movement_move_to",
+        "A* path found in {:.6}ms",
+        start.elapsed().as_millis()
+    );
+
+    commands.trigger_targets(CommandMovementStart(result), entity);
 }
 
 /// 主要的寻路函数，结合A*和漏斗算法
