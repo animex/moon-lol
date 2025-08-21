@@ -167,18 +167,22 @@ fn update_path_movement(
 fn command_movement_start(
     trigger: Trigger<CommandMovementStart>,
     mut commands: Commands,
-    mut q_transform: Query<(&Transform, &mut MovementState)>,
+    mut q_transform: Query<&mut MovementState>,
 ) {
     let entity = trigger.target();
     let path = trigger.event().0.clone();
 
-    if !path.is_empty() {
-        // 设置新路径
-        if let Ok((_, mut movement_state)) = q_transform.get_mut(entity) {
-            movement_state.set_path(path);
-            commands.trigger_targets(EventMovementStart, entity);
-        }
+    if path.is_empty() {
+        return;
     }
+
+    let Ok(mut movement_state) = q_transform.get_mut(entity) else {
+        return;
+    };
+
+    movement_state.set_path(path);
+
+    commands.trigger_targets(EventMovementStart, entity);
 }
 
 fn command_movement_stop(
@@ -187,8 +191,12 @@ fn command_movement_stop(
     mut q_movement: Query<&mut MovementState>,
 ) {
     let entity = trigger.target();
-    if let Ok(mut movement_state) = q_movement.get_mut(entity) {
-        movement_state.clear_path();
-        commands.trigger_targets(EventMovementEnd, entity);
-    }
+
+    let Ok(mut movement_state) = q_movement.get_mut(entity) else {
+        return;
+    };
+
+    movement_state.clear_path();
+
+    commands.trigger_targets(EventMovementEnd, entity);
 }

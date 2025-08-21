@@ -65,8 +65,8 @@ pub fn setup(
                 Team::Chaos,
                 Movement { speed: 325.0 },
                 Health {
-                    value: 600.0,
-                    max: 600.0,
+                    value: 6000.0,
+                    max: 6000.0,
                 },
                 Fiora,
             ))

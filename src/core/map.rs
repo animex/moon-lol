@@ -274,16 +274,16 @@ pub fn on_click_map(
     commands.trigger_targets(CommandBehaviorMoveTo(position.xz()), targets);
 }
 
-fn on_map_move(
+pub fn on_map_move(
     mut commands: Commands,
-    res_input: Res<ButtonInput<KeyCode>>,
-    q_controller: Query<(Entity, &Team), With<Controller>>,
-    q_target: Query<(Entity, &Transform, &Team)>,
-    q_map: Query<Entity, With<Map>>,
-    window: Single<&Window>,
     camera: Single<(&Camera, &GlobalTransform)>,
-    q_children: Query<&ChildOf>,
     mut ray_cast: MeshRayCast,
+    q_children: Query<&ChildOf>,
+    q_controller: Query<(Entity, &Team), With<Controller>>,
+    q_map: Query<Entity, With<Map>>,
+    q_target: Query<(Entity, &Transform, &Team)>,
+    res_input: Res<ButtonInput<KeyCode>>,
+    window: Single<&Window>,
 ) {
     if !res_input.just_pressed(KeyCode::KeyA) {
         return;
