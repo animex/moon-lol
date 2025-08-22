@@ -149,6 +149,7 @@ pub fn spawn_skin_entity(
                                 value: *value,
                             })
                             .collect::<Vec<_>>(),
+                        current_index: None,
                     },
                 );
             }
@@ -164,6 +165,7 @@ pub fn spawn_skin_entity(
         AnimationState {
             last_hash: LeagueLoader::hash_bin("Idle1"),
             current_hash: LeagueLoader::hash_bin("Idle1"),
+            current_duration: None,
         },
     ));
 
