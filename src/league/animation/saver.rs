@@ -12,8 +12,8 @@ use crate::core::{
 };
 use crate::league::{
     get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file, skinned_mesh_to_intermediate,
-    AnimationData, AnimationFile, LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton,
-    LeagueSkinnedMesh, LeagueSkinnedMeshInternal, LeagueWadLoader,
+    LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton, LeagueSkinnedMesh,
+    LeagueSkinnedMeshInternal, LeagueWadLoader,
 };
 
 impl LeagueWadLoader {
@@ -154,16 +154,9 @@ impl LeagueWadLoader {
                         .map(|v| v.0.clone())
                         .unwrap();
 
-                    let buffer = self.get_wad_entry_buffer_by_path(&clip_path).unwrap();
-                    let file = AnimationFile::read(&mut Cursor::new(buffer)).unwrap();
-                    let data = AnimationData::from(file);
-
                     return Some((
                         k.0.hash,
-                        ConfigCharacterSkinAnimation::AtomicClipData {
-                            clip_path,
-                            duration: data.duration,
-                        },
+                        ConfigCharacterSkinAnimation::AtomicClipData { clip_path },
                     ));
                 }
 
