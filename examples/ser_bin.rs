@@ -72,7 +72,6 @@ fn main() {
 pub mod bin_deserializer {
     use super::*;
 
-    use binrw::helpers::count;
     use cdragon_hashes::bin::compute_binhash;
     use serde::{
         de::{EnumAccess, VariantAccess},
@@ -118,7 +117,6 @@ pub mod bin_deserializer {
 
     #[derive(Debug, Clone, Copy, PartialEq, Eq)]
     #[repr(u8)]
-
     enum BinType {
         None = 0,
         Bool = 1,
@@ -525,8 +523,7 @@ pub mod bin_deserializer {
             // 我们可以直接将这个请求转发给我们的 `deserialize_struct` 方法。
             // `deserialize_struct` 会读取类型哈希、字段数，并构建字段哈希图，
             // 然后 `visitor` 会正确地访问并填充 `m_mesh` 字段。
-            self.de
-                .deserialize_struct("VfxPrimitiveMesh", fields, visitor)
+            self.de.deserialize_struct("", fields, visitor)
         }
 
         // 下面这两种变体我们没有用到，所以返回错误即可

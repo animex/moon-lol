@@ -1,8 +1,10 @@
-use crate::league::{BoundingBox, EnvironmentVisibility, Vector2};
 use binrw::binread;
 
-use super::enums::{parse_layer_transition_behavior, parse_quality_filter, LayerTransitionBehavior, QualityFilter};
-use super::types::{Channel, Submesh, TextureOverride};
+use crate::league::{
+    parse_layer_transition_behavior, parse_quality_filter, BoundingBox, Channel,
+    EnvironmentVisibility, LayerTransitionBehavior, QualityFilter, Submesh, TextureOverride,
+    Vector2,
+};
 
 #[binread]
 #[derive(Debug)]

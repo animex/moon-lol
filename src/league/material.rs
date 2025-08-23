@@ -4,8 +4,14 @@ use bevy::{
     render::alpha::AlphaMode,
     utils::default,
 };
+use serde::{Deserialize, Serialize};
 
-use crate::league::{LeagueLoaderError, LeagueMaterial};
+use crate::league::LeagueLoaderError;
+
+#[derive(Serialize, Deserialize)]
+pub struct LeagueMaterial {
+    pub texture_path: String,
+}
 
 #[derive(Default)]
 pub struct LeagueLoaderMaterial;

@@ -3,7 +3,6 @@ use binrw::binrw;
 #[binrw]
 #[br(little)]
 #[br(magic = b"PROP")]
-#[derive(Debug)]
 pub struct PropFile {
     pub version: u32,
 
@@ -22,7 +21,6 @@ pub struct PropFile {
 
 #[binrw]
 #[br(little)]
-#[derive(Debug)]
 pub struct TypeInfoV2 {
     pub count: u32,
 
@@ -32,7 +30,6 @@ pub struct TypeInfoV2 {
 
 #[binrw]
 #[br(little)]
-#[derive(Debug)]
 pub struct EntryData {
     pub len: u32,
 

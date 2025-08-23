@@ -13,7 +13,7 @@ use tokio::io::AsyncWriteExt;
 
 use crate::{
     core::CONFIG_PATH_MAP,
-    league::{static_conversion::parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo},
+    league::{parse_vertex_data, LayerTransitionBehavior, LeagueMapGeo},
 };
 use crate::{
     core::CONFIG_PATH_MAP_NAV_GRID,
