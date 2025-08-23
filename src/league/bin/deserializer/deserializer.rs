@@ -166,12 +166,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
             }),
             BinType::Color => todo!(),
             BinType::String => self.deserialize_string(visitor),
-            BinType::Hash => {
-                // Hash 和 Link 通常是 u32 或 u64 的包装，这里假设为 u32
-                visitor.visit_u32(u32::from_le_bytes(
-                    self.parser.read_bytes(4)?.try_into().unwrap(),
-                ))
-            }
+            BinType::Hash => visitor.visit_u32(u32::from_le_bytes(
+                self.parser.read_bytes(4)?.try_into().unwrap(),
+            )),
             BinType::Path => {
                 // Path 通常是 u64
                 visitor.visit_u64(u64::from_le_bytes(
@@ -376,7 +373,7 @@ impl<'de> BinParser<'de> {
                     let fields_total_len =
                         u32::from_le_bytes(self.read_bytes(4)?.try_into().unwrap());
 
-                    let _field_count = self.read_bytes(2)?;
+                    let field_count = u16::from_le_bytes(self.read_bytes(2)?.try_into().unwrap());
 
                     self.read_bytes((fields_total_len - 2) as usize)?;
                 }

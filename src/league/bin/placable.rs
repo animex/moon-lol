@@ -22,20 +22,35 @@ pub enum MapPlaceable {
     },
     #[serde(rename_all = "camelCase")]
     MapGroup { transform: Mat4, name: String },
-    #[serde(rename_all = "camelCase")]
-    Unk3c2bf0c0 { transform: Mat4, name: u32 },
-    #[serde(rename_all = "camelCase")]
-    Unk3c995caf {
+    #[serde(rename = "Unk3c2bf0c0", rename_all = "camelCase")]
+    InhibitorOrTurret {
+        transform: Mat4,
+        name: u32,
+        definition: InhibitorOrTurretDefinition,
+    },
+    #[serde(rename = "Unk3c995caf", rename_all = "camelCase")]
+    MinionPath {
         transform: Mat4,
         name: String,
         segments: Vec<Vec3>,
     },
-    // #[serde(rename_all = "camelCase")]
-    // Unk7ad3dda { transform: Mat4, name: String },
+    #[serde(rename = "Unk7ad3dda", rename_all = "camelCase")]
+    Unk7ad3dda { transform: Mat4, name: u32 },
+    #[serde(rename = "Unkc71ee7fb", rename_all = "camelCase")]
+    Barrack { transform: Mat4, name: u32 },
 }
 
 #[derive(Serialize, Deserialize, Debug)]
 #[serde(rename_all = "camelCase")]
 pub struct GDSMapObjectBannerInfo {
-    banner_data: u32,
+    pub banner_data: u32,
+}
+
+#[derive(Serialize, Deserialize, Debug)]
+#[serde(rename_all = "camelCase")]
+pub struct InhibitorOrTurretDefinition {
+    pub character_record: String,
+    pub r#type: u16,
+    pub skin: String,
+    pub team: Option<u32>,
 }

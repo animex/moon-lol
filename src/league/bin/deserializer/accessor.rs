@@ -105,9 +105,12 @@ impl<'de, 'a> MapAccess<'de> for HashMapReader<'a, 'de> {
     ) -> BinDeserializerResult<V::Value> {
         // 临时设置 deserializer 要解析的类型为 value 的类型
         self.de.value_type = self.vtype;
-        let value = seed.deserialize(&mut *self.de)?;
+        println!(
+            "🐕 获取第 {} 个 HashMap 的值，类型为: {:?}",
+            self.count, self.vtype
+        );
 
-        println!("🐕 获取第 {} 个 HashMap 值", self.count);
+        let value = seed.deserialize(&mut *self.de)?;
 
         // 一个完整的键值对已经读取完毕，将计数器减 1
         self.count -= 1;
