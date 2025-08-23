@@ -9,7 +9,6 @@ pub struct PropFile {
     #[br(if(version >= 2))]
     pub type_info_v2: Option<TypeInfoV2>,
 
-    #[br(dbg)]
     pub types_count: u32,
 
     #[br(count = types_count * 4)]
@@ -33,6 +32,8 @@ pub struct TypeInfoV2 {
 pub struct EntryData {
     pub len: u32,
 
-    #[br(count = len)]
+    pub hash: u32,
+
+    #[br(count = len - 4)]
     pub data: Vec<u8>,
 }
