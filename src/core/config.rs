@@ -29,7 +29,6 @@ type ConfigLegend = (Transform, Team, ConfigCharacterSkin);
 #[derive(Resource, Default, Serialize, Deserialize)]
 pub struct ConfigMap {
     pub geometry_objects: Vec<ConfigGeometryObject>,
-
     pub minion_paths: HashMap<Lane, Vec<Vec2>>,
     pub barracks: HashMap<BinHash, Unk0xc71ee7fb>,
     pub characters: HashMap<BinHash, Unk0x9d9f60d2>,

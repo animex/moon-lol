@@ -13,10 +13,10 @@ use crate::{
         CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
     },
     league::{
-        from_entry, get_asset_writer, get_bin_path, parse_vertex_data, save_struct_to_file,
-        submesh_to_intermediate, AiMeshNGrid, BarracksConfig, LayerTransitionBehavior,
-        LeagueLoader, LeagueLoaderError, LeagueMapGeo, LeagueMaterial, LeagueWadLoader,
-        MapContainer, MapPlaceableContainer, PropFile,
+        from_entry, get_asset_writer, get_bin_path, neg_vec_z, parse_vertex_data,
+        save_struct_to_file, submesh_to_intermediate, AiMeshNGrid, BarracksConfig,
+        LayerTransitionBehavior, LeagueLoader, LeagueLoaderError, LeagueMapGeo, LeagueMaterial,
+        LeagueWadLoader, MapContainer, MapPlaceableContainer, PropFile,
         SkinCharacterDataPropertiesPersistentEffectConditions, StaticMaterialDef, Unk0x9d9f60d2,
     },
 };
@@ -146,8 +146,7 @@ impl LeagueWadMapLoader {
 
     pub async fn save_config_map(&self) -> Result<ConfigMap, LeagueLoaderError> {
         // 并行处理地图网格
-        let geometry_objects = Vec::new();
-        // self.save_mapgeo().await?;
+        let geometry_objects = self.save_mapgeo().await?;
 
         let mut minion_paths = HashMap::new();
         let mut barracks = HashMap::new();
@@ -194,9 +193,13 @@ impl LeagueWadMapLoader {
                             _ => panic!("未知的小兵路径: {}", unk0x3c995caf.name),
                         };
 
-                        let path = unk0x3c995caf.segments.iter().map(|v| v.xz()).collect();
+                        let translation = unk0x3c995caf.transform.to_scale_rotation_translation().2;
 
-                        println!("unk0x3c995caf: {:?}", unk0x3c995caf);
+                        let path = unk0x3c995caf
+                            .segments
+                            .iter()
+                            .map(|v| neg_vec_z(&(v + translation)).xz())
+                            .collect();
 
                         minion_paths.entry(lane).or_insert(path);
                     }
@@ -270,8 +273,6 @@ impl LeagueWadMapLoader {
 
         let components = map_container.components;
 
-        println!("components: {:?}", components);
-
         let map_nav_grid = components
             .iter()
             .filter_map(|v| match v {
@@ -295,36 +296,10 @@ impl LeagueWadMapLoader {
             -(min_bounds.y + nav_grid.header.z_cell_count as f32 * nav_grid.header.cell_size),
         );
 
-        let max_position = vec2(
-            min_bounds.x + nav_grid.header.x_cell_count as f32 * nav_grid.header.cell_size,
-            -min_bounds.y,
-        );
-
-        println!("min_position: {:?}", min_position);
-        println!("max_position: {:?}", max_position);
-
-        let width = max_position.x - min_position.x;
-        let height = max_position.y - min_position.y;
-
         let cell_size = nav_grid.header.cell_size;
-
-        println!(
-            "width: {:?}, x len: {:?}",
-            width,
-            (width + 50.0) / cell_size
-        );
-
-        println!(
-            "height: {:?}, y len: {:?}",
-            height,
-            (height + 50.0) / cell_size
-        );
 
         let x_len = nav_grid.header.x_cell_count as usize;
         let y_len = nav_grid.header.z_cell_count as usize;
-
-        println!("x_len: {:?}", x_len);
-        println!("y_len: {:?}", y_len);
 
         let mut cells: Vec<ConfigNavigationGridCell> = Vec::new();
 
@@ -349,12 +324,7 @@ impl LeagueWadMapLoader {
             cell_size,
             x_len,
             y_len,
-            cells: cells
-                .chunks(x_len)
-                // .map(|v| v.to_vec().into_iter().rev().collect())
-                .map(|v| v.to_vec())
-                .rev()
-                .collect(),
+            cells: cells.chunks(x_len).map(|v| v.to_vec()).rev().collect(),
             height_x_len: nav_grid.height_samples.x_count as usize,
             height_y_len: nav_grid.height_samples.z_count as usize,
             height_samples: nav_grid
@@ -363,7 +333,6 @@ impl LeagueWadMapLoader {
                 .chunks(nav_grid.height_samples.x_count as usize)
                 .map(|v| v.to_vec())
                 .rev()
-                // .map(|v| v.to_vec().into_iter().rev().collect())
                 .collect(),
         })
     }

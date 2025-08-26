@@ -6,7 +6,7 @@ use crate::core::{
     CommandBehaviorMoveTo, ConfigCharacterSkinAnimation, ConfigMap, Controller, Team,
 };
 use crate::core::{ConfigCharacterSkin, ConfigGeometryObject};
-use crate::league::LeagueLoader;
+use crate::league::{neg_mat_z, LeagueLoader};
 use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
@@ -205,7 +205,7 @@ pub fn spawn_environment_objects_from_configs(
             commands,
             res_animation_graph,
             asset_server,
-            Transform::from_matrix(environment_object.transform),
+            Transform::from_matrix(neg_mat_z(&environment_object.transform)),
             configs
                 .skins
                 .get(&environment_object.definition.skin)

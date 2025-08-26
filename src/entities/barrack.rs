@@ -7,8 +7,8 @@ use crate::{
     core::{spawn_skin_entity, Armor, Bounding, ConfigMap, Damage, Health, Lane, Movement, Team},
     entities::Minion,
     league::{
-        BarracksMinionConfigWaveBehavior, BinHash, ConstantWaveBehavior, InhibitorWaveBehavior,
-        RotatingWaveBehavior, TimedVariableWaveBehavior,
+        neg_mat_z, BarracksMinionConfigWaveBehavior, BinHash, ConstantWaveBehavior,
+        InhibitorWaveBehavior, RotatingWaveBehavior, TimedVariableWaveBehavior,
     },
 };
 
@@ -45,19 +45,23 @@ pub struct PluginBarrack;
 impl Plugin for PluginBarrack {
     fn build(&self, app: &mut App) {
         app.init_resource::<InhibitorState>();
-        // app.add_systems(Startup, setup);
+        app.add_systems(Startup, setup);
         app.add_systems(Update, barracks_spawning_system);
     }
 }
 
 fn setup(mut commands: Commands, res_game_config: Res<ConfigMap>) {
     for (hash, barrack) in res_game_config.barracks.iter() {
-        let barrack_config = res_game_config.barrack_configs.get(hash).unwrap();
+        let barrack_config = res_game_config
+            .barrack_configs
+            .get(&barrack.definition.barracks_config)
+            .unwrap();
 
-        let initial_delay = barrack_config.initial_spawn_time_secs;
+        // let initial_delay = barrack_config.initial_spawn_time_secs;
+        let initial_delay = 0.0;
 
         commands.spawn((
-            Transform::from_matrix(barrack.transform),
+            Transform::from_matrix(neg_mat_z(&barrack.transform)),
             Team::from(barrack.definition.team),
             Lane::from(barrack.definition.unk_0xdbde2288[0].lane),
             Barrack {
