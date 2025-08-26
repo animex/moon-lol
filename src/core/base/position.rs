@@ -1,10 +1,7 @@
 use bevy::prelude::*;
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Default, Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[derive(Component, Default, Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum Position {
     #[default]
     Outer = 0,
@@ -33,31 +30,5 @@ impl From<Option<u16>> for Position {
             Some(value) => From::from(value),
             None => Position::Outer,
         }
-    }
-}
-
-struct PositionVisitor;
-
-impl<'de> Visitor<'de> for PositionVisitor {
-    type Value = Position;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a u16 representing a Position variant")
-    }
-
-    fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        Ok(Position::from(value))
-    }
-}
-
-impl<'de> Deserialize<'de> for Position {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_u16(PositionVisitor)
     }
 }

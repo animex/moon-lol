@@ -11,9 +11,9 @@ use crate::core::{
 };
 use crate::league::{
     from_entry, get_asset_writer, get_bin_path, neg_mat_z, save_struct_to_file,
-    skinned_mesh_to_intermediate, AnimationGraphData, AnimationGraphDataMClipDataMap,
-    ConditionFloatClipDataUpdater, EntryData, LeagueLoader, LeagueLoaderError, LeagueMaterial,
-    LeagueSkeleton, LeagueSkinnedMesh, LeagueSkinnedMeshInternal, LeagueWadLoader,
+    skinned_mesh_to_intermediate, AnimationGraphData, AnimationGraphDataMClipDataMap, EntryData,
+    LeagueLoader, LeagueLoaderError, LeagueMaterial, LeagueSkeleton, LeagueSkinnedMesh,
+    LeagueSkinnedMeshInternal, LeagueWadLoader, ParametricClipDataUpdater,
 };
 
 impl LeagueWadLoader {
@@ -128,7 +128,9 @@ impl LeagueWadLoader {
     ) -> Result<HashMap<u32, ConfigCharacterSkinAnimation>, LeagueLoaderError> {
         let animation_graph_data = from_entry::<AnimationGraphData>(value);
 
-        let nodes = animation_graph_data.m_clip_data_map;
+        let Some(nodes) = animation_graph_data.m_clip_data_map else {
+            return Ok(HashMap::new());
+        };
 
         let animation_graph_data = nodes
             .iter()
@@ -149,7 +151,7 @@ impl LeagueWadLoader {
                             probably_nodes: selector_clip_data
                                 .m_selector_pair_data_list
                                 .iter()
-                                .map(|v| (v.m_clip_name, v.m_probability))
+                                .map(|v| (v.m_clip_name, v.m_probability.unwrap_or(0.0)))
                                 .collect(),
                         },
                     )),
@@ -164,13 +166,13 @@ impl LeagueWadLoader {
                                 .map(|v| (v.m_clip_name, v.m_value.unwrap_or(0.0)))
                                 .collect(),
                             component_name: match condition_float_clip_data.updater {
-                                ConditionFloatClipDataUpdater::MoveSpeedParametricUpdater => {
+                                ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
                                     "Movement".to_string()
                                 }
                                 _ => "".to_string(),
                             },
                             field_name: match condition_float_clip_data.updater {
-                                ConditionFloatClipDataUpdater::MoveSpeedParametricUpdater => {
+                                ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
                                     "speed".to_string()
                                 }
                                 _ => "".to_string(),

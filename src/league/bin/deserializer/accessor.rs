@@ -1,4 +1,4 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, VecDeque};
 
 use serde::de::{self, EnumAccess, IntoDeserializer, MapAccess, SeqAccess, VariantAccess, Visitor};
 use serde::Deserializer;
@@ -7,24 +7,62 @@ use crate::league::{
     BinDeserializer, BinDeserializerError, BinDeserializerResult, BinType, LeagueLoader,
 };
 
-pub struct SeqReader<'a, 'de: 'a> {
-    pub de: &'a mut BinDeserializer<'de>,
-    pub count: usize,
+pub struct SeqIntoReader<E> {
+    pub values: VecDeque<E>,
 }
 
-impl<'de, 'a> SeqAccess<'de> for SeqReader<'a, 'de> {
+impl<E> SeqIntoReader<E> {
+    pub fn from_values(values: Vec<E>) -> Self {
+        Self {
+            values: VecDeque::from(values),
+        }
+    }
+}
+
+impl<'de, E: IntoDeserializer<'de, BinDeserializerError> + Copy> SeqAccess<'de>
+    for SeqIntoReader<E>
+{
     type Error = BinDeserializerError;
 
     fn next_element_seed<T: de::DeserializeSeed<'de>>(
         &mut self,
         seed: T,
     ) -> BinDeserializerResult<Option<T::Value>> {
-        if self.count == 0 {
+        let Some(value) = self.values.pop_front() else {
             return Ok(None);
-        }
+        };
 
-        self.count -= 1;
-        seed.deserialize(&mut *self.de).map(Some)
+        seed.deserialize(value.into_deserializer()).map(Some)
+    }
+}
+
+pub struct SeqDerReader<'de> {
+    pub values: VecDeque<&'de [u8]>,
+    pub vtype: BinType,
+}
+
+impl<'de> SeqDerReader<'de> {
+    pub fn from_values(values: Vec<&'de [u8]>, vtype: BinType) -> Self {
+        Self {
+            values: VecDeque::from(values),
+            vtype,
+        }
+    }
+}
+
+impl<'de> SeqAccess<'de> for SeqDerReader<'de> {
+    type Error = BinDeserializerError;
+
+    fn next_element_seed<T: de::DeserializeSeed<'de>>(
+        &mut self,
+        seed: T,
+    ) -> BinDeserializerResult<Option<T::Value>> {
+        let Some(value) = self.values.pop_front() else {
+            return Ok(None);
+        };
+
+        seed.deserialize(&mut BinDeserializer::from_bytes(value, self.vtype))
+            .map(Some)
     }
 }
 

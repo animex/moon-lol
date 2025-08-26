@@ -1,10 +1,7 @@
 use bevy::prelude::*;
-use serde::{
-    de::{self, Visitor},
-    Deserialize, Deserializer, Serialize,
-};
+use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Serialize)]
+#[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum Lane {
     Top,
     Mid,
@@ -28,31 +25,5 @@ impl From<Option<u16>> for Lane {
             Some(value) => From::from(value),
             None => Lane::Bot,
         }
-    }
-}
-
-struct LaneVisitor;
-
-impl<'de> Visitor<'de> for LaneVisitor {
-    type Value = Lane;
-
-    fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-        formatter.write_str("a u16 representing a Lane variant")
-    }
-
-    fn visit_u16<E>(self, value: u16) -> Result<Self::Value, E>
-    where
-        E: de::Error,
-    {
-        Ok(Lane::from(value))
-    }
-}
-
-impl<'de> Deserialize<'de> for Lane {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        deserializer.deserialize_u16(LaneVisitor)
     }
 }

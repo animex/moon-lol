@@ -16,8 +16,8 @@ use crate::{
         from_entry, get_asset_writer, get_bin_path, parse_vertex_data, save_struct_to_file,
         submesh_to_intermediate, AiMeshNGrid, BarracksConfig, LayerTransitionBehavior,
         LeagueLoader, LeagueLoaderError, LeagueMapGeo, LeagueMaterial, LeagueWadLoader,
-        MapContainer, MapContainerComponents, MapPlaceableContainer, MapPlaceableContainerItems,
-        PropFile, StaticMaterialDef, Unk0x9d9f60d2,
+        MapContainer, MapPlaceableContainer, PropFile,
+        SkinCharacterDataPropertiesPersistentEffectConditions, StaticMaterialDef, Unk0x9d9f60d2,
     },
 };
 
@@ -123,7 +123,7 @@ impl LeagueWadMapLoader {
         let material = from_entry::<StaticMaterialDef>(entry);
 
         // 2. 将列表转换为可迭代的 BinEmbed
-        let embedded_samplers = material.sampler_values;
+        let embedded_samplers = material.sampler_values?;
 
         // 3. 遍历所有 sampler，查找第一个包含 "texturePath" 的
         // `find_map` 会在找到第一个 Some(T) 后立即停止，比 filter_map + collect + first 更高效
@@ -132,7 +132,7 @@ impl LeagueWadMapLoader {
             if !(texture_name == "DiffuseTexture" || texture_name == "Diffuse_Texture") {
                 return None;
             }
-            Some(sampler_item.texture_path)
+            sampler_item.texture_path
         });
 
         if let Some(texture_path) = texture_path {
@@ -179,10 +179,14 @@ impl LeagueWadMapLoader {
 
             for (hash, value) in map_placeable_container.items {
                 match value {
-                    MapPlaceableContainerItems::Unk0x3c2bf0c0(unk0x3c2bf0c0) => {
+                    SkinCharacterDataPropertiesPersistentEffectConditions::Unk0x3c2bf0c0(
+                        unk0x3c2bf0c0,
+                    ) => {
                         environment_objects.entry(hash).or_insert(unk0x3c2bf0c0);
                     }
-                    MapPlaceableContainerItems::Unk0x3c995caf(unk0x3c995caf) => {
+                    SkinCharacterDataPropertiesPersistentEffectConditions::Unk0x3c995caf(
+                        unk0x3c995caf,
+                    ) => {
                         let lane = match unk0x3c995caf.name.as_str() {
                             "MinionPath_Top" => Lane::Top,
                             "MinionPath_Mid" => Lane::Mid,
@@ -192,9 +196,13 @@ impl LeagueWadMapLoader {
 
                         let path = unk0x3c995caf.segments.iter().map(|v| v.xz()).collect();
 
+                        println!("unk0x3c995caf: {:?}", unk0x3c995caf);
+
                         minion_paths.entry(lane).or_insert(path);
                     }
-                    MapPlaceableContainerItems::Unk0xc71ee7fb(unk0xc71ee7fb) => {
+                    SkinCharacterDataPropertiesPersistentEffectConditions::Unk0xc71ee7fb(
+                        unk0xc71ee7fb,
+                    ) => {
                         barracks.entry(hash).or_insert(unk0xc71ee7fb);
                     }
                     _ => {}
@@ -267,7 +275,7 @@ impl LeagueWadMapLoader {
         let map_nav_grid = components
             .iter()
             .filter_map(|v| match v {
-                MapContainerComponents::MapNavGrid(v) => Some(v),
+                SkinCharacterDataPropertiesPersistentEffectConditions::MapNavGrid(v) => Some(v),
                 _ => None,
             })
             .next()

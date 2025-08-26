@@ -68,6 +68,16 @@ impl<'de> BinParser<'de> {
         ))
     }
 
+    pub fn read_u8_many(&mut self, count: usize) -> BinDeserializerResult<Vec<u8>> {
+        let mut result = Vec::new();
+
+        for _ in 0..count {
+            result.push(self.read_u8().unwrap());
+        }
+
+        Ok(result)
+    }
+
     pub fn read_i8(&mut self) -> BinDeserializerResult<i8> {
         Ok(i8::from_le_bytes(
             self.read_bytes(1).unwrap().try_into().unwrap(),
@@ -106,6 +116,16 @@ impl<'de> BinParser<'de> {
         Ok(f32::from_le_bytes(
             self.read_bytes(4).unwrap().try_into().unwrap(),
         ))
+    }
+
+    pub fn read_f32_many(&mut self, count: usize) -> BinDeserializerResult<Vec<f32>> {
+        let mut result = Vec::new();
+
+        for _ in 0..count {
+            result.push(self.read_f32().unwrap());
+        }
+
+        Ok(result)
     }
 
     pub fn read_u64(&mut self) -> BinDeserializerResult<u64> {

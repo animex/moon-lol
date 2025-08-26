@@ -8,7 +8,7 @@ use crate::{
     entities::Minion,
     league::{
         BarracksMinionConfigWaveBehavior, BinHash, ConstantWaveBehavior, InhibitorWaveBehavior,
-        RotatingWaveBehavior, TimedVariableWaveBehavior, TimedWaveBehaviorInfoBehavior,
+        RotatingWaveBehavior, TimedVariableWaveBehavior,
     },
 };
 
@@ -198,7 +198,7 @@ fn barracks_spawning_system(
             .get(&character.character_record)
             .unwrap();
 
-        let mut health = Health::new(character_record.base_hp);
+        let mut health = Health::new(character_record.base_hp.unwrap_or(0.0));
         let hp_upgrade = if is_late_game {
             upgrade_config.hp_upgrade_late.unwrap_or(0.0)
         } else {
@@ -227,7 +227,7 @@ fn barracks_spawning_system(
             (barrack_config.move_speed_increase_increment * move_speed_upgrade_count) as f32;
 
         let bounding = Bounding {
-            radius: character_record.pathfinding_collision_radius,
+            radius: character_record.pathfinding_collision_radius.unwrap_or(0.0),
             height: character_record.health_bar_height.unwrap_or(0.0),
         };
 
@@ -299,33 +299,21 @@ fn calculate_spawn_count(
                 }
             }
 
-            // 递归调用
-            match active_behavior {
-                Some(behavior) => match behavior {
-                    TimedWaveBehaviorInfoBehavior::ConstantWaveBehavior(ConstantWaveBehavior {
-                        spawn_count,
-                    }) => calculate_spawn_count(
-                        &BarracksMinionConfigWaveBehavior::ConstantWaveBehavior(
-                            ConstantWaveBehavior {
-                                spawn_count: *spawn_count,
-                            },
-                        ),
-                        game_time_secs,
-                        wave_count,
-                        inhibitor_state,
-                    ),
-                    TimedWaveBehaviorInfoBehavior::RotatingWaveBehavior(RotatingWaveBehavior {
-                        spawn_counts_by_wave,
-                    }) => {
-                        if spawn_counts_by_wave.is_empty() {
-                            0
-                        } else {
-                            spawn_counts_by_wave
-                                [((wave_count - 1) % spawn_counts_by_wave.len() as u32) as usize]
-                        }
-                    }
-                },
-                None => 0,
+            if let Some(active_behavior) = active_behavior {
+                // 递归调用
+                calculate_spawn_count(active_behavior, game_time_secs, wave_count, inhibitor_state)
+            } else {
+                0
+            }
+        }
+        BarracksMinionConfigWaveBehavior::RotatingWaveBehavior(RotatingWaveBehavior {
+            spawn_counts_by_wave,
+        }) => {
+            if spawn_counts_by_wave.is_empty() {
+                0
+            } else {
+                spawn_counts_by_wave
+                    [((wave_count - 1) % spawn_counts_by_wave.len() as u32) as usize]
             }
         }
     }

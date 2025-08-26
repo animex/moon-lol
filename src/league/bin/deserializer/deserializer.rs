@@ -2,7 +2,7 @@ use serde::de::{self, Visitor};
 
 use crate::league::{
     BinDeserializerError, BinDeserializerResult, BinParser, BinType, EnumReader, HashMapReader,
-    LeagueLoader, MapReader, SeqReader,
+    LeagueLoader, MapReader, SeqDerReader, SeqIntoReader,
 };
 
 pub struct BinDeserializer<'de> {
@@ -54,11 +54,6 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
 
     fn deserialize_any<V: Visitor<'de>>(self, visitor: V) -> BinDeserializerResult<V::Value> {
         match self.value_type {
-            BinType::None => {
-                todo!()
-                // self.parser.read_bytes(6)?;
-                // visitor.visit_unit()
-            }
             BinType::Bool => visitor.visit_bool(self.parser.read_bool()?),
             BinType::S8 => visitor.visit_i8(self.parser.read_i8()?),
             BinType::U8 => visitor.visit_u8(self.parser.read_u8()?),
@@ -69,26 +64,21 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
             BinType::S64 => visitor.visit_i64(self.parser.read_s64()?),
             BinType::U64 => visitor.visit_u64(self.parser.read_u64()?),
             BinType::Float => visitor.visit_f32(self.parser.read_f32()?),
-            BinType::Vec2 => visitor.visit_seq(SeqReader {
-                de: &mut BinDeserializer::from_bytes(self.parser.input, BinType::Float),
-                count: 2,
-            }),
-            BinType::Vec3 => visitor.visit_seq(SeqReader {
-                de: &mut BinDeserializer::from_bytes(self.parser.input, BinType::Float),
-                count: 3,
-            }),
-            BinType::Vec4 => visitor.visit_seq(SeqReader {
-                de: &mut BinDeserializer::from_bytes(self.parser.input, BinType::Float),
-                count: 4,
-            }),
-            BinType::Matrix => visitor.visit_seq(SeqReader {
-                de: &mut BinDeserializer::from_bytes(self.parser.input, BinType::Float),
-                count: 16,
-            }),
-            BinType::Color => visitor.visit_seq(SeqReader {
-                de: &mut BinDeserializer::from_bytes(self.parser.input, BinType::U8),
-                count: 4,
-            }),
+            BinType::Vec2 => {
+                visitor.visit_seq(SeqIntoReader::from_values(self.parser.read_f32_many(2)?))
+            }
+            BinType::Vec3 => {
+                visitor.visit_seq(SeqIntoReader::from_values(self.parser.read_f32_many(3)?))
+            }
+            BinType::Vec4 => {
+                visitor.visit_seq(SeqIntoReader::from_values(self.parser.read_f32_many(4)?))
+            }
+            BinType::Matrix => {
+                visitor.visit_seq(SeqIntoReader::from_values(self.parser.read_f32_many(16)?))
+            }
+            BinType::Color => {
+                visitor.visit_seq(SeqIntoReader::from_values(self.parser.read_u8_many(4)?))
+            }
             BinType::String => self.deserialize_string(visitor),
             BinType::Hash => visitor.visit_u32(self.parser.read_hash()?),
             BinType::Path => {
@@ -96,23 +86,18 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
                 visitor.visit_u64(self.parser.read_u64()?)
             }
             BinType::List | BinType::List2 => {
-                let value_bin_type = self.parser.read_type()?;
-                let _padding = self.parser.read_u32()?;
+                let vtype = self.parser.read_type()?;
+                let _bytes_count = self.parser.read_u32()?;
                 let count = self.parser.read_u32()? as usize;
 
-                visitor.visit_seq(SeqReader {
-                    de: &mut BinDeserializer::from_bytes(self.parser.input, value_bin_type),
-                    count,
-                })
+                let mut values = Vec::new();
+                for _ in 0..count {
+                    values.push(self.parser.skip_value(vtype)?);
+                }
+
+                visitor.visit_seq(SeqDerReader::from_values(values, vtype))
             }
-            BinType::Struct | BinType::Embed => {
-                unreachable!()
-            }
-            BinType::Link => {
-                // Hash 和 Link 通常是 u32 或 u64 的包装，这里假设为 u32
-                visitor.visit_u32(self.parser.read_link()?)
-            }
-            BinType::Option => todo!(),
+            BinType::Link => visitor.visit_u32(self.parser.read_link()?),
             BinType::Map => {
                 let ktype = self.parser.read_type()?;
                 let vtype = self.parser.read_type()?;
@@ -128,7 +113,9 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
                 })
             }
             BinType::Flag => visitor.visit_bool(self.parser.read_flag()?),
-            BinType::Entry => todo!(),
+            _ => {
+                unreachable!()
+            }
         }
     }
 
