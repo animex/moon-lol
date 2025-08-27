@@ -9,4 +9,3 @@ league_core.workspace = true
 lol_core.workspace = true
 serde.workspace = true
 binrw.workspace = true
-league_utils.workspace = true

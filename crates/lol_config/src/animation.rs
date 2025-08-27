@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Default, Serialize, Deserialize)]
-pub struct AnimationData {
+pub struct ConfigAnimationClip {
     pub fps: f32,
     pub duration: f32,
     pub joint_hashes: Vec<u32>,

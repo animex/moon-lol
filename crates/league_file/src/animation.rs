@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::f32::consts::SQRT_2;
 use std::fmt::Debug;
 
 use bevy::math::Quat;
@@ -7,7 +8,6 @@ use binrw::io::{Read, Seek, SeekFrom};
 use binrw::{binread, BinRead};
 use binrw::{prelude::*, Endian};
 
-use league_utils::animation::decompress_quat;
 use league_utils::{hash_joint, parse_quat, parse_quat_array, parse_vec3, parse_vec3_array};
 
 #[binread]
@@ -87,6 +87,7 @@ pub struct CompressedData {
         seek_before = SeekFrom::Start(frames_offset as u64 + 12),
         count = frame_count
     )]
+    #[br(args { inner: (duration, translation_min, translation_max, scale_min, scale_max) })]
     pub frames: Vec<CompressedFrame>,
 
     #[br(
@@ -118,16 +119,31 @@ impl From<u16> for CompressedTransformType {
 #[binread]
 #[derive(Debug, PartialEq)]
 #[br(little)]
+#[br(import(duration: f32, translation_min: Vec3, translation_max: Vec3, scale_min: Vec3, scale_max: Vec3))]
 pub struct CompressedFrame {
-    pub time: u16,
+    #[br(map = |time: u16| decompress_time(time, duration))]
+    pub time: f32,
 
     #[br(temp)]
     joint_id_and_type: u16,
 
-    pub value: [u16; 3],
+    #[br(temp)]
+    value: [u16; 3],
 
     #[br(calc = (joint_id_and_type >> 14).into())]
     pub transform_type: CompressedTransformType,
+
+    #[br(if(transform_type == CompressedTransformType::Translation))]
+    #[br(calc = decompress_vector3(&value, &translation_min, &translation_max))]
+    pub translation: Vec3,
+
+    #[br(if(transform_type == CompressedTransformType::Rotation))]
+    #[br(calc = decompress_quat(value))]
+    pub rotation: Quat,
+
+    #[br(if(transform_type == CompressedTransformType::Scale))]
+    #[br(calc = decompress_vector3(&value, &scale_min, &scale_max))]
+    pub scale: Vec3,
 
     #[br(calc = joint_id_and_type & 0x3FFF)]
     pub joint_id: u16,
@@ -249,7 +265,7 @@ pub struct UncompressedDataV5 {
     #[br(
         seek_before = SeekFrom::Start(quat_palette_offset as u64 + 12),
         count = (joint_name_hashes_offset - quat_palette_offset) / 6,
-        map = |vals: Vec<[u16; 3]>| vals.iter().map(decompress_quat).collect()
+        map = |vals: Vec<[u16; 3]>| vals.into_iter().map(decompress_quat).collect()
     )]
     pub quat_palette: Vec<Quat>,
 
@@ -427,4 +443,44 @@ pub struct UncompressedFrame {
     pub translation_id: u16,
     pub scale_id: u16,
     pub rotation_id: u16,
+}
+
+const ONE_OVER_USHORT_MAX: f32 = 1.0 / 65535.0;
+const ONE_OVER_SQRT_2: f32 = 1.0 / SQRT_2;
+
+pub fn decompress_time(time: u16, duration: f32) -> f32 {
+    time as f32 * ONE_OVER_USHORT_MAX * duration
+}
+
+pub fn decompress_vector3(value: &[u16; 3], min: &Vec3, max: &Vec3) -> Vec3 {
+    let mut uncompressed = max - min;
+
+    uncompressed.x *= value[0] as f32 * ONE_OVER_USHORT_MAX;
+    uncompressed.y *= value[1] as f32 * ONE_OVER_USHORT_MAX;
+    uncompressed.z *= value[2] as f32 * ONE_OVER_USHORT_MAX;
+
+    uncompressed + min
+}
+
+pub fn decompress_quat(value: [u16; 3]) -> Quat {
+    let bits = (value[0] as u64) | ((value[1] as u64) << 16) | ((value[2] as u64) << 32);
+
+    let max_index = (bits >> 45) & 0x03;
+    let v_a = (bits >> 30) & 0x7FFF;
+    let v_b = (bits >> 15) & 0x7FFF;
+    let v_c = bits & 0x7FFF;
+
+    let a = (v_a as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
+    let b = (v_b as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
+    let c = (v_c as f32 / 32767.0) * SQRT_2 - ONE_OVER_SQRT_2;
+
+    let sub = 1.0 - (a * a + b * b + c * c);
+    let d = f32::sqrt(f32::max(0.0, sub));
+
+    match max_index {
+        0 => Quat::from_xyzw(d, a, b, c),
+        1 => Quat::from_xyzw(a, d, b, c),
+        2 => Quat::from_xyzw(a, b, d, c),
+        _ => Quat::from_xyzw(a, b, c, d),
+    }
 }

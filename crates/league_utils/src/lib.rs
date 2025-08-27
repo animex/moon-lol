@@ -1,5 +1,3 @@
-pub mod animation;
-
 use std::hash::Hasher;
 
 use bevy::prelude::*;

@@ -28,7 +28,7 @@ use league_utils::{neg_rotation_z, neg_vec_z};
 use thiserror::Error;
 
 use lol_config::{
-    AnimationData, ConfigSkinnedMeshInverseBindposes, IntermediateMesh, LeagueMaterial,
+    ConfigAnimationClip, ConfigSkinnedMeshInverseBindposes, IntermediateMesh, LeagueMaterial,
 };
 
 #[derive(Error, Debug)]
@@ -262,7 +262,7 @@ impl AssetLoader for LeagueLoaderAnimationClip {
     ) -> Result<Self::Asset, Self::Error> {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
-        let animation: AnimationData = bincode::deserialize(&buf)?;
+        let animation: ConfigAnimationClip = bincode::deserialize(&buf)?;
 
         let mut clip = AnimationClip::default();
         for (i, join_hash) in animation.joint_hashes.iter().enumerate() {

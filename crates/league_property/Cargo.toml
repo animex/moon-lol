@@ -6,7 +6,7 @@ edition = "2021"
 [dependencies]
 bevy.workspace = true
 binrw.workspace = true
-heck.workspace = true
+heck = "0.5.0"
 league_utils.workspace = true
 serde.workspace = true
 thiserror.workspace = true

@@ -6,15 +6,12 @@ use league_file::{
 };
 use league_loader::LeagueWadLoader;
 use league_property::{from_entry, EntryData};
-use league_utils::{
-    animation::{decompress_quat, decompress_time, decompress_vector3},
-    hash_joint, neg_mat_z,
-};
+use league_utils::{hash_joint, neg_mat_z};
 use std::collections::HashMap;
 
 use league_core::{AnimationGraphData, AnimationGraphDataMClipDataMap, ParametricClipDataUpdater};
 use lol_config::{
-    AnimationData, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
+    ConfigAnimationClip, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
     ConfigSkinnedMeshInverseBindposes, LeagueMaterial,
 };
 
@@ -188,19 +185,17 @@ pub fn load_animation_map(
     Ok(animation_graph_data)
 }
 
-pub fn load_animation_file(value: AnimationFile) -> AnimationData {
+pub fn load_animation_file(value: AnimationFile) -> ConfigAnimationClip {
     match value {
         AnimationFile::Compressed(compressed) => {
             let data = compressed.data;
             let joint_count = data.joint_count as usize;
-            let duration = data.duration;
 
             let mut translates = vec![Vec::new(); joint_count];
             let mut rotations = vec![Vec::new(); joint_count];
             let mut scales = vec![Vec::new(); joint_count];
 
             for frame in data.frames {
-                let time = decompress_time(frame.time, duration);
                 let joint_id = frame.joint_id as usize;
 
                 if joint_id >= joint_count {
@@ -213,26 +208,18 @@ pub fn load_animation_file(value: AnimationFile) -> AnimationData {
 
                 match frame.transform_type {
                     CompressedTransformType::Rotation => {
-                        let quat = decompress_quat(&frame.value);
-                        rotations[joint_id].push((time, quat));
+                        rotations[joint_id].push((frame.time, frame.rotation));
                     }
                     CompressedTransformType::Translation => {
-                        let vec = decompress_vector3(
-                            &frame.value,
-                            &data.translation_min,
-                            &data.translation_max,
-                        );
-                        translates[joint_id].push((time, vec));
+                        translates[joint_id].push((frame.time, frame.translation));
                     }
                     CompressedTransformType::Scale => {
-                        let vec =
-                            decompress_vector3(&frame.value, &data.scale_min, &data.scale_max);
-                        scales[joint_id].push((time, vec));
+                        scales[joint_id].push((frame.time, frame.scale));
                     }
                 }
             }
 
-            AnimationData {
+            ConfigAnimationClip {
                 fps: data.fps,
                 duration: data.duration,
                 joint_hashes: data.joint_hashes,
@@ -279,7 +266,7 @@ pub fn load_animation_file(value: AnimationFile) -> AnimationData {
                     }
                 }
 
-                AnimationData {
+                ConfigAnimationClip {
                     fps,
                     duration,
                     joint_hashes,
@@ -325,7 +312,7 @@ pub fn load_animation_file(value: AnimationFile) -> AnimationData {
                     }
                 }
 
-                AnimationData {
+                ConfigAnimationClip {
                     fps,
                     duration,
                     joint_hashes,
@@ -380,7 +367,7 @@ pub fn load_animation_file(value: AnimationFile) -> AnimationData {
                     }
                 }
 
-                AnimationData {
+                ConfigAnimationClip {
                     fps,
                     duration,
                     joint_hashes,
