@@ -3,9 +3,9 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Component, Debug, PartialEq, Eq, Hash, Clone, Serialize, Deserialize)]
 pub enum Lane {
-    Top,
-    Mid,
-    Bot,
+    Top = 2,
+    Mid = 1,
+    Bot = 0,
 }
 
 impl From<u16> for Lane {

@@ -1,22 +1,24 @@
 use std::{collections::VecDeque, time::Duration};
 
 use bevy::prelude::*;
+use league_core::{
+    BarracksMinionConfigWaveBehavior, ConstantWaveBehavior, InhibitorWaveBehavior,
+    RotatingWaveBehavior, TimedVariableWaveBehavior,
+};
+use league_utils::neg_mat_z;
+use lol_config::ConfigMap;
 use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{spawn_skin_entity, Armor, Bounding, ConfigMap, Damage, Health, Movement},
+    core::{spawn_skin_entity, Armor, Bounding, Damage, Health, Movement},
     entities::Minion,
-    league::{
-        neg_mat_z, BarracksMinionConfigWaveBehavior, BinHash, ConstantWaveBehavior,
-        InhibitorWaveBehavior, RotatingWaveBehavior, TimedVariableWaveBehavior,
-    },
 };
 
 /// 兵营的动态状态，用于跟踪计时器和生成队列
 #[derive(Component, Serialize, Deserialize)]
 pub struct Barrack {
-    pub id: BinHash,
+    pub id: u32,
     /// 下一波兵的生成计时器
     pub wave_timer: Timer,
     /// 属性升级计时器

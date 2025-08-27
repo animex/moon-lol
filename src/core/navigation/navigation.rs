@@ -1,7 +1,9 @@
 use bevy::prelude::*;
 use std::time::Instant;
 
-use crate::core::{find_grid_path, CommandMovementStart, ConfigNavigationGrid, Movement};
+use lol_config::ConfigNavigationGrid;
+
+use crate::core::{find_grid_path, CommandMovementStart, Movement};
 use crate::system_debug;
 
 #[derive(Event, Debug)]

@@ -1,6 +1,7 @@
 use bevy::prelude::*;
+use lol_config::ConfigGame;
 
-use crate::core::{spawn_skin_entity, ConfigGame, Controller, Focus, Health, Movement};
+use crate::core::{spawn_skin_entity, Controller, Focus, Health, Movement};
 
 #[derive(Default)]
 pub struct PluginGame;

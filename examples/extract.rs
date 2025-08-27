@@ -1,25 +1,24 @@
-use moon_lol::league::LeagueLoader;
+use league_to_lol::{save_config_map, save_legends, save_navigation_grid};
 use tokio::time::Instant;
+
+use league_loader::LeagueLoader;
 
 #[tokio::main]
 async fn main() {
     #[cfg(unix)]
-    let loader = LeagueLoader::new(
-        r"/mnt/c/Program Files (x86)/WeGameApps/英雄联盟/game",
-        "bloom",
-    )
-    .unwrap();
+    let root_dir = r"/mnt/c/Program Files (x86)/WeGameApps/英雄联盟/game";
     #[cfg(windows)]
-    let loader =
-        LeagueLoader::new(r"C:\Program Files (x86)\WeGameApps\英雄联盟\game", "bloom").unwrap();
+    let root_dir = r"C:\Program Files (x86)\WeGameApps\英雄联盟\game";
+
+    let loader = LeagueLoader::new(root_dir, "bloom").unwrap();
 
     let start = Instant::now();
 
-    loader.map_loader.save_config_map().await.unwrap();
+    save_config_map(&loader.map_loader).await.unwrap();
 
-    loader.map_loader.save_navigation_grid().await.unwrap();
+    save_navigation_grid(&loader.map_loader).await.unwrap();
 
-    match loader.save_legends("Fiora", "Skin44").await {
+    match save_legends(root_dir, "Fiora", "Skin44").await {
         Ok(_) => println!("Legends saved"),
         Err(e) => println!("Error saving legends: {:?}", e),
     }

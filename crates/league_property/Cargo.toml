@@ -1,0 +1,12 @@
+[package]
+name = "league_property"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy.workspace = true
+binrw.workspace = true
+heck.workspace = true
+league_utils.workspace = true
+serde.workspace = true
+thiserror.workspace = true

@@ -1,0 +1,394 @@
+use bevy::prelude::*;
+use binrw::BinRead;
+use league_file::{
+    AnimationFile, CompressedTransformType, LeagueSkeleton, LeagueSkinnedMesh,
+    LeagueSkinnedMeshInternal, UncompressedData,
+};
+use league_loader::LeagueWadLoader;
+use league_property::{from_entry, EntryData};
+use league_utils::{
+    animation::{decompress_quat, decompress_time, decompress_vector3},
+    hash_joint, neg_mat_z,
+};
+use std::collections::HashMap;
+
+use league_core::{AnimationGraphData, AnimationGraphDataMClipDataMap, ParametricClipDataUpdater};
+use lol_config::{
+    AnimationData, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
+    ConfigSkinnedMeshInverseBindposes, LeagueMaterial,
+};
+
+use crate::{
+    get_bin_path, save_struct_to_file, save_wad_entry_to_file, skinned_mesh_to_intermediate, Error,
+};
+
+pub async fn save_environment_object(
+    loader: &LeagueWadLoader,
+    skin: &str,
+) -> Result<ConfigCharacterSkin, Error> {
+    let (skin_character_data_properties, flat_map) = loader.load_character_skin(&skin);
+
+    let skin_mesh_properties = &skin_character_data_properties.skin_mesh_properties.unwrap();
+
+    let texture = skin_mesh_properties.texture.clone().unwrap();
+    save_wad_entry_to_file(loader, &texture).await?;
+
+    let material = LeagueMaterial {
+        texture_path: texture.clone(),
+    };
+    let material_path = get_bin_path(&format!("ASSETS/{}/material", skin));
+    save_struct_to_file(&material_path, &material).await?;
+
+    let skeleton = skin_mesh_properties.skeleton.clone().unwrap();
+    save_wad_entry_to_file(loader, &skeleton).await?;
+
+    let league_skeleton = loader
+        .get_wad_entry_reader_by_path(&skeleton)
+        .map(|mut v| LeagueSkeleton::read(&mut v).unwrap())
+        .unwrap();
+
+    let simple_skin = skin_mesh_properties.simple_skin.clone().unwrap();
+    let mut reader = loader
+        .get_wad_entry_no_seek_reader_by_path(&simple_skin)
+        .unwrap();
+    let league_skinned_mesh =
+        LeagueSkinnedMesh::from(LeagueSkinnedMeshInternal::read(&mut reader).unwrap());
+
+    let animation_map = load_animation_map(
+        flat_map
+            .get(
+                &skin_character_data_properties
+                    .skin_animation_properties
+                    .animation_graph_data,
+            )
+            .unwrap(),
+    )?;
+
+    // 保存动画文件
+    for (_, animation) in &animation_map {
+        match animation {
+            ConfigCharacterSkinAnimation::AtomicClipData { clip_path, .. } => {
+                let mut animation_file = loader.get_wad_entry_reader_by_path(&clip_path)?;
+                let animation_file = AnimationFile::read(&mut animation_file)?;
+                let animation_data = load_animation_file(animation_file);
+                save_struct_to_file(&clip_path, &animation_data).await?;
+            }
+            _ => {}
+        }
+    }
+
+    let mut submesh_paths = Vec::new();
+
+    for (i, range) in league_skinned_mesh.ranges.iter().enumerate() {
+        let mesh = skinned_mesh_to_intermediate(&league_skinned_mesh, i);
+        let mesh_path = format!("ASSETS/{}/meshes/{}.mesh", skin, &range.name);
+        save_struct_to_file(&mesh_path, &mesh).await?;
+
+        submesh_paths.push(mesh_path);
+    }
+
+    let inverse_bind_poses = league_skeleton
+        .modern_data
+        .influences
+        .iter()
+        .map(|&v| league_skeleton.modern_data.joints[v as usize].inverse_bind_transform)
+        .map(|v| neg_mat_z(&v))
+        .collect::<Vec<_>>();
+
+    let inverse_bind_pose_path = get_bin_path(&format!("ASSETS/{}/inverse_bind_pose", skin));
+    save_struct_to_file(
+        &inverse_bind_pose_path,
+        &ConfigSkinnedMeshInverseBindposes {
+            inverse_bindposes: inverse_bind_poses,
+        },
+    )
+    .await?;
+
+    Ok(ConfigCharacterSkin {
+        skin_scale: skin_mesh_properties.skin_scale,
+        material_path,
+        submesh_paths,
+        joint_influences_indices: league_skeleton.modern_data.influences,
+        inverse_bind_pose_path,
+        joints: league_skeleton
+            .modern_data
+            .joints
+            .iter()
+            .map(|joint| ConfigJoint {
+                hash: hash_joint(&joint.name),
+                transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
+                parent_index: joint.parent_index,
+            })
+            .collect(),
+        animation_map,
+    })
+}
+
+pub fn load_animation_map(
+    value: &EntryData,
+) -> Result<HashMap<u32, ConfigCharacterSkinAnimation>, Error> {
+    let animation_graph_data = from_entry::<AnimationGraphData>(value);
+
+    let Some(nodes) = animation_graph_data.m_clip_data_map else {
+        return Ok(HashMap::new());
+    };
+
+    let animation_graph_data = nodes
+        .iter()
+        .filter_map(|(k, v)| -> Option<(u32, ConfigCharacterSkinAnimation)> {
+            match v {
+                AnimationGraphDataMClipDataMap::AtomicClipData(atomic_clip_data) => Some((
+                    *k,
+                    ConfigCharacterSkinAnimation::AtomicClipData {
+                        clip_path: atomic_clip_data
+                            .m_animation_resource_data
+                            .m_animation_file_path
+                            .clone(),
+                    },
+                )),
+                AnimationGraphDataMClipDataMap::SelectorClipData(selector_clip_data) => Some((
+                    *k,
+                    ConfigCharacterSkinAnimation::SelectorClipData {
+                        probably_nodes: selector_clip_data
+                            .m_selector_pair_data_list
+                            .iter()
+                            .map(|v| (v.m_clip_name, v.m_probability.unwrap_or(0.0)))
+                            .collect(),
+                    },
+                )),
+                AnimationGraphDataMClipDataMap::ConditionFloatClipData(
+                    condition_float_clip_data,
+                ) => Some((
+                    *k,
+                    ConfigCharacterSkinAnimation::ConditionFloatClipData {
+                        conditions: condition_float_clip_data
+                            .m_condition_float_pair_data_list
+                            .iter()
+                            .map(|v| (v.m_clip_name, v.m_value.unwrap_or(0.0)))
+                            .collect(),
+                        component_name: match condition_float_clip_data.updater {
+                            ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
+                                "Movement".to_string()
+                            }
+                            _ => "".to_string(),
+                        },
+                        field_name: match condition_float_clip_data.updater {
+                            ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
+                                "speed".to_string()
+                            }
+                            _ => "".to_string(),
+                        },
+                    },
+                )),
+                _ => None,
+            }
+        })
+        .collect();
+
+    Ok(animation_graph_data)
+}
+
+pub fn load_animation_file(value: AnimationFile) -> AnimationData {
+    match value {
+        AnimationFile::Compressed(compressed) => {
+            let data = compressed.data;
+            let joint_count = data.joint_count as usize;
+            let duration = data.duration;
+
+            let mut translates = vec![Vec::new(); joint_count];
+            let mut rotations = vec![Vec::new(); joint_count];
+            let mut scales = vec![Vec::new(); joint_count];
+
+            for frame in data.frames {
+                let time = decompress_time(frame.time, duration);
+                let joint_id = frame.joint_id as usize;
+
+                if joint_id >= joint_count {
+                    panic!(
+                        "索引 {} 超出关节索引范围 [0, {}]",
+                        joint_id,
+                        joint_count - 1
+                    )
+                }
+
+                match frame.transform_type {
+                    CompressedTransformType::Rotation => {
+                        let quat = decompress_quat(&frame.value);
+                        rotations[joint_id].push((time, quat));
+                    }
+                    CompressedTransformType::Translation => {
+                        let vec = decompress_vector3(
+                            &frame.value,
+                            &data.translation_min,
+                            &data.translation_max,
+                        );
+                        translates[joint_id].push((time, vec));
+                    }
+                    CompressedTransformType::Scale => {
+                        let vec =
+                            decompress_vector3(&frame.value, &data.scale_min, &data.scale_max);
+                        scales[joint_id].push((time, vec));
+                    }
+                }
+            }
+
+            AnimationData {
+                fps: data.fps,
+                duration: data.duration,
+                joint_hashes: data.joint_hashes,
+                translates,
+                rotations,
+                scales,
+            }
+        }
+        AnimationFile::Uncompressed(uncompressed) => match uncompressed.data {
+            UncompressedData::V3(data) => {
+                let fps = data.fps as f32;
+                let duration = if fps > 0.0 {
+                    (data.frame_count.saturating_sub(1)) as f32 / fps
+                } else {
+                    0.0
+                };
+
+                let mut joint_hashes: Vec<u32> = data.joint_frames.keys().cloned().collect();
+                joint_hashes.sort_unstable();
+
+                let hash_to_idx: HashMap<u32, usize> = joint_hashes
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &h)| (h, i))
+                    .collect();
+
+                let num_joints = joint_hashes.len();
+                let mut translates = vec![Vec::new(); num_joints];
+                let mut rotations = vec![Vec::new(); num_joints];
+                let mut scales = vec![Vec::new(); num_joints];
+
+                for (hash, frames) in data.joint_frames {
+                    if let Some(&joint_idx) = hash_to_idx.get(&hash) {
+                        for (time_idx, frame) in frames.iter().enumerate() {
+                            let time = time_idx as f32 / fps;
+
+                            rotations[joint_idx]
+                                .push((time, data.quat_palette[frame.rotation_id as usize]));
+                            translates[joint_idx]
+                                .push((time, data.vector_palette[frame.translation_id as usize]));
+                            scales[joint_idx]
+                                .push((time, data.vector_palette[frame.scale_id as usize]));
+                        }
+                    }
+                }
+
+                AnimationData {
+                    fps,
+                    duration,
+                    joint_hashes,
+                    translates,
+                    rotations,
+                    scales,
+                }
+            }
+            UncompressedData::V4(data) => {
+                let fps = if data.frame_duration > 0.0 {
+                    1.0 / data.frame_duration
+                } else {
+                    0.0
+                };
+                let duration = data.frame_duration * (data.frame_count.saturating_sub(1)) as f32;
+
+                let mut joint_hashes: Vec<u32> = data.joint_frames.keys().cloned().collect();
+                joint_hashes.sort_unstable();
+
+                let hash_to_idx: HashMap<u32, usize> = joint_hashes
+                    .iter()
+                    .enumerate()
+                    .map(|(i, &h)| (h, i))
+                    .collect();
+
+                let num_joints = joint_hashes.len();
+                let mut translates = vec![Vec::new(); num_joints];
+                let mut rotations = vec![Vec::new(); num_joints];
+                let mut scales = vec![Vec::new(); num_joints];
+
+                for (hash, frames) in data.joint_frames {
+                    if let Some(&joint_idx) = hash_to_idx.get(&hash) {
+                        for (time_idx, frame) in frames.iter().enumerate() {
+                            let time = time_idx as f32 * data.frame_duration;
+
+                            rotations[joint_idx]
+                                .push((time, data.quat_palette[frame.rotation_id as usize]));
+                            translates[joint_idx]
+                                .push((time, data.vector_palette[frame.translation_id as usize]));
+                            scales[joint_idx]
+                                .push((time, data.vector_palette[frame.scale_id as usize]));
+                        }
+                    }
+                }
+
+                AnimationData {
+                    fps,
+                    duration,
+                    joint_hashes,
+                    translates,
+                    rotations,
+                    scales,
+                }
+            }
+            UncompressedData::V5(data) => {
+                let joint_count = data.track_count as usize;
+                let frame_count = data.frame_count as usize;
+                let fps = if data.frame_duration > 0.0 {
+                    1.0 / data.frame_duration
+                } else {
+                    0.0
+                };
+                let duration = data.frame_duration * (frame_count.saturating_sub(1)) as f32;
+
+                let joint_hashes = data.joint_hashes;
+                assert_eq!(
+                    joint_hashes.len(),
+                    joint_count,
+                    "V5中关节哈希数量与轨道数量不匹配"
+                );
+
+                let mut translates = vec![Vec::with_capacity(frame_count); joint_count];
+                let mut rotations = vec![Vec::with_capacity(frame_count); joint_count];
+                let mut scales = vec![Vec::with_capacity(frame_count); joint_count];
+
+                for time_idx in 0..frame_count {
+                    let time = time_idx as f32 * data.frame_duration;
+                    for joint_idx in 0..joint_count {
+                        let frame_idx = time_idx * joint_count + joint_idx;
+                        if let Some(frame) = data.frames.get(frame_idx) {
+                            if let Some(rot_quat) =
+                                data.quat_palette.get(frame.rotation_id as usize)
+                            {
+                                rotations[joint_idx].push((time, *rot_quat));
+                            }
+
+                            if let Some(trans_bvec) =
+                                data.vector_palette.get(frame.translation_id as usize)
+                            {
+                                translates[joint_idx].push((time, *trans_bvec));
+                            }
+                            if let Some(scale_bvec) =
+                                data.vector_palette.get(frame.scale_id as usize)
+                            {
+                                scales[joint_idx].push((time, *scale_bvec));
+                            }
+                        }
+                    }
+                }
+
+                AnimationData {
+                    fps,
+                    duration,
+                    joint_hashes,
+                    translates,
+                    rotations,
+                    scales,
+                }
+            }
+        },
+    }
+}

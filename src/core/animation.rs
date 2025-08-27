@@ -1,15 +1,13 @@
 use std::{collections::HashMap, time::Duration};
 
 use bevy::{prelude::*, reflect::ReflectRef};
+use league_utils::hash_bin;
 use rand::{
     distr::{weighted::WeightedIndex, Distribution},
     rng,
 };
 
-use crate::{
-    core::{Attack, State},
-    league::LeagueLoader,
-};
+use crate::core::{Attack, State};
 
 #[derive(Default)]
 pub struct PluginAnimation;
@@ -178,17 +176,15 @@ fn on_state_change(
     for (entity, state, mut animation_state) in query.iter_mut() {
         match state {
             State::Idle => {
-                animation_state.update(LeagueLoader::hash_bin("Idle1"));
+                animation_state.update(hash_bin("Idle1"));
             }
             State::Moving => {
-                animation_state.update(LeagueLoader::hash_bin("Run"));
+                animation_state.update(hash_bin("Run"));
             }
             State::Attacking => {
                 let attack = q_attack.get(entity).unwrap();
-                animation_state.update_with_duration(
-                    LeagueLoader::hash_bin("Attack1"),
-                    attack.total_duration_secs(),
-                );
+                animation_state
+                    .update_with_duration(hash_bin("Attack1"), attack.total_duration_secs());
             }
         }
     }

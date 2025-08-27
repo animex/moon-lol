@@ -1,0 +1,11 @@
+[package]
+name = "league_core"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy.workspace = true
+binrw.workspace = true
+bitflags.workspace = true
+league_utils.workspace = true
+serde.workspace = true

@@ -5,14 +5,16 @@ use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use bevy::render::mesh::skinning::SkinnedMesh;
+use league_utils::{hash_bin, neg_mat_z};
+use lol_config::{
+    ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigGeometryObject, ConfigMap,
+};
 use lol_core::Team;
 
 use crate::core::{
     Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandBehaviorAttack,
-    CommandBehaviorMoveTo, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigGeometryObject,
-    ConfigMap, Controller,
+    CommandBehaviorMoveTo, Controller,
 };
-use crate::league::{neg_mat_z, LeagueLoader};
 
 // 基于相机配置的地图边界
 pub const MAP_WIDTH: f32 = 14400.0; // cam_MaxX
@@ -163,8 +165,8 @@ pub fn spawn_skin_entity(
         AnimationGraphHandle(graph_handle),
         Animation { hash_to_node },
         AnimationState {
-            last_hash: LeagueLoader::hash_bin("Idle1"),
-            current_hash: LeagueLoader::hash_bin("Idle1"),
+            last_hash: hash_bin("Idle1"),
+            current_hash: hash_bin("Idle1"),
             current_duration: None,
         },
     ));

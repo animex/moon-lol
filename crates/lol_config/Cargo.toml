@@ -1,0 +1,12 @@
+[package]
+name = "lol_config"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+bevy.workspace = true
+league_core.workspace = true
+lol_core.workspace = true
+serde.workspace = true
+binrw.workspace = true
+league_utils.workspace = true

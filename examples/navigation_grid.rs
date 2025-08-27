@@ -7,13 +7,13 @@ use bevy::render::{
     RenderPlugin,
 };
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
+use league_core::VisionPathingFlags;
+use lol_config::ConfigNavigationGrid;
 use moon_lol::core::{
     find_grid_path_with_result, on_click_map, post_process_path, AStarResult, CameraState,
-    CommandMovementStart, CommandNavigationTo, ConfigNavigationGrid, Map, Movement, PluginCore,
-    PluginNavigaton,
+    CommandMovementStart, CommandNavigationTo, Map, Movement, PluginCore, PluginNavigaton,
 };
 use moon_lol::entities::PluginEntities;
-use moon_lol::league::VisionPathingFlags;
 use moon_lol::logging::PluginLogging;
 use moon_lol::system_debug;
 

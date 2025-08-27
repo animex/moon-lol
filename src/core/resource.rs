@@ -1,14 +1,11 @@
-use crate::{
-    core::{ConfigGame, ConfigMap, ConfigNavigationGrid},
-    league::{
-        get_struct_from_file, LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMaterial,
-        LeagueLoaderMesh, LeagueLoaderSkinnedMeshInverseBindposes,
-    },
+use league_to_lol::{
+    get_struct_from_file, CONFIG_PATH_GAME, CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
 };
-
-pub const CONFIG_PATH_MAP: &str = "config_map";
-pub const CONFIG_PATH_MAP_NAV_GRID: &str = "config_map_nav_grid";
-pub const CONFIG_PATH_GAME: &str = "config_game";
+use lol_config::{ConfigGame, ConfigMap, ConfigNavigationGrid};
+use lol_loader::{
+    LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMaterial, LeagueLoaderMesh,
+    LeagueLoaderSkinnedMeshInverseBindposes,
+};
 
 use bevy::prelude::*;
 

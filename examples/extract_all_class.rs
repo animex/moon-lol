@@ -1,4 +1,9 @@
-use moon_lol::league::{get_hashes_u64, LeagueLoader};
+use std::collections::HashMap;
+
+use league_loader::LeagueLoader;
+use league_property::{
+    class_map_to_rust_code, extract_all_class, get_hashes, get_hashes_u64, merge_class_maps,
+};
 use tokio::time::Instant;
 
 #[tokio::main]
@@ -26,7 +31,7 @@ async fn main() {
 
     let hashes = get_hashes_u64(&file_paths);
 
-    let paths = hashes
+    let file_paths = hashes
         .iter()
         .filter(|(_hash, path)| {
             path.ends_with(".bin")
@@ -35,10 +40,25 @@ async fn main() {
         .map(|v| v.1.as_str())
         .collect::<Vec<_>>();
 
-    let rust_code = loader
-        .extract_all_classes(&paths, &hash_paths)
-        .await
-        .unwrap();
+    let rust_code = {
+        let mut class_map = HashMap::new();
+        for (i, file_path) in file_paths.iter().enumerate() {
+            println!("{:?}/{:?}", i, file_paths.len());
+            let Ok(bin) = loader.get_prop_bin_by_path(file_path) else {
+                continue;
+            };
+            let bin_class_map = extract_all_class(&bin).await.unwrap();
+            merge_class_maps(&mut class_map, bin_class_map);
+        }
+
+        let hashes = get_hashes(&hash_paths);
+
+        let rust_code = class_map_to_rust_code(&mut class_map, &hashes)
+            .await
+            .unwrap();
+
+        rust_code
+    };
 
     std::fs::write("league.rs", rust_code).unwrap();
 

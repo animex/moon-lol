@@ -1,0 +1,23 @@
+mod accessor;
+mod deserializer;
+mod extract;
+mod parser;
+mod prop;
+mod types;
+
+pub use accessor::*;
+pub use deserializer::*;
+pub use extract::*;
+pub use parser::*;
+pub use prop::*;
+pub use types::*;
+
+use serde::Deserialize;
+
+pub fn from_entry<'de, T>(slice: &'de EntryData) -> T
+where
+    T: Deserialize<'de>,
+{
+    let mut deserializer = BinDeserializer::from_bytes(&slice.data, BinType::Entry);
+    T::deserialize(&mut deserializer).unwrap()
+}

@@ -2,7 +2,8 @@ use std::fs::File;
 use std::io::BufReader;
 
 use binrw::BinRead;
-use moon_lol::league::{from_entry, AnimationGraphData, PropFile};
+use league_core::AnimationGraphData;
+use league_property::{from_entry, PropFile};
 
 fn main() {
     let path = "assets/skin41.bin";
@@ -31,4 +32,5 @@ fn main() {
     // );
 
     // println!("反序列化成功，结果: {:#?}", data);
+    
 }
