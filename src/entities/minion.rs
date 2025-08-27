@@ -1,9 +1,11 @@
+use bevy::{app::Plugin, prelude::*};
+use lol_core::Lane;
+use serde::{Deserialize, Serialize};
+
 use crate::core::{
     Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart, ConfigMap,
-    DamageType, EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, Lane, State, Team,
+    DamageType, EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, State, Team,
 };
-use bevy::{app::Plugin, prelude::*};
-use serde::{Deserialize, Serialize};
 
 #[derive(Default)]
 pub struct PluginMinion;

@@ -5,10 +5,11 @@ use bevy::{
     math::{vec2, vec3, Mat4, Vec2, Vec3},
     transform::components::Transform,
 };
+use lol_core::Lane;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{Lane, Team},
+    core::Team,
     league::{
         BarracksConfig, BinHash, CharacterRecord, JungleQuadrantFlags, MainRegionFlags,
         NearestLaneFlags, POIFlags, RingFlags, RiverRegionFlags, Unk0x3c2bf0c0, Unk0x9d9f60d2,

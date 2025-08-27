@@ -5,11 +5,12 @@ use std::{
 
 use bevy::math::{vec2, Vec3Swizzles};
 use binrw::{io::NoSeek, BinRead, BinWrite};
+use lol_core::Lane;
 use tokio::io::AsyncWriteExt;
 
 use crate::{
     core::{
-        ConfigGeometryObject, ConfigMap, ConfigNavigationGrid, ConfigNavigationGridCell, Lane,
+        ConfigGeometryObject, ConfigMap, ConfigNavigationGrid, ConfigNavigationGridCell,
         CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
     },
     league::{
