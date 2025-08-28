@@ -18,7 +18,7 @@ pub fn setup(
     asset_server: Res<AssetServer>,
     config_game: Res<ConfigGame>,
 ) {
-    for (mut transform, team, skin) in config_game.legends.clone() {
+    for (mut transform, team, skin) in config_game.legends.iter() {
         transform.translation = Vec3::new(1000.0, 30.0, -1000.0);
 
         let entity = spawn_skin_entity(
@@ -32,7 +32,7 @@ pub fn setup(
         commands
             .entity(entity)
             .insert((
-                team,
+                team.clone(),
                 Controller,
                 Focus,
                 Movement { speed: 325.0 },

@@ -9,7 +9,10 @@ use league_property::{from_entry, EntryData};
 use league_utils::{hash_joint, neg_mat_z};
 use std::collections::HashMap;
 
-use league_core::{AnimationGraphData, AnimationGraphDataMClipDataMap, ParametricClipDataUpdater};
+use league_core::{
+    AnimationGraphData, AnimationGraphDataMClipDataMap, ParametricClipDataUpdater,
+    VfxSystemDefinitionData,
+};
 use lol_config::{
     ConfigAnimationClip, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
     ConfigSkinnedMeshInverseBindposes, LeagueMaterial,
@@ -19,11 +22,25 @@ use crate::{
     get_bin_path, save_struct_to_file, save_wad_entry_to_file, skinned_mesh_to_intermediate, Error,
 };
 
-pub async fn save_environment_object(
+pub async fn save_character(
     loader: &LeagueWadLoader,
     skin: &str,
-) -> Result<ConfigCharacterSkin, Error> {
-    let (skin_character_data_properties, flat_map) = loader.load_character_skin(&skin);
+) -> Result<(ConfigCharacterSkin, HashMap<u32, VfxSystemDefinitionData>), Error> {
+    let (skin_character_data_properties, resource_resolver, flat_map) =
+        loader.load_character_skin(&skin);
+
+    let mut vfx_system_definition_datas = HashMap::new();
+    if let Some(Some(resource_map)) = resource_resolver.map(|v| v.resource_map) {
+        for (hash, link) in resource_map {
+            let Some(entry_data) = flat_map.get(&link) else {
+                println!("lost skin: {:?}, link: {:?}", skin, link);
+                continue;
+            };
+            println!("get entry_data for skin: {:?} link: {:?}", skin, link);
+            let vfx_system_definition_data = from_entry::<VfxSystemDefinitionData>(entry_data);
+            vfx_system_definition_datas.insert(hash, vfx_system_definition_data);
+        }
+    }
 
     let skin_mesh_properties = &skin_character_data_properties.skin_mesh_properties.unwrap();
 
@@ -101,24 +118,27 @@ pub async fn save_environment_object(
     )
     .await?;
 
-    Ok(ConfigCharacterSkin {
-        skin_scale: skin_mesh_properties.skin_scale,
-        material_path,
-        submesh_paths,
-        joint_influences_indices: league_skeleton.modern_data.influences,
-        inverse_bind_pose_path,
-        joints: league_skeleton
-            .modern_data
-            .joints
-            .iter()
-            .map(|joint| ConfigJoint {
-                hash: hash_joint(&joint.name),
-                transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
-                parent_index: joint.parent_index,
-            })
-            .collect(),
-        animation_map,
-    })
+    Ok((
+        ConfigCharacterSkin {
+            skin_scale: skin_mesh_properties.skin_scale,
+            material_path,
+            submesh_paths,
+            joint_influences_indices: league_skeleton.modern_data.influences,
+            inverse_bind_pose_path,
+            joints: league_skeleton
+                .modern_data
+                .joints
+                .iter()
+                .map(|joint| ConfigJoint {
+                    hash: hash_joint(&joint.name),
+                    transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
+                    parent_index: joint.parent_index,
+                })
+                .collect(),
+            animation_map,
+        },
+        vfx_system_definition_datas,
+    ))
 }
 
 pub fn load_animation_map(

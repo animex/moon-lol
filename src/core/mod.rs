@@ -12,6 +12,7 @@ mod life;
 mod map;
 mod movement;
 mod navigation;
+mod particle;
 mod resource;
 mod ui;
 
@@ -29,6 +30,7 @@ pub use life::*;
 pub use map::*;
 pub use movement::*;
 pub use navigation::*;
+pub use particle::*;
 pub use resource::*;
 pub use ui::*;
 
@@ -51,5 +53,6 @@ plugin_group! {
         :PluginResource,
         :PluginState,
         :PluginUI,
+        :PluginParticle,
     }
 }

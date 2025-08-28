@@ -1,10 +1,11 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+use league_utils::hash_bin;
 use lol_core::Team;
 use rand::random;
 
-use crate::entities::champion::Champion;
+use crate::{core::CommandParticleSpawn, entities::champion::Champion};
 
 #[derive(Component)]
 #[require(Champion)]
@@ -110,6 +111,13 @@ fn update_add_vital(
                 active_timer: Timer::from_seconds(VITAL_ADD_DURATION, TimerMode::Once),
                 remove_timer: Timer::from_seconds(VITAL_DURATION, TimerMode::Once),
             });
+
+            println!("add vital: {:?}", target_entity);
+            commands
+                .entity(target_entity)
+                .trigger(CommandParticleSpawn {
+                    particle: hash_bin("Fiora_Passive_NE"),
+                });
         }
     }
 }
@@ -150,6 +158,7 @@ fn update_remove_vital(
 
             if vital.remove_timer.finished() {
                 commands.entity(target_entity).remove::<FioraVital>();
+                println!("remove vital: {:?}", target_entity);
             }
         }
     }

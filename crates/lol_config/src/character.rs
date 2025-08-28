@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Serialize, Deserialize)]
 pub struct ConfigCharacterSkin {
     pub animation_map: HashMap<u32, ConfigCharacterSkinAnimation>,
     pub inverse_bind_pose_path: String,

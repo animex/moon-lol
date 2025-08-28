@@ -6,20 +6,26 @@ use league_core::{
     BarracksConfig, MapPlaceableContainer, SkinCharacterDataPropertiesPersistentEffectConditions,
     Unk0x9d9f60d2,
 };
-use league_loader::LeagueWadMapLoader;
+use league_loader::{LeagueLoader, LeagueWadMapLoader};
 use league_property::from_entry;
 use league_utils::{hash_bin, neg_vec_z};
 use lol_config::{ConfigMap, ConfigNavigationGrid};
 use lol_core::Lane;
 
 use crate::{
-    get_bin_path, load_navigation_grid, save_environment_object, save_mapgeo, save_struct_to_file,
-    Error, CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
+    get_bin_path, load_navigation_grid, save_character, save_legends, save_mapgeo,
+    save_struct_to_file, Error, CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
 };
 
-pub async fn save_config_map(loader: &LeagueWadMapLoader) -> Result<ConfigMap, Error> {
+pub async fn save_config_map(
+    root_dir: &str,
+    map: &str,
+    champions: Vec<(&str, &str)>,
+) -> Result<ConfigMap, Error> {
+    let loader = LeagueLoader::new(root_dir, map)?;
+    let map_loader = loader.map_loader;
     // 并行处理地图网格
-    let geometry_objects = save_mapgeo(loader).await?;
+    let geometry_objects = save_mapgeo(&map_loader).await?;
 
     let mut minion_paths = HashMap::new();
     let mut barracks = HashMap::new();
@@ -28,8 +34,9 @@ pub async fn save_config_map(loader: &LeagueWadMapLoader) -> Result<ConfigMap, E
     let mut environment_objects = HashMap::new();
     let mut skins = HashMap::new();
     let mut character_records = HashMap::new();
+    let mut vfx_system_definition_datas = HashMap::new();
 
-    for entry in loader
+    for entry in map_loader
         .materials_bin
         .iter_entry_by_class(hash_bin("BarracksConfig"))
     {
@@ -38,12 +45,12 @@ pub async fn save_config_map(loader: &LeagueWadMapLoader) -> Result<ConfigMap, E
             .or_insert(from_entry::<BarracksConfig>(entry));
     }
 
-    for entry in loader.materials_bin.iter_entry_by_class(0x9d9f60d2) {
+    for entry in map_loader.materials_bin.iter_entry_by_class(0x9d9f60d2) {
         let record = from_entry::<Unk0x9d9f60d2>(entry);
         characters.entry(entry.hash).or_insert(record);
     }
 
-    for entry in loader
+    for entry in map_loader
         .materials_bin
         .iter_entry_by_class(hash_bin("MapPlaceableContainer"))
     {
@@ -86,33 +93,40 @@ pub async fn save_config_map(loader: &LeagueWadMapLoader) -> Result<ConfigMap, E
         }
     }
 
-    for environment_object in environment_objects.values() {
-        let skin_key = environment_object.definition.skin.clone();
-        let skin = save_environment_object(&loader.wad_loader, &skin_key).await?;
-        skins.entry(skin_key).or_insert(skin);
+    let mut skin_paths = Vec::new();
+    let mut record_paths = Vec::new();
 
-        let character_record_key = environment_object.definition.character_record.clone();
-        let character_record = loader
-            .wad_loader
-            .load_character_record(&character_record_key);
-        character_records
-            .entry(character_record_key)
-            .or_insert(character_record);
+    for environment_object in environment_objects.values() {
+        skin_paths.push(environment_object.definition.skin.clone());
+        record_paths.push(environment_object.definition.character_record.clone());
     }
 
     for character in characters.values() {
-        let skin_key = character.skin.clone();
-        let skin = save_environment_object(&loader.wad_loader, &skin_key).await?;
-        skins.entry(skin_key).or_insert(skin);
+        skin_paths.push(character.skin.clone());
+        record_paths.push(character.character_record.clone());
+    }
 
-        let character_record_key = character.character_record.clone();
-        let character_record = loader
-            .wad_loader
-            .load_character_record(&character_record_key);
+    for skin_path in skin_paths {
+        let (skin, skin_vfx_system_definition_datas) =
+            save_character(&map_loader.wad_loader, &skin_path).await?;
+
+        skins.entry(skin_path).or_insert(skin);
+        vfx_system_definition_datas.extend(skin_vfx_system_definition_datas);
+    }
+
+    for record_path in record_paths {
+        let character_record = map_loader.wad_loader.load_character_record(&record_path);
         character_records
-            .entry(character_record_key)
+            .entry(record_path)
             .or_insert(character_record);
     }
+
+    for (champion, skin) in champions {
+        let champion_vfx_system_definition_datas = save_legends(root_dir, champion, skin).await?;
+        vfx_system_definition_datas.extend(champion_vfx_system_definition_datas);
+    }
+
+    save_navigation_grid(&map_loader).await?;
 
     let configs = ConfigMap {
         geometry_objects,
@@ -123,6 +137,7 @@ pub async fn save_config_map(loader: &LeagueWadMapLoader) -> Result<ConfigMap, E
         environment_objects,
         skins,
         character_records,
+        vfx_system_definition_datas,
     };
 
     // 保存最终配置文件

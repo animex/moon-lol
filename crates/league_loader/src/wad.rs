@@ -9,7 +9,7 @@ use std::{
 use binrw::{args, io::NoSeek, BinRead, Endian};
 use zstd::Decoder;
 
-use league_core::{CharacterRecord, SkinCharacterDataProperties};
+use league_core::{CharacterRecord, ResourceResolver, SkinCharacterDataProperties};
 use league_file::LeagueTexture;
 use league_property::{from_entry, EntryData, PropFile};
 use league_utils::{hash_bin, hash_wad};
@@ -162,14 +162,24 @@ impl LeagueWadLoader {
     pub fn load_character_skin(
         &self,
         skin: &str,
-    ) -> (SkinCharacterDataProperties, HashMap<u32, EntryData>) {
+    ) -> (
+        SkinCharacterDataProperties,
+        Option<ResourceResolver>,
+        HashMap<u32, EntryData>,
+    ) {
         let skin_bin = self.get_skin_bin_by_path(skin).unwrap();
 
-        let awi = skin_bin
-            .iter_entry_by_class(hash_bin("SkinCharacterDataProperties"))
-            .collect::<Vec<_>>();
+        let skin_character_data_properties = from_entry(
+            skin_bin
+                .iter_entry_by_class(hash_bin("SkinCharacterDataProperties"))
+                .next()
+                .unwrap(),
+        );
 
-        let skin_character_data_properties = awi.iter().next().unwrap();
+        let resource_resolver = skin_bin
+            .iter_entry_by_class(hash_bin("ResourceResolver"))
+            .next()
+            .map(|v| from_entry(v));
 
         let flat_map: HashMap<_, _> = skin_bin
             .links
@@ -179,7 +189,7 @@ impl LeagueWadLoader {
             .map(|v| (v.hash, v))
             .collect();
 
-        (from_entry(skin_character_data_properties), flat_map)
+        (skin_character_data_properties, resource_resolver, flat_map)
     }
 
     pub fn get_wad_entry_reader(

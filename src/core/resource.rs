@@ -28,6 +28,7 @@ impl Plugin for PluginResource {
 
         let nav_grid: ConfigNavigationGrid =
             get_struct_from_file(CONFIG_PATH_MAP_NAV_GRID).unwrap();
+
         app.insert_resource(nav_grid);
     }
 }
