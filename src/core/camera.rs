@@ -24,6 +24,19 @@ pub const CAMERA_MAP_CONSTRAIN_OFFSET_BOTTOM: f32 = -2000.0;
 
 pub const CAMERA_OFFSET: Vec3 = Vec3::new(CAMERA_OFFSET_X, CAMERA_OFFSET_Y, CAMERA_OFFSET_Z);
 
+#[derive(Default)]
+pub struct PluginCamera;
+
+impl Plugin for PluginCamera {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, setup);
+        app.add_systems(Update, update);
+        app.add_systems(Update, update_focus);
+        app.add_systems(Update, on_wheel);
+        app.add_systems(Update, on_mouse_scroll);
+    }
+}
+
 #[derive(Component)]
 pub struct Focus;
 
@@ -46,20 +59,10 @@ impl CameraState {
     }
 }
 
-#[derive(Default)]
-pub struct PluginCamera;
-
-impl Plugin for PluginCamera {
-    fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
-        app.add_systems(Update, update);
-        app.add_systems(Update, update_focus);
-        app.add_systems(Update, on_wheel);
-        app.add_systems(Update, on_mouse_scroll);
-    }
-}
-
-fn setup(mut commands: Commands, mut window: Query<&mut Window>) {
+fn setup(
+    mut commands: Commands,
+    // mut window: Query<&mut Window>
+) {
     commands.spawn((
         Camera3d::default(),
         CameraState {
@@ -68,9 +71,9 @@ fn setup(mut commands: Commands, mut window: Query<&mut Window>) {
         },
     ));
 
-    if let Ok(mut window) = window.single_mut() {
-        window.cursor_options.grab_mode = CursorGrabMode::Confined;
-    }
+    // if let Ok(mut window) = window.single_mut() {
+    //     window.cursor_options.grab_mode = CursorGrabMode::Confined;
+    // }
 }
 
 fn update(mut q_camera: Query<(&mut Transform, &CameraState), Changed<CameraState>>) {

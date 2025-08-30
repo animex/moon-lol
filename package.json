@@ -1,13 +1,14 @@
 {
   "name": "fsm-demo-rust",
   "scripts": {
-    "watch": "cargo-watch -x run -w src -w assets",
     "extract": "cargo run --example extract",
     "example:classic_fiora": "cargo run --package moon_lol --example classic_fiora",
     "example:attack": "cargo run --package moon_lol --example attack",
     "wsl:example:classic_fiora": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo run --package moon_lol --example classic_fiora",
     "wsl:example:navigation_grid": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo run --package moon_lol --example navigation_grid",
-    "wsl:example:attack": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo run --package moon_lol --example attack"
+    "wsl:example:attack": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo run --package moon_lol --example attack",
+    "wsl:example:attack:watch": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo-watch -x \"run --example attack\" -w src -w assets",
+    "wsl:example:particle:watch": "WGPU_ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER=1 cargo-watch -w src -w assets/shaders -x \"run --example particle\""
   },
   "dependencies": {
     "@gltf-transform/core": "^4.2.0",

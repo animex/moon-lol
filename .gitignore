@@ -3,7 +3,8 @@ target
 
 node_modules
 
-assets
+assets/*
+!assets/shaders
 
 *.db
 .docs-cache

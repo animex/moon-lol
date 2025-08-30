@@ -116,7 +116,7 @@ fn update_add_vital(
             commands
                 .entity(target_entity)
                 .trigger(CommandParticleSpawn {
-                    particle: hash_bin("Fiora_Passive_NE"),
+                    particle: hash_bin("Fiora_Passive_NW_Warning"),
                 });
         }
     }

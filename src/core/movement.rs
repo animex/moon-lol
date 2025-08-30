@@ -77,9 +77,9 @@ fn update_path_movement(
     mut commands: Commands,
     mut query: Query<(Entity, &Movement, &mut MovementState)>,
     mut q_transform: Query<&mut Transform>,
-    timer: Res<Time<Fixed>>,
+    time: Res<Time<Fixed>>,
 ) {
-    let dt = timer.delta_secs();
+    let dt = time.delta_secs();
 
     for (entity, movement, mut movement_state) in query.iter_mut() {
         if movement_state.completed || movement_state.path.is_empty() {

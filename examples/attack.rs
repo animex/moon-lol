@@ -8,7 +8,7 @@ use league_utils::hash_bin;
 use lol_config::{ConfigGame, ConfigMap, ConfigNavigationGrid};
 use lol_core::Team;
 use moon_lol::core::{spawn_skin_entity, Attack, Controller, Focus, Health, Movement, PluginGame};
-use moon_lol::entities::Fiora;
+use moon_lol::entities::{Fiora, PluginBarrack};
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
@@ -36,7 +36,7 @@ fn main() {
                     ..default()
                 }),
             PluginCore.build().disable::<PluginGame>(),
-            PluginEntities,
+            PluginEntities.build().disable::<PluginBarrack>(),
         ))
         .add_systems(Startup, setup)
         .run();
