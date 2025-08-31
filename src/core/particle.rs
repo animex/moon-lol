@@ -32,13 +32,12 @@ const SHADER_ASSET_PATH: &str = "shaders/custom_material.wgsl";
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
 pub struct CustomMaterial {
-    #[uniform(0)]
     pub color: LinearRgba,
-    #[texture(1)]
-    #[sampler(2)]
+    #[texture(0)]
+    #[sampler(1)]
     pub texture: Option<Handle<Image>>,
-    #[texture(3)]
-    #[sampler(4)]
+    #[texture(2)]
+    #[sampler(3)]
     pub particle_color_texture: Option<Handle<Image>>,
     pub alpha_mode: AlphaMode,
 

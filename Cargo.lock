@@ -3276,6 +3276,7 @@ dependencies = [
  "bevy_egui",
  "binrw",
  "league_core",
+ "league_file",
  "league_loader",
  "league_property",
  "league_to_lol",

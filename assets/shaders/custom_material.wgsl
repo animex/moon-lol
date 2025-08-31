@@ -5,11 +5,10 @@
     mesh_view_bindings::globals,
 }
 
-@group(2) @binding(0) var<uniform> material_color: vec4<f32>;
-@group(2) @binding(1) var texture_texture: texture_2d<f32>;
-@group(2) @binding(2) var texture_sampler: sampler;
-@group(2) @binding(3) var particle_color_texture_texture: texture_2d<f32>;
-@group(2) @binding(4) var particle_color_texture_sampler: sampler;
+@group(2) @binding(0) var texture_texture: texture_2d<f32>;
+@group(2) @binding(1) var texture_sampler: sampler;
+@group(2) @binding(2) var particle_color_texture_texture: texture_2d<f32>;
+@group(2) @binding(3) var particle_color_texture_sampler: sampler;
 
 @fragment
 fn fragment(
