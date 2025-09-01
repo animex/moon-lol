@@ -2324,7 +2324,7 @@ pub struct Unk0x429a2180 {
     pub unk_0x7d27af7f: Option<bool>,
     pub stop_spawn_time_secs: Option<f32>,
     pub minimap_icon_offset: Option<Vec3>,
-    pub camp_name: String,
+    pub camp_name: Option<String>,
     pub team: u32,
     pub tags: Option<Vec<u32>>,
 }
