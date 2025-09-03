@@ -4,7 +4,6 @@ target
 node_modules
 
 assets/*
-!assets/shaders
 
 *.db
 .docs-cache

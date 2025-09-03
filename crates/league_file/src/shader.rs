@@ -8,7 +8,7 @@ use crate::SizedStringU32;
 #[br(little)]
 pub struct LeagueShader {
     pub magic: SizedStringU32,
-    #[br(dbg)]
+
     pub shader_count: u32,
     pub base_define_count: u32,
     pub bundled_shader_count: u32,

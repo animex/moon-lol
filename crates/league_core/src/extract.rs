@@ -1,9 +1,12 @@
 use std::collections::HashMap;
 
-use bevy::math::{Mat4, Vec2, Vec3, Vec4};
+use bevy::{
+    ecs::component::Component,
+    math::{Mat4, Vec2, Vec3, Vec4},
+};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum OneTrueMaterialDriverMDrivers {
     HasGearDynamicMaterialBoolDriver(HasGearDynamicMaterialBoolDriver),
     HasBuffDynamicMaterialBoolDriver(HasBuffDynamicMaterialBoolDriver),
@@ -59,7 +62,7 @@ pub enum OneTrueMaterialDriverMDrivers {
     MaxMaterialDriver(MaxMaterialDriver),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum HasAllSubRequirementsCastRequirementMSubRequirements {
     HasNNearbyVisibleUnitsRequirement(HasNNearbyVisibleUnitsRequirement),
     HasAllSubRequirementsCastRequirement(HasAllSubRequirementsCastRequirement),
@@ -72,7 +75,7 @@ pub enum HasAllSubRequirementsCastRequirementMSubRequirements {
     HasUnitTagsCastRequirement(HasUnitTagsCastRequirement),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum VfxEmitterDefinitionDataSpawnShape {
     VfxShapeBox(VfxShapeBox),
     VfxShapeCylinder(VfxShapeCylinder),
@@ -81,7 +84,7 @@ pub enum VfxEmitterDefinitionDataSpawnShape {
     VfxShapeLegacy(VfxShapeLegacy),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum VfxEmitterDefinitionDataPrimitive {
     VfxPrimitiveRay,
     VfxPrimitiveArbitraryQuad,
@@ -96,19 +99,19 @@ pub enum VfxEmitterDefinitionDataPrimitive {
     VfxPrimitiveBeam(VfxPrimitiveBeam),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TargeterDefinitionLineIndicatorType {
     IndicatorTypeGlobal(IndicatorTypeGlobal),
     IndicatorTypeLocal,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TargeterDefinitionRangeMFadeBehavior {
     FadeToExplicitValueBehavior(FadeToExplicitValueBehavior),
     FadeOverTimeBehavior(FadeOverTimeBehavior),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ProductOfSubPartsCalculationPartMPart2 {
     ByCharLevelFormulaCalculationPart(ByCharLevelFormulaCalculationPart),
     AbilityResourceByCoefficientCalculationPart(AbilityResourceByCoefficientCalculationPart),
@@ -130,7 +133,7 @@ pub enum ProductOfSubPartsCalculationPartMPart2 {
     NamedDataValueCalculationPart(NamedDataValueCalculationPart),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BarracksMinionConfigWaveBehavior {
     RotatingWaveBehavior(RotatingWaveBehavior),
     TimedVariableWaveBehavior(TimedVariableWaveBehavior),
@@ -138,7 +141,7 @@ pub enum BarracksMinionConfigWaveBehavior {
     ConstantWaveBehavior(ConstantWaveBehavior),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum CustomTargeterDefinitionsMTargeterDefinitions {
     TargeterDefinitionWall(TargeterDefinitionWall),
     TargeterDefinitionCone(TargeterDefinitionCone),
@@ -151,14 +154,14 @@ pub enum CustomTargeterDefinitionsMTargeterDefinitions {
     TargeterDefinitionMultiAoe(TargeterDefinitionMultiAoe),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SpellRankUpRequirementsMRequirements {
     HasBuffRequirement(HasBuffRequirement),
     CharacterLevelRequirement(CharacterLevelRequirement),
     HasSkillPointRequirement,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SkinCharacterDataPropertiesPersistentEffectConditions {
     MapScriptLocator(MapScriptLocator),
     ResimulateTrailVfxOnEnterVisibility(ResimulateTrailVfxOnEnterVisibility),
@@ -199,20 +202,20 @@ pub enum SkinCharacterDataPropertiesPersistentEffectConditions {
     FixedDistanceIgnoringTerrain(FixedDistanceIgnoringTerrain),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SkinCharacterDataPropertiesUnknownEnumField {
     Unk0xe7ee4f28(Unk0xe7ee4f28),
     Unk0xc96d9140(Unk0xc96d9140),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ScriptDataObjectMConstants {
     GameModeConstantStringVector(GameModeConstantStringVector),
     GameModeConstantInteger(GameModeConstantInteger),
     GameModeConstantString(GameModeConstantString),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AtomicClipDataMEventDataMap {
     ConformToPathEventData(ConformToPathEventData),
     EnableLookAtEventData(EnableLookAtEventData),
@@ -230,20 +233,20 @@ pub enum AtomicClipDataMEventDataMap {
     LockRootOrientationEventData(LockRootOrientationEventData),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum JunglePathRecommendationOrderJunglePath {
     TakeCamp(TakeCamp),
     TerminatePath,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SpellDataResourceMSpellCalculations {
     GameCalculation(GameCalculation),
     GameCalculationConditional(GameCalculationConditional),
     GameCalculationModified(GameCalculationModified),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SpellDataResourceMTargetingTypeData {
     MySelf,
     Direction,
@@ -261,13 +264,13 @@ pub enum SpellDataResourceMTargetingTypeData {
     SelfAoe,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SpellDataResourceUnknownEnumField {
     Unk0x6bbc3db6(Unk0x6bbc3db6),
     Unk0xf00f3333,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ParametricClipDataUpdater {
     TurnAngleRemainingParametricUpdater,
     AttackSpeedParametricUpdater,
@@ -299,13 +302,13 @@ pub enum ParametricClipDataUpdater {
     IsHomeguardParametricUpdater,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum VfxMaterialDefinitionDataMaterialDrivers {
     VfxFloatOverLifeMaterialDriver(VfxFloatOverLifeMaterialDriver),
     VfxColorOverLifeMaterialDriver(VfxColorOverLifeMaterialDriver),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ContextualConditionCharacterMChildConditions {
     ContextualConditionCharacterPlayingEmote,
     ContextualConditionCharacterName(ContextualConditionCharacterName),
@@ -325,7 +328,7 @@ pub enum ContextualConditionCharacterMChildConditions {
     ContextualConditionCharacterInRangeForSyncedAnimation,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MissileSpecificationHeightSolver {
     SinusoidalHeightSolver(SinusoidalHeightSolver),
     CurveTheDifferenceHeightSolver(CurveTheDifferenceHeightSolver),
@@ -334,13 +337,13 @@ pub enum MissileSpecificationHeightSolver {
     GravityHeightSolver(GravityHeightSolver),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MissileSpecificationVerticalFacing {
     VerticalFacingFaceTarget,
     VeritcalFacingMatchVelocity,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MissileSpecificationMovementComponent {
     SyncCircleMovement(SyncCircleMovement),
     FixedSpeedMovement(FixedSpeedMovement),
@@ -356,13 +359,13 @@ pub enum MissileSpecificationMovementComponent {
     FixedSpeedSplineMovement(FixedSpeedSplineMovement),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum MissileSpecificationVisibilityComponent {
     Defaultvisibility(Defaultvisibility),
     EnterFowVisibility(EnterFowVisibility),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TriggerOnHitMActions {
     AttackEvents(AttackEvents),
     ChangeMissileSpeed(ChangeMissileSpeed),
@@ -374,13 +377,13 @@ pub enum TriggerOnHitMActions {
     ClearAlreadyHitTracking,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum PackManagerDataUnknownEnumField {
     Unk0x1ddfbeeb,
     Unk0x1aae122(Unk0x1aae122),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum SkinMeshDataPropertiesRigPoseModifierData {
     Unk0xe6147387(Unk0xe6147387),
     ConformToPathRigPoseModifierData(ConformToPathRigPoseModifierData),
@@ -388,7 +391,7 @@ pub enum SkinMeshDataPropertiesRigPoseModifierData {
     SpringPhysicsRigPoseModifierData(SpringPhysicsRigPoseModifierData),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ContextualConditionNegationMChildCondition {
     ContextualConditionTeammateDeathsNearby(ContextualConditionTeammateDeathsNearby),
     ContextualConditionWinningTeam(ContextualConditionWinningTeam),
@@ -429,32 +432,32 @@ pub enum ContextualConditionNegationMChildCondition {
     ContextualConditionMapId(ContextualConditionMapId),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum BasicSkinAugmentModifiers {
     Unk0xeea0bf1,
     Unk0x9c5b78dd(Unk0x9c5b78dd),
     Unk0x51ada002(Unk0x51ada002),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum TargetingParametersRangeValue {
     TargetingRangeValue(TargetingRangeValue),
     Unk0x9d62f7e(Unk0x9d62f7e),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum StatStoneEventToTrackStatFilters {
     TargetTypeFilter(TargetTypeFilter),
     TargetHasUnitTagFilter(TargetHasUnitTagFilter),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AnimationGraphDataMBlendDataTable {
     TransitionClipBlendData(TransitionClipBlendData),
     TimeBlendData(TimeBlendData),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum AnimationGraphDataMClipDataMap {
     ConditionBoolClipData(ConditionBoolClipData),
     AtomicClipData(AtomicClipData),
@@ -465,32 +468,32 @@ pub enum AnimationGraphDataMClipDataMap {
     SelectorClipData(SelectorClipData),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum Unk0xc76c1b9aModifiers {
     Unk0x557bb273(Unk0x557bb273),
     Unk0x51445de9(Unk0x51445de9),
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TooltipInstanceList {
     pub level_count: Option<u32>,
     pub elements: Option<Vec<TooltipInstanceListElement>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionBuffCounterChanged {
     pub buff: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellEffectAmount {
     pub value: Option<Vec<f32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BuffData {
     pub m_float_vars_decimals: Option<Vec<i32>>,
@@ -503,7 +506,7 @@ pub struct BuffData {
     pub persistent_effect_conditions: Option<Vec<PersistentEffectConditionData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellModifier {
     pub m_calculation_stat_conversions: Option<Vec<RatioConversion>>,
@@ -513,13 +516,13 @@ pub struct SpellModifier {
     pub m_modifier_id: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterUnitTags {
     pub m_unit_tags: ObjectTags,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConformToPathRigPoseModifierData {
     pub activation_distance: Option<f32>,
@@ -535,32 +538,32 @@ pub struct ConformToPathRigPoseModifierData {
     pub m_damping_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9bc366ca {
     pub skin_id: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionTeammateDeathsNearby {
     pub m_teammate_deaths: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpellSlot {
     pub m_spell_slot: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ValueFloat {
     pub dynamics: Option<VfxAnimatedFloatVariableData>,
     pub constant_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SubmeshVisibilityEventData {
     pub m_end_frame: Option<f32>,
@@ -573,7 +576,7 @@ pub struct SubmeshVisibilityEventData {
     pub m_is_self_only: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldDragDefinitionData {
     pub position: Option<ValueVector3>,
@@ -581,32 +584,32 @@ pub struct VfxFieldDragDefinitionData {
     pub strength: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OneTrueMaterialDriver {
     pub m_drivers: Box<Option<Vec<OneTrueMaterialDriverMDrivers>>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameModeConstantInteger {
     pub m_value: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasAllSubRequirementsCastRequirement {
     pub m_sub_requirements: Box<Vec<HasAllSubRequirementsCastRequirementMSubRequirements>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xfe70e9c4 {
     pub unk_0x3ef62dce: u8,
     pub unk_0x4e748038: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone, Component)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmitterDefinitionData {
     pub spawn_shape: Option<VfxEmitterDefinitionDataSpawnShape>,
@@ -745,13 +748,13 @@ pub struct VfxEmitterDefinitionData {
     pub write_alpha_only: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveArbitraryTrail {
     pub m_trail: Option<VfxTrailDefinitionData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WallFollowMovement {
     pub m_use_ground_height_at_target: bool,
@@ -767,7 +770,7 @@ pub struct WallFollowMovement {
     pub m_wall_offset: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct JointSnapEventData {
     pub m_name: Option<u32>,
@@ -780,7 +783,7 @@ pub struct JointSnapEventData {
     pub m_is_self_only: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatTextIconData {
     pub m_display_size: Vec2,
@@ -790,27 +793,27 @@ pub struct FloatTextIconData {
     pub m_icon_file_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinUpgradeData {
     pub skin_augment_categories: Option<SkinAugmentCategories>,
     pub m_gear_skin_upgrades: Option<Vec<u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FadeToExplicitValueBehavior {
     pub m_alpha: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpawningUiDefinition {
     pub buff_name_filter: String,
     pub max_number_of_units: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe07edfa4 {
     pub path_hash: u32,
@@ -818,19 +821,19 @@ pub struct Unk0xe07edfa4 {
     pub default_visible: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OverrideAutoAttackCastTimeData {
     pub m_override_autoattack_cast_time_calculation: GameCalculation,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Cast {
     pub roll_for_critical_hit_result: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionLine {
     pub override_base_range: Option<FloatPerSpellLevel>,
@@ -858,7 +861,7 @@ pub struct TargeterDefinitionLine {
     pub facing_line: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EnterFowVisibility {
     pub m_missile_client_wait_for_target_update_before_missile_show: Option<bool>,
@@ -867,13 +870,13 @@ pub struct EnterFowVisibility {
     pub m_perception_bubble_radius: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x19da44b2 {
     pub unk_0x44146c9d: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapAudio {
     pub transform: Mat4,
@@ -881,13 +884,13 @@ pub struct MapAudio {
     pub event_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationMatrix {
     pub mrows: Vec<ItemRecommendationMatrixRow>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmissionSurfaceData {
     pub use_avatar_pose: Option<bool>,
@@ -899,7 +902,7 @@ pub struct VfxEmissionSurfaceData {
     pub use_surface_normal_for_birth_physics: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResimulateTrailVfxOnEnterVisibility {
     pub time_to_resimulate: f32,
@@ -907,14 +910,14 @@ pub struct ResimulateTrailVfxOnEnterVisibility {
     pub cycles: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionGameTimer {
     pub m_game_time_in_minutes: f32,
     pub m_compare_op: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionRange {
     pub texture_orientation: Option<u32>,
@@ -931,21 +934,21 @@ pub struct TargeterDefinitionRange {
     pub texture_override_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFloatOverLifeMaterialDriver {
     pub graph: VfxAnimatedFloatVariableData,
     pub frequency: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct JointOrientationEventData {
     pub blend_data: Unk0x125a3586,
     pub m_end_frame: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xc7e628b9 {
     pub unk_0x877e4953: u32,
@@ -955,32 +958,32 @@ pub struct Unk0xc7e628b9 {
     pub unk_0xd00e123a: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpellLevel {
     pub m_spell_level: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FollowTerrainHeightSolver {
     pub m_height_offset: Option<f32>,
     pub m_max_slope: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionMapId {
     pub m_map_i_ds: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xcf4a55da {
     pub overlays: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EnableLookAtEventData {
     pub m_name: Option<u32>,
@@ -990,7 +993,7 @@ pub struct EnableLookAtEventData {
     pub m_start_frame: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xc71ee7fb {
     pub transform: Mat4,
@@ -998,7 +1001,7 @@ pub struct Unk0xc71ee7fb {
     pub definition: Unk0xfde6a2d7,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TerrainType {
     pub m_river_cursor: CursorData,
@@ -1006,7 +1009,7 @@ pub struct TerrainType {
     pub m_brush_cursor: CursorData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicMaterialParameterDef {
     pub enabled: Option<bool>,
@@ -1014,13 +1017,13 @@ pub struct DynamicMaterialParameterDef {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpellName {
     pub m_spell: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAlphaErosionDefinitionData {
     pub erosion_map_name: Option<String>,
@@ -1035,7 +1038,7 @@ pub struct VfxAlphaErosionDefinitionData {
     pub erosion_map_address_mode: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParametricMovement {
     pub m_start_bone_name: String,
@@ -1045,13 +1048,13 @@ pub struct ParametricMovement {
     pub movement_entries: Vec<ParametricMovementEntry>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellRankIntDriver {
     pub spell_slot: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CharacterRecord {
     pub m_use_cc_animations: Option<bool>,
@@ -1191,7 +1194,7 @@ pub struct CharacterRecord {
     pub attack_speed_ratio: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xfde6a2d7 {
     pub team: Option<u32>,
@@ -1200,13 +1203,13 @@ pub struct Unk0xfde6a2d7 {
     pub unk_0xdbde2288: Vec<Unk0x82cab1b3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionIsAlly {
     pub m_is_ally: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationOverride {
     pub m_rec_item_ranges: Option<Vec<ItemRecOverrideRange>>,
@@ -1216,32 +1219,32 @@ pub struct ItemRecommendationOverride {
     pub starting_item_bundles: Option<Vec<ItemRecommendationOverrideStartingItemBundle>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AutoSpellCastInfo {
     pub auto_spell_cast: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterPlayingAnimation {
     pub m_animation_name_hash: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolSpellDesc {
     pub display_name: Option<String>,
     pub desc: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MaxMaterialDriver {
     pub m_drivers: Box<Vec<OneTrueMaterialDriverMDrivers>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct OverrideAttackTimeData {
     pub m_cast_time_percent: Option<f32>,
@@ -1249,7 +1252,7 @@ pub struct OverrideAttackTimeData {
     pub m_total_attack_time_secs: Option<GameCalculation>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinAudioProperties {
     pub tag_event_list: Option<Vec<String>>,
@@ -1257,20 +1260,20 @@ pub struct SkinAudioProperties {
     pub bank_units: Option<Vec<BankUnit>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GearSkinUpgrade {
     pub m_gear_data: GearData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetingPriorityList {
     pub targeting_parameters_list: Vec<TargetingParameters>,
     pub m_spell_flags: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TreatAutoAttacksAsNormalSpells {
     pub auto_attack_spells_use_spell_source: bool,
@@ -1278,52 +1281,52 @@ pub struct TreatAutoAttacksAsNormalSpells {
     pub skip_sequenced_attack_events: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ProductOfSubPartsCalculationPart {
     pub m_part2: Box<ProductOfSubPartsCalculationPartMPart2>,
     pub m_part1: Box<ProductOfSubPartsCalculationPartMPart2>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xfcb92181 {
     pub team: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxShapeSphere {
     pub radius: Option<f32>,
     pub flags: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DelayStart {
     pub m_delay_time: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IsAnimationPlayingDynamicMaterialBoolDriver {
     pub m_animation_names: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionObjectiveTakeByMyTeam {
     pub m_taken_objective: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegratedValueVector2 {
     pub constant_value: Option<Vec2>,
     pub dynamics: VfxAnimatedVector2fVariableData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RatioConversion {
     pub m_source_stat_output: Option<u8>,
@@ -1331,32 +1334,32 @@ pub struct RatioConversion {
     pub m_source_to_result_conversion_ratio: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParametricMovementEntry {
     pub movement_spec: FixedSpeedSplineMovement,
     pub value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CastOnHit {
     pub roll_for_critical_hit_result: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LogicDriverFloatParametricUpdater {
     pub driver: OneTrueMaterialDriverMDrivers,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionAoeScalar {
     pub scalar: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xff6e8118 {
     pub name: u32,
@@ -1364,20 +1367,20 @@ pub struct Unk0xff6e8118 {
     pub definition: Unk0x7faa90a0,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BorderPropertyData {
     pub border_path: String,
     pub border_treatment: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapBakeProperties {
     pub light_grid_size: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxBeamDefinitionData {
     pub m_animated_color_with_distance: Option<ValueColor>,
@@ -1390,14 +1393,14 @@ pub struct VfxBeamDefinitionData {
     pub m_segments: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9c1d99c0 {
     pub spells: Vec<u32>,
     pub unk_0x80cf3335: Unk0x7a1a2d27,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialSwitchDef {
     pub on: Option<bool>,
@@ -1405,7 +1408,7 @@ pub struct StaticMaterialSwitchDef {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameCalculationConditional {
     pub m_default_game_calculation: u32,
@@ -1416,7 +1419,7 @@ pub struct GameCalculationConditional {
     pub m_conditional_game_calculation: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackData {
     pub m_priority: Option<u8>,
@@ -1424,21 +1427,21 @@ pub struct TrackData {
     pub m_blend_mode: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FlexValueFloat {
     pub m_flex_id: Option<u32>,
     pub m_value: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeMaterialDriver {
     pub loop_time_as_fraction: Option<bool>,
     pub loop_duration: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatByCoefficientCalculationPart {
     pub m_stat_formula: Option<u8>,
@@ -1448,13 +1451,13 @@ pub struct StatByCoefficientCalculationPart {
     pub stat_type: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterSkinId {
     pub m_skin_i_ds: Vec<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x6ecc3b19 {
     pub unk_0x262bfa2e: Option<u32>,
@@ -1463,19 +1466,19 @@ pub struct Unk0x6ecc3b19 {
     pub unk_0x20941997: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TextureResource {
     pub texture_path: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationMatrixRow {
     pub m_choices_map: Option<HashMap<String, ItemRecommendationChoices>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionCone {
     pub end_locator: DrawablePositionLocator,
@@ -1487,18 +1490,18 @@ pub struct TargeterDefinitionCone {
     pub cone_follows_end: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinCharacterMetaDataPropertiesSpawningSkinOffset {
     pub tag: String,
     pub offset: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParametricMovementTypeAngleFromTarget {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasNNearbyVisibleUnitsRequirement {
     pub m_units_required: u32,
@@ -1506,7 +1509,7 @@ pub struct HasNNearbyVisibleUnitsRequirement {
     pub m_range: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistentEffectConditionData {
     pub force_render_vfx: Option<bool>,
@@ -1517,31 +1520,31 @@ pub struct PersistentEffectConditionData {
     pub submeshes_to_show: Option<Vec<u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldAccelerationDefinitionData {
     pub acceleration: Option<ValueVector3>,
     pub is_local_space: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PercentageOfBuffNameElapsed {
     pub buff_name: u32,
     pub coefficient: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x635d04b7 {
     pub champion_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChampionRuneRecommendationsContext {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasNNearbyUnitsRequirement {
     pub m_units_requirements: Box<Vec<HasAllSubRequirementsCastRequirementMSubRequirements>>,
@@ -1550,7 +1553,7 @@ pub struct HasNNearbyUnitsRequirement {
     pub m_distance_type: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FadeOverTimeBehavior {
     pub m_start_alpha: Option<f32>,
@@ -1559,7 +1562,7 @@ pub struct FadeOverTimeBehavior {
     pub m_end_alpha: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BarracksMinionConfig {
     pub minion_upgrade_stats: MinionUpgradeConfig,
@@ -1568,14 +1571,14 @@ pub struct BarracksMinionConfig {
     pub wave_behavior: BarracksMinionConfigWaveBehavior,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecOverrideRange {
     pub max_completed_items: Option<u32>,
     pub items: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpringPhysicsRigPoseModifierData {
     pub spring_stiffness: Option<f32>,
@@ -1590,13 +1593,13 @@ pub struct SpringPhysicsRigPoseModifierData {
     pub joint: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NumberCalculationPart {
     pub m_number: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmitterFiltering {
     pub spectator_policy: Option<u8>,
@@ -1605,7 +1608,7 @@ pub struct VfxEmitterFiltering {
     pub keywords_required: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xd82714cc {
     pub flags: Option<u16>,
@@ -1613,7 +1616,7 @@ pub struct Unk0xd82714cc {
     pub name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RecSpellRankUpInfo {
     pub map_id: Option<u32>,
@@ -1625,7 +1628,7 @@ pub struct RecSpellRankUpInfo {
     pub unk_0x5b968ffb: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AbilityResourceSlotInfo {
     pub ar_type: Option<u8>,
@@ -1651,33 +1654,33 @@ pub struct AbilityResourceSlotInfo {
     pub ar_base: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinAugmentCategories {
     pub border_augments: Vec<Unk0x4a70b12c>,
     pub basic_augments: Option<Vec<Unk0xe1555e0a>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimationFractionDynamicMaterialFloatDriver {
     pub m_animation_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CustomTargeterDefinitions {
     pub m_targeter_definitions: Vec<CustomTargeterDefinitionsMTargeterDefinitions>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x6bbc3db6 {
     pub unk_0xda28e4c: [u8; 4],
     pub spell_objects: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionBuffCounterReachedLimitFromZero {
     pub compare_op: Option<u8>,
@@ -1685,7 +1688,7 @@ pub struct ContextualConditionBuffCounterReachedLimitFromZero {
     pub m_buff: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAnimatedFloatVariableData {
     pub values: Vec<f32>,
@@ -1693,7 +1696,7 @@ pub struct VfxAnimatedFloatVariableData {
     pub times: Vec<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GearData {
     pub m_character_submeshes_to_show: Option<Vec<u32>>,
@@ -1708,7 +1711,7 @@ pub struct GearData {
     pub m_character_submeshes_to_hide: Option<Vec<u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DelayedBoolMaterialDriver {
     pub m_delay_on: Option<f32>,
@@ -1716,21 +1719,21 @@ pub struct DelayedBoolMaterialDriver {
     pub m_delay_off: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CatalogEntry {
     pub item_id: u32,
     pub content_id: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UseAutoattackCastTimeData {
     pub m_use_cast_time_as_total_time: Option<bool>,
     pub m_autoattack_cast_time_calculation: Option<GameCalculation>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x7084628f {
     pub unk_0xc742ceb4: u32,
@@ -1739,13 +1742,13 @@ pub struct Unk0x7084628f {
     pub bottom_hr_momentum_post: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CurveTheDifferenceHeightSolver {
     pub m_initial_target_height_offset: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationContextList {
     pub m_all_recommendable_item_ids: HashMap<u32, ItemRecommendationItemList>,
@@ -1753,7 +1756,7 @@ pub struct ItemRecommendationContextList {
     pub m_all_starting_item_ids: HashMap<u32, ItemRecommendationItemList>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x1aae122 {
     pub max_distance: f32,
@@ -1762,14 +1765,14 @@ pub struct Unk0x1aae122 {
     pub max_offset_delta: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParallelClipData {
     pub m_clip_name_list: Vec<u32>,
     pub m_flags: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ESportTeamEntry {
     pub texture_name: Option<String>,
@@ -1777,13 +1780,13 @@ pub struct ESportTeamEntry {
     pub league_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapTerrainPaint {
     pub terrain_paint_texture_path: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AttackEvents {
     pub roll_for_critical_hit_result: bool,
@@ -1794,14 +1797,14 @@ pub struct AttackEvents {
     pub trigger_once_per_enemy_of_parent: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9c5b78dd {
     pub unk_0xb4222185: Vec<u32>,
     pub resource_resolver: Unk0x20194a16,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapScriptLocator {
     pub name: String,
@@ -1809,14 +1812,14 @@ pub struct MapScriptLocator {
     pub script_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xf6f4bb5f {
     pub color: Option<[u8; 4]>,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolAlternateForm {
     pub name: String,
@@ -1825,7 +1828,7 @@ pub struct ToolAlternateForm {
     pub spells: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EvolutionDescription {
     pub m_icon_names: Vec<String>,
@@ -1834,7 +1837,7 @@ pub struct EvolutionDescription {
     pub m_tooltips: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionSkipTerrain {
     pub m_terrain_texture_name: String,
@@ -1842,7 +1845,7 @@ pub struct TargeterDefinitionSkipTerrain {
     pub m_end_locator: DrawablePositionLocator,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xf4a21c35 {
     pub transform: Mat4,
@@ -1850,30 +1853,30 @@ pub struct Unk0xf4a21c35 {
     pub name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialTechniqueDef {
     pub passes: Vec<StaticMaterialPassDef>,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellRankUpRequirements {
     pub m_requirements: Option<Vec<SpellRankUpRequirementsMRequirements>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EsportsBannerMaterialController {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatLiteralMaterialDriver {
     pub m_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolAiPresence {
     pub unk_0x6175bb7b: Option<bool>,
@@ -1886,20 +1889,20 @@ pub struct ToolAiPresence {
     pub hard: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BuffCounterDynamicMaterialFloatDriver {
     pub spell: Option<u32>,
     pub m_script_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x557bb273 {
     pub value: Option<Vec4>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinCharacterDataProperties {
     pub skin_animation_properties: SkinAnimationProperties,
@@ -1953,7 +1956,7 @@ pub struct SkinCharacterDataProperties {
     pub skin_upgrade_data: Option<SkinUpgradeData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BlendingSwitchMaterialDriver {
     pub m_elements: Box<Vec<SwitchMaterialDriverElement>>,
@@ -1962,13 +1965,13 @@ pub struct BlendingSwitchMaterialDriver {
     pub m_default_value: Box<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapPlaceableContainer {
     pub items: HashMap<u32, SkinCharacterDataPropertiesPersistentEffectConditions>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedTimeMovement {
     pub m_tracks_target: Option<bool>,
@@ -1985,7 +1988,7 @@ pub struct FixedTimeMovement {
     pub m_start_bone_skin_overrides: Option<HashMap<u32, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BuffCounterByCoefficientCalculationPart {
     pub m_icon_key: Option<String>,
@@ -1994,7 +1997,7 @@ pub struct BuffCounterByCoefficientCalculationPart {
     pub m_scaling_tag_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MissileAttachedTargetingDefinition {
     pub m_line_end_texture_name: String,
@@ -2004,7 +2007,7 @@ pub struct MissileAttachedTargetingDefinition {
     pub m_line_end_texture_width: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xdd661aab {
     pub unk_0x77cff90e: Unk0xd91a223,
@@ -2017,7 +2020,7 @@ pub struct Unk0xdd661aab {
     pub override_params: Option<Unk0xc7e628b9>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxProjectionDefinitionData {
     pub m_fading: Option<f32>,
@@ -2025,34 +2028,34 @@ pub struct VfxProjectionDefinitionData {
     pub color_modulate: Option<ValueColor>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GravityHeightSolver {
     pub m_gravity: Option<f32>,
     pub unk_0x922c17e5: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WallDetection {
     pub detection_range: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SwitchMaterialDriverElement {
     pub m_value: OneTrueMaterialDriverMDrivers,
     pub m_condition: OneTrueMaterialDriverMDrivers,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x6355dd6f {
     pub visibility_controller: u32,
     pub chunk: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAnimatedVector3fVariableData {
     pub times: Vec<f32>,
@@ -2060,7 +2063,7 @@ pub struct VfxAnimatedVector3fVariableData {
     pub probability_tables: Option<Vec<VfxProbabilityTableData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Defaultvisibility {
     pub m_visible_to_owner_team_only: Option<bool>,
@@ -2069,13 +2072,13 @@ pub struct Defaultvisibility {
     pub trail_time_to_consider_for_visibility: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x8ad25772 {
     pub system: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x111a9fcc {
     pub definition: Unk0xf775806c,
@@ -2083,7 +2086,7 @@ pub struct Unk0x111a9fcc {
     pub name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxSoftParticleDefinitionData {
     pub begin_in: Option<f32>,
@@ -2092,7 +2095,7 @@ pub struct VfxSoftParticleDefinitionData {
     pub delta_in: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxChildParticleSetDefinitionData {
     pub child_emit_on_death: Option<bool>,
@@ -2102,33 +2105,33 @@ pub struct VfxChildParticleSetDefinitionData {
     pub children_probability: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionRuleCooldown {
     pub m_rule_cooldown: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ColorGraphMaterialDriver {
     pub driver: Box<OneTrueMaterialDriverMDrivers>,
     pub colors: VfxAnimatedColorVariableData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe1555e0a {
     pub augment_group: Vec<u32>,
     pub unk_0x9a676645: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellLevelUpInfo {
     pub m_requirements: Vec<SpellRankUpRequirements>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapParticle {
     pub transform: Mat4,
@@ -2144,7 +2147,7 @@ pub struct MapParticle {
     pub system: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ScriptDataObject {
     pub m_required_constants_group: u32,
@@ -2152,7 +2155,7 @@ pub struct ScriptDataObject {
     pub m_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAnimatedColorVariableData {
     pub times: Option<Vec<f32>>,
@@ -2160,7 +2163,7 @@ pub struct VfxAnimatedColorVariableData {
     pub probability_tables: Option<Vec<VfxProbabilityTableData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PlatformSpellInfo {
     pub m_game_modes: Option<Vec<String>>,
@@ -2169,20 +2172,20 @@ pub struct PlatformSpellInfo {
     pub m_spell_id: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NavGridTerrainConfig {
     pub tags: Vec<Unk0xd82714cc>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SelectorClipData {
     pub m_selector_pair_data_list: Vec<SelectorPairData>,
     pub m_flags: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BorderSkinAugment {
     pub catalog_entry: CatalogEntry,
@@ -2190,7 +2193,7 @@ pub struct BorderSkinAugment {
     pub m_name_tra_key: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FadeEventData {
     pub m_time_to_fade: Option<f32>,
@@ -2201,14 +2204,14 @@ pub struct FadeEventData {
     pub m_fire_if_animation_ends_early: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionBuffCounterSetToZeroAfterLimitReached {
     pub m_buff: u32,
     pub m_counter_highest_reached: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TooltipInstanceBuff {
     pub m_format: u32,
@@ -2216,51 +2219,51 @@ pub struct TooltipInstanceBuff {
     pub m_loc_keys: Option<HashMap<String, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xcdb1c8f6 {
     pub unk_0x6355dd6f: Vec<Unk0x6355dd6f>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionItemVoGroup {
     pub m_item_vo_group_hash: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x5b2fdd66 {
     pub value: AnimationFractionDynamicMaterialFloatDriver,
     pub add: FloatLiteralMaterialDriver,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x75e34c40 {
     pub unk_0x1dcc5270: Vec<Unk0xd5c9eb1>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x51445de9 {
     pub value: Vec4,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xee39916f {
     pub emit_offset: Option<Vec3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SelectorPairData {
     pub m_clip_name: u32,
     pub m_probability: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AbilityObject {
     pub m_lifetime_manually_managed: Option<bool>,
@@ -2271,7 +2274,7 @@ pub struct AbilityObject {
     pub ability_traits: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LockRootOrientationEventData {
     pub blend_out_time: Option<f32>,
@@ -2280,7 +2283,7 @@ pub struct LockRootOrientationEventData {
     pub m_start_frame: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedSpeedSplineMovement {
     pub m_use_missile_position_as_origin: Option<bool>,
@@ -2294,7 +2297,7 @@ pub struct FixedSpeedSplineMovement {
     pub m_target_height_augment: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParticleEventData {
     pub scale: Option<f32>,
@@ -2314,7 +2317,7 @@ pub struct ParticleEventData {
     pub m_fire_if_animation_ends_early: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x429a2180 {
     pub reveal_event: Option<u16>,
@@ -2329,14 +2332,14 @@ pub struct Unk0x429a2180 {
     pub tags: Option<Vec<u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LinearTransformProcessorData {
     pub m_increment: Option<f32>,
     pub m_multiplier: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StopAnimationEventData {
     pub m_start_frame: Option<f32>,
@@ -2345,7 +2348,7 @@ pub struct StopAnimationEventData {
     pub m_name: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xc96d9140 {
     pub unk_0x1418c47f: u32,
@@ -2353,7 +2356,7 @@ pub struct Unk0xc96d9140 {
     pub unk_0xc19c58be: Option<HashMap<String, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AtomicClipData {
     pub m_track_data_name: u32,
@@ -2370,13 +2373,13 @@ pub struct AtomicClipData {
     pub m_event_data_map: Option<HashMap<u32, AtomicClipDataMEventDataMap>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFrameFloatClipReaderDriver {
     pub clip_accessory_to_read: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ClampSubPartsCalculationPart {
     pub m_floor: Option<f32>,
@@ -2384,20 +2387,20 @@ pub struct ClampSubPartsCalculationPart {
     pub m_subparts: Box<Vec<ProductOfSubPartsCalculationPartMPart2>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct JunglePathRecommendation {
     pub order_jungle_path: Vec<JunglePathRecommendationOrderJunglePath>,
     pub chaos_jungle_path: Vec<JunglePathRecommendationOrderJunglePath>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PackFormationData {
     pub formation_positions: Vec<Vec2>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDataResource {
     pub m_cant_cancel_while_channeling: Option<bool>,
@@ -2559,13 +2562,13 @@ pub struct SpellDataResource {
     pub m_orient_radius_texture_from_player: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpecificColorMaterialDriver {
     pub m_color: Option<Vec4>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapSunProperties {
     pub fog_color: Vec4,
@@ -2579,7 +2582,7 @@ pub struct MapSunProperties {
     pub sky_light_color: Vec4,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualActionPlayAnimation {
     pub m_hashed_situation_trigger: Option<u32>,
@@ -2587,14 +2590,14 @@ pub struct ContextualActionPlayAnimation {
     pub m_hashed_animation_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ValueVector3 {
     pub dynamics: Option<VfxAnimatedVector3fVariableData>,
     pub constant_value: Option<Vec3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TooltipInstanceSpell {
     pub m_loc_keys: Option<HashMap<String, String>>,
@@ -2604,7 +2607,7 @@ pub struct TooltipInstanceSpell {
     pub m_lists: Option<HashMap<String, TooltipInstanceList>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionFloatPairData {
     pub m_clip_name: u32,
@@ -2613,19 +2616,19 @@ pub struct ConditionFloatPairData {
     pub m_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpellIsReady {
     pub m_spell_is_ready: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AllTrueMaterialDriver {
     pub m_drivers: Box<Option<Vec<OneTrueMaterialDriverMDrivers>>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveAttachedMesh {
     pub align_yaw_to_camera: Option<bool>,
@@ -2635,7 +2638,7 @@ pub struct VfxPrimitiveAttachedMesh {
     pub m_mesh: Option<VfxMeshDefinitionData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicMaterialStaticSwitch {
     pub name: String,
@@ -2643,13 +2646,13 @@ pub struct DynamicMaterialStaticSwitch {
     pub enabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionNumberOfCharactersNearTargetPos {
     pub m_team_compare_op: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SequencerClipData {
     pub m_clip_name_list: Vec<u32>,
@@ -2657,20 +2660,20 @@ pub struct SequencerClipData {
     pub m_event_data_map: Option<HashMap<u32, AtomicClipDataMEventDataMap>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameModeConstantString {
     pub m_value: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmitterAudio {
     pub sound_on_create: Option<String>,
     pub sound_persistent: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConformToPathEventData {
     pub m_name: Option<u32>,
@@ -2683,7 +2686,7 @@ pub struct ConformToPathEventData {
     pub m_mask_data_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FaceTargetEventData {
     pub blend_out_time: Option<f32>,
@@ -2697,7 +2700,7 @@ pub struct FaceTargetEventData {
     pub y_rotation_degrees: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionAoe {
     pub override_radius: Option<FloatPerSpellLevel>,
@@ -2711,14 +2714,14 @@ pub struct TargeterDefinitionAoe {
     pub texture_orientation: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ValueVector2 {
     pub dynamics: Option<VfxAnimatedVector2fVariableData>,
     pub constant_value: Option<Vec2>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxMeshDefinitionData {
     pub m_mesh_name: Option<String>,
@@ -2731,7 +2734,7 @@ pub struct VfxMeshDefinitionData {
     pub m_lock_mesh_to_attachment: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe7b61183 {
     pub unk_0xe1795243: bool,
@@ -2739,20 +2742,20 @@ pub struct Unk0xe7b61183 {
     pub unk_0x44146c9d: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x72f86c81 {
     pub unk_0xccfd27e6: Option<f32>,
     pub unk_0xdc9124b1: [u8; 4],
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveCameraTrail {
     pub m_trail: Option<VfxTrailDefinitionData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPaletteDefinitionData {
     pub palette_texture: Option<String>,
@@ -2764,20 +2767,20 @@ pub struct VfxPaletteDefinitionData {
     pub palette_v_animation_curve: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinAnimationProperties {
     pub animation_graph_data: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialShaderParamDef {
     pub value: Option<Vec4>,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldCollectionDefinitionData {
     pub field_noise_definitions: Option<Vec<VfxFieldNoiseDefinitionData>>,
@@ -2787,20 +2790,20 @@ pub struct VfxFieldCollectionDefinitionData {
     pub field_acceleration_definitions: Option<Vec<VfxFieldAccelerationDefinitionData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EffectValueCalculationPart {
     pub m_effect_index: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ESportLeagueEntry {
     pub league_name: String,
     pub texture_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x7fb92f53 {
     pub unk_0x3c475337: f32,
@@ -2808,7 +2811,7 @@ pub struct Unk0x7fb92f53 {
     pub unk_0x28de30d6: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAssetRemap {
     pub r#type: Option<u32>,
@@ -2816,7 +2819,7 @@ pub struct VfxAssetRemap {
     pub new_asset: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapContainer {
     pub lowest_walkable_height: f32,
@@ -2828,7 +2831,7 @@ pub struct MapContainer {
     pub mesh_combine_radius: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xc406a533 {
     pub unk_0x27639032: u8,
@@ -2837,7 +2840,7 @@ pub struct Unk0xc406a533 {
     pub default_visible: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x42239bf8 {
     pub name: u32,
@@ -2845,13 +2848,13 @@ pub struct Unk0x42239bf8 {
     pub transform: Mat4,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapNavGridOverlays {
     pub overlays: Vec<MapNavGridOverlay>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedDistanceIgnoringTerrain {
     pub scan_width_override: Option<f32>,
@@ -2861,20 +2864,20 @@ pub struct FixedDistanceIgnoringTerrain {
     pub m_maximum_distance: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xb09016f6 {
     pub effect_calculation: GameCalculation,
     pub effect_tag: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CastOnMovementComplete {
     pub roll_for_critical_hit_result: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationContext {
     pub upgrade_choices: Option<HashMap<u32, ItemRecommendationItemList>>,
@@ -2889,13 +2892,13 @@ pub struct ItemRecommendationContext {
     pub m_position: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetHasUnitTagFilter {
     pub unit_tags: ObjectTags,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialPassDef {
     pub depth_offset_slope: Option<f32>,
@@ -2915,7 +2918,7 @@ pub struct StaticMaterialPassDef {
     pub cull_enable: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatStoneData {
     pub events_to_track: Vec<StatStoneEventToTrack>,
@@ -2932,91 +2935,91 @@ pub struct StatStoneData {
     pub triggered_from_script: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Float4LiteralMaterialDriver {
     pub value: Option<Vec4>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxChildIdentifier {
     pub effect_key: Option<u32>,
     pub effect: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct WidthPerSecond {
     pub m_width_per_second: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x6fb748e3 {
     pub files: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpell {
     pub m_spell_slot: u32,
     pub m_child_conditions: Vec<ContextualConditionSpellIsReady>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FontLocaleType {
     pub m_font_file_path: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct EsportsBannerData {
     pub banner_name: String,
     pub team: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapLocator {
     pub transform: Mat4,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TakeCamp {
     pub camp: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ReturnToCasterOnMovementComplete {
     pub m_preserve_speed: bool,
     pub m_override_spec: AcceleratingMovement,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct KeyFrameFloatMapClipAccessoryData {
     pub name: u32,
     // pub key_frame_floatmap: Option<HashMap<f32, f32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xf3cbe7b2 {
     pub m_spell_calculation_key: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDataValueVector {
     pub spell_data_values: Option<Vec<SpellDataValue>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinFilterData {
     pub skin_ids: Option<Vec<u32>>,
@@ -3024,7 +3027,7 @@ pub struct SkinFilterData {
     pub use_valid_parent_for_chroma: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BarracksConfig {
     pub move_speed_increase_initial_delay_secs: f32,
@@ -3041,7 +3044,7 @@ pub struct BarracksConfig {
     pub move_speed_increase_interval_secs: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x7ad3dda {
     pub definition: Unk0x8ad25772,
@@ -3050,7 +3053,7 @@ pub struct Unk0x7ad3dda {
     pub transform: Mat4,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialShaderSamplerDef {
     pub texture_name: String,
@@ -3061,20 +3064,20 @@ pub struct StaticMaterialShaderSamplerDef {
     pub uncensored_textures: Option<HashMap<u32, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SwitchMaterialDriver {
     pub m_elements: Box<Option<Vec<SwitchMaterialDriverElement>>>,
     pub m_default_value: Box<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CharacterLevelRequirement {
     pub m_level: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncCircleMovement {
     pub m_axis_of_rotation: Option<u8>,
@@ -3087,7 +3090,7 @@ pub struct SyncCircleMovement {
     pub m_start_bone_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetingForgivenessDefinitions {
     pub caster_forgiveness_definitions: Option<Vec<SameTeamCastRequirement>>,
@@ -3098,19 +3101,19 @@ pub struct TargetingForgivenessDefinitions {
         Option<Vec<HasAllSubRequirementsCastRequirementMSubRequirements>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimedVariableWaveBehavior {
     pub behaviors: Box<Vec<TimedWaveBehaviorInfo>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasBuffRequirement {
     pub m_buff_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxTextureMultDefinitionData {
     pub texture_mult: Option<String>,
@@ -3133,7 +3136,7 @@ pub struct VfxTextureMultDefinitionData {
     pub uv_scroll_clamp_mult: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualSituation {
     pub m_choose_random_valid_rule: Option<bool>,
@@ -3141,7 +3144,7 @@ pub struct ContextualSituation {
     pub m_cool_down_time: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DrawablePositionLocator {
     pub base_position: Option<u32>,
@@ -3150,41 +3153,41 @@ pub struct DrawablePositionLocator {
     pub distance_offset: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDataValue {
     pub m_values: Option<Vec<f32>>,
     pub m_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FlexValueVector3 {
     pub m_value: Option<ValueVector3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xd5c9eb1 {
     pub event_name: u32,
     pub unk_0x1004c9c8: HashMap<u32, Unk0x56bb851>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolEducationData {
     pub skill_order: Option<i32>,
     pub first_item: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FlexValueVector2 {
     pub m_value: Option<ValueVector2>,
     pub m_flex_id: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmitterLegacySimple {
     pub rotation: Option<ValueFloat>,
@@ -3198,7 +3201,7 @@ pub struct VfxEmitterLegacySimple {
     pub birth_rotational_velocity: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParametricClipData {
     pub m_mask_data_name: Option<u32>,
@@ -3212,26 +3215,26 @@ pub struct ParametricClipData {
     pub unk_0x69de8fca: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapGroup {
     pub transform: Mat4,
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionMarkerName {
     pub m_marker_names: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UvScaleBiasFromAnimationDynamicMaterialDriver {
     pub m_sub_mesh_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x2bfb084c {
     pub group_name: String,
@@ -3239,33 +3242,33 @@ pub struct Unk0x2bfb084c {
     pub tags: Vec<Unk0xf6f4bb5f>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxProbabilityTableData {
     pub key_values: Option<Vec<f32>>,
     pub key_times: Option<Vec<f32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionItemId {
     pub m_items: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ValueColor {
     pub dynamics: Option<VfxAnimatedColorVariableData>,
     pub constant_value: Option<Vec4>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetingRangeValue {
     pub range: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionWall {
     pub thickness: FloatPerSpellLevel,
@@ -3275,7 +3278,7 @@ pub struct TargeterDefinitionWall {
     pub wall_rotation: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LaunchAreaData {
     pub inner_area_target_distance: f32,
@@ -3283,7 +3286,7 @@ pub struct LaunchAreaData {
     pub indicator_texture_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CharacterToolData {
     pub difficulty_rank: Option<i32>,
@@ -3324,7 +3327,7 @@ pub struct CharacterToolData {
     pub cast_shadows: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxLingerDefinitionData {
     pub use_separate_linger_color: Option<bool>,
@@ -3341,7 +3344,7 @@ pub struct VfxLingerDefinitionData {
     pub separate_linger_color: Option<ValueColor>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameCalculation {
     pub m_precision: Option<i32>,
@@ -3355,20 +3358,20 @@ pub struct GameCalculation {
     pub m_expanded_tooltip_calculation_display: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RotatingWaveBehavior {
     pub spawn_counts_by_wave: Vec<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x82cab1b3 {
     pub lane: u16,
     pub position: Option<u16>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Breakpoint {
     pub m_additional_bonus_at_this_level: Option<f32>,
@@ -3376,7 +3379,7 @@ pub struct Breakpoint {
     pub m_bonus_per_level_at_and_after: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ClearTargetAndKeepMoving {
     pub m_override_height_augment: Option<f32>,
@@ -3385,7 +3388,7 @@ pub struct ClearTargetAndKeepMoving {
     pub m_override_movement: Option<FixedSpeedMovement>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatBySubPartCalculationPart {
     pub m_stat: Option<u8>,
@@ -3393,34 +3396,34 @@ pub struct StatBySubPartCalculationPart {
     pub m_stat_formula: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionKillCount {
     pub m_total_kills: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinEmblem {
     pub m_emblem_data: u32,
     pub m_loading_screen_anchor: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxMaterialDefinitionData {
     pub material: u32,
     pub material_drivers: Option<HashMap<String, VfxMaterialDefinitionDataMaterialDrivers>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MaskData {
     pub mid: Option<u32>,
     pub m_weight_list: Vec<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionFloatClipData {
     pub updater: ParametricClipDataUpdater,
@@ -3433,7 +3436,7 @@ pub struct ConditionFloatClipData {
     pub m_child_anim_delay_switch_time: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxMaterialOverrideDefinitionData {
     pub transition_sample: Option<f32>,
@@ -3447,7 +3450,7 @@ pub struct VfxMaterialOverrideDefinitionData {
     pub transition_texture: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SoundEventData {
     pub m_skip_if_past_end_frame: Option<bool>,
@@ -3462,7 +3465,7 @@ pub struct SoundEventData {
     pub m_is_loop: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldNoiseDefinitionData {
     pub axis_fraction: Option<Vec3>,
@@ -3472,7 +3475,7 @@ pub struct VfxFieldNoiseDefinitionData {
     pub radius: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConditionBoolClipData {
     pub m_flags: Option<u32>,
@@ -3486,7 +3489,7 @@ pub struct ConditionBoolClipData {
     pub updater: ParametricClipDataUpdater,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangeMissileSpeed {
     pub m_speed_change_type: Option<u32>,
@@ -3494,7 +3497,7 @@ pub struct ChangeMissileSpeed {
     pub m_speed_value: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicMaterialTextureSwapDef {
     pub options: Option<Vec<DynamicMaterialTextureSwapOption>>,
@@ -3502,26 +3505,26 @@ pub struct DynamicMaterialTextureSwapDef {
     pub enabled: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct InhibitorWaveBehavior {
     pub spawn_count_per_inhibitor_down: Vec<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RecSpellRankUpInfoList {
     pub rec_spell_rank_up_infos: Vec<RecSpellRankUpInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedDurationTriggeredBoolDriver {
     pub m_bool_driver: Box<OneTrueMaterialDriverMDrivers>,
     pub m_custom_duration: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialChildTechniqueDef {
     pub shader_macros: HashMap<String, String>,
@@ -3529,7 +3532,7 @@ pub struct StaticMaterialChildTechniqueDef {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TrackMouseMovement {
     pub m_target_bone_name: String,
@@ -3546,26 +3549,26 @@ pub struct TrackMouseMovement {
     pub m_acceleration: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveCameraSegmentBeam {
     pub m_beam: VfxBeamDefinitionData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x56bb851 {
     pub unk_0xe6d60f41: Option<HashMap<u8, Unk0xc76c1b9a>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegratedValueFloat {
     pub constant_value: Option<f32>,
     pub dynamics: VfxAnimatedFloatVariableData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasBuffDynamicMaterialBoolDriver {
     pub m_deactivate_early_seconds: Option<f32>,
@@ -3574,51 +3577,51 @@ pub struct HasBuffDynamicMaterialBoolDriver {
     pub m_script_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicMaterialTextureSwapOption {
     pub driver: OneTrueMaterialDriverMDrivers,
     pub texture_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionSpellBuffName {
     pub spell_buff: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x55f6bf86 {
     pub effect_key: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MissileGroupSpawnerSpec {
     pub m_child_missile_spell: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameModeConstantStringVector {
     pub m_value: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FontType {
     pub locale_types: Vec<FontLocaleType>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DistanceToPlayerMaterialFloatDriver {
     pub min_distance: f32,
     pub max_distance: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameFontDescription {
     pub color: [u8; 4],
@@ -3630,7 +3633,7 @@ pub struct GameFontDescription {
     pub shadow_color: Option<[u8; 4]>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TftCharacterRecord {
     pub m_character_name: String,
@@ -3641,13 +3644,13 @@ pub struct TftCharacterRecord {
     pub omit_from_match_history: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasBuffOfTypeBoolDriver {
     pub buff_type: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinCharacterMetaDataProperties {
     pub spawning_skin_offsets: Option<Vec<SkinCharacterMetaDataPropertiesSpawningSkinOffset>>,
@@ -3658,7 +3661,7 @@ pub struct SkinCharacterMetaDataProperties {
     pub skin_based_relative_color_scheme: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IdleParticlesVisibilityEventData {
     pub m_fire_if_animation_ends_early: Option<bool>,
@@ -3667,24 +3670,24 @@ pub struct IdleParticlesVisibilityEventData {
     pub m_is_self_only: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameModeConstantsGroup {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetTypeFilter {
     pub champions_are_valid: Option<bool>,
     pub minions_are_valid: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CcBehaviorData {
     pub cc_behavior: TargetingPriorityList,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe7ee4f28 {
     pub unk_0xa2cb8e03: Option<HashMap<String, u32>>,
@@ -3692,32 +3695,32 @@ pub struct Unk0xe7ee4f28 {
     pub unk_0x7dd33afb: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SumOfSubPartsCalculationPart {
     pub m_subparts: Box<Vec<ProductOfSubPartsCalculationPartMPart2>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x125a3586 {
     pub unk_0xe61bf09e: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimedWaveBehaviorInfo {
     pub behavior: BarracksMinionConfigWaveBehavior,
     pub start_time_secs: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x4ab36eb5 {
     pub unk_0x93f0c42c: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StaticMaterialDef {
     pub dynamic_material: Option<DynamicMaterialDef>,
@@ -3731,7 +3734,7 @@ pub struct StaticMaterialDef {
     pub param_values: Vec<StaticMaterialShaderParamDef>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionSpline {
     pub spline_width: FloatPerSpellLevel,
@@ -3743,7 +3746,7 @@ pub struct TargeterDefinitionSpline {
     pub base_texture_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatComparisonMaterialDriver {
     pub m_operator: Option<u32>,
@@ -3751,14 +3754,14 @@ pub struct FloatComparisonMaterialDriver {
     pub m_value_a: Box<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacter {
     pub m_child_conditions: Option<Vec<ContextualConditionCharacterMChildConditions>>,
     pub m_character_type: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellDataResourceClient {
     pub m_tooltip_data: Option<TooltipInstanceSpell>,
@@ -3772,14 +3775,14 @@ pub struct SpellDataResourceClient {
     pub m_targeter_definitions: Option<Vec<CustomTargeterDefinitionsMTargeterDefinitions>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9d62f7e {
     pub named_data_value: u32,
     pub spell: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdaterData {
     pub m_value_processor_data_list: Option<Vec<LinearTransformProcessorData>>,
@@ -3787,19 +3790,19 @@ pub struct UpdaterData {
     pub input: ParametricClipDataUpdater,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xfb16e4be {
     pub order_types: Vec<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasGearDynamicMaterialBoolDriver {
     pub m_gear_index: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x7faa90a0 {
     pub skin: String,
@@ -3809,20 +3812,20 @@ pub struct Unk0x7faa90a0 {
     pub team: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveBeam {
     pub m_mesh: Option<VfxMeshDefinitionData>,
     pub m_beam: Option<VfxBeamDefinitionData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterName {
     pub m_characters: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolPassiveData {
     pub effect: Option<Vec<String>>,
@@ -3830,7 +3833,7 @@ pub struct ToolPassiveData {
     pub level: Option<Vec<i32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TooltipInstanceListElement {
     pub style: Option<u32>,
@@ -3840,14 +3843,14 @@ pub struct TooltipInstanceListElement {
     pub multiplier: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapNavGrid {
     pub nav_grid_path: String,
     pub nav_grid_config: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MissileSpecification {
     pub height_solver: Option<MissileSpecificationHeightSolver>,
@@ -3860,33 +3863,33 @@ pub struct MissileSpecification {
     pub missile_group_spawners: Option<Vec<MissileGroupSpawnerSpec>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FlexTypeFloat {
     pub m_value: Option<f32>,
     pub m_flex_id: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionNeutralCampId {
     pub m_camp_id: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasAtleastNSubRequirementsCastRequirement {
     pub m_successes_required: u32,
     pub m_sub_requirements: Vec<HasBuffCastRequirement>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerOnHit {
     pub m_actions: Vec<TriggerOnHitMActions>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxReflectionDefinitionData {
     pub reflection_fresnel_color: Option<Vec4>,
@@ -3898,7 +3901,7 @@ pub struct VfxReflectionDefinitionData {
     pub fresnel: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualActionPlayVo {
     pub m_max_occurences: Option<u32>,
@@ -3910,7 +3913,7 @@ pub struct ContextualActionPlayVo {
     pub m_spectator_event_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatStoneSet {
     pub name: String,
@@ -3918,26 +3921,26 @@ pub struct StatStoneSet {
     pub stat_stones: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IsCastingBoolDriver {
     pub spell_slot: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChangeMissileWidth {
     pub width_value: f32,
     pub width_change_type: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IndicatorTypeGlobal {
     pub m_is_floating: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatTextFormattingData {
     pub ignore_queue: Option<bool>,
@@ -3968,7 +3971,7 @@ pub struct FloatTextFormattingData {
     pub is_animated: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BuffCounterByNamedDataValueCalculationPart {
     pub m_data_value: u32,
@@ -3976,28 +3979,28 @@ pub struct BuffCounterByNamedDataValueCalculationPart {
     pub m_buff_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AbilityResourceByCoefficientCalculationPart {
     pub m_coefficient: f32,
     pub m_stat_formula: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerOnDelay {
     pub m_actions: Vec<TriggerOnHitMActions>,
     pub m_delay: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterMetadata {
     pub m_category: String,
     pub m_data: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PackManagerData {
     pub follower_crossover_animation: u32,
@@ -4012,14 +4015,14 @@ pub struct PackManagerData {
     pub on_leader_move_follower_animation: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Target {
     pub m_can_complete_cast_without_target: Option<bool>,
     pub unk_0xfb5bbd7: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xf775806c {
     pub unk_0xf908963: Vec3,
@@ -4030,7 +4033,7 @@ pub struct Unk0xf775806c {
     pub character_record: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x7a1a2d27 {
     pub critical_physical_damage_format: u32,
@@ -4043,13 +4046,13 @@ pub struct Unk0x7a1a2d27 {
     pub absorbed_damage_format: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncedAnimationEventData {
     pub m_lerp_time: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerFromScript {
     pub m_actions: Vec<TriggerOnHitMActions>,
@@ -4057,7 +4060,7 @@ pub struct TriggerFromScript {
     pub m_trigger_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionMultiAoe {
     pub angel_offset_radian: Option<f32>,
@@ -4071,21 +4074,21 @@ pub struct TargeterDefinitionMultiAoe {
     pub center_locator: DrawablePositionLocator,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionMapRegionName {
     pub m_region_name: String,
     pub m_region_type: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatPerSpellLevel {
     pub m_per_level_values: Option<Vec<f32>>,
     pub m_value_type: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinMeshDataPropertiesMaterialOverride {
     pub texture: Option<String>,
@@ -4094,14 +4097,14 @@ pub struct SkinMeshDataPropertiesMaterialOverride {
     pub submesh: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxParentInheritanceParams {
     pub relative_offset: Option<ValueVector3>,
     pub mode: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxDistortionDefinitionData {
     pub distortion_mode: Option<u8>,
@@ -4109,7 +4112,7 @@ pub struct VfxDistortionDefinitionData {
     pub distortion: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasBuffCastRequirement {
     pub m_from_anyone: Option<bool>,
@@ -4117,7 +4120,7 @@ pub struct HasBuffCastRequirement {
     pub m_buff_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinMeshDataProperties {
     pub reflection_map: Option<String>,
@@ -4156,7 +4159,7 @@ pub struct SkinMeshDataProperties {
     pub emissive_texture: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DecelToLocationMovement {
     pub m_use_height_offset_at_end: bool,
@@ -4171,7 +4174,7 @@ pub struct DecelToLocationMovement {
     pub m_target_bone_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualActionData {
     pub m_situations: HashMap<u32, ContextualSituation>,
@@ -4180,7 +4183,7 @@ pub struct ContextualActionData {
     pub m_health_percent_threshold: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFlexShapeDefinitionData {
     pub scale_birth_scale_by_bound_object_height: Option<f32>,
@@ -4194,19 +4197,19 @@ pub struct VfxFlexShapeDefinitionData {
     pub flex_birth_translation: Option<FlexValueVector3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionChanceToPlay {
     pub m_percent_chance_to_play: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellLockDeltaTimeData {
     pub m_spell_lock_delta_time_calculation: GameCalculation,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedSpeedMovement {
     pub m_use_ground_height_at_target: Option<bool>,
@@ -4225,21 +4228,21 @@ pub struct FixedSpeedMovement {
     pub m_infer_direction_from_facing_if_needed: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x20194a16 {
     pub resource_resolver: u32,
     pub unk_0xfcea40c4: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x4a70b12c {
     pub augment_group: Vec<u32>,
     pub unk_0x9a676645: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x770f7888 {
     pub armor_per_level: Option<f32>,
@@ -4250,7 +4253,7 @@ pub struct Unk0x770f7888 {
     pub hp_per_level: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitiveMesh {
     pub m_mesh: Option<VfxMeshDefinitionData>,
@@ -4259,7 +4262,7 @@ pub struct VfxPrimitiveMesh {
     pub align_yaw_to_camera: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DynamicMaterialDef {
     pub static_switch: Option<DynamicMaterialStaticSwitch>,
@@ -4267,14 +4270,14 @@ pub struct DynamicMaterialDef {
     pub textures: Option<Vec<DynamicMaterialTextureSwapDef>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CensoredImage {
     pub image: String,
     pub uncensored_images: Option<HashMap<u32, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AttackSlotData {
     pub m_attack_delay_cast_offset_percent: Option<f32>,
@@ -4286,7 +4289,7 @@ pub struct AttackSlotData {
     pub m_attack_cast_time: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BankUnit {
     pub asynchrone: Option<bool>,
@@ -4296,7 +4299,7 @@ pub struct BankUnit {
     pub bank_path: Option<Vec<String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CircleMovement {
     pub m_lifetime: f32,
@@ -4305,37 +4308,37 @@ pub struct CircleMovement {
     pub m_start_bone_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ObjectTags {
     pub m_object_tag_list: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ByCharLevelFormulaCalculationPart {
     pub m_values: Vec<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ConstantWaveBehavior {
     pub spawn_count: i32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionIsSelf {
     pub is_self: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionNegation {
     pub m_child_condition: Box<ContextualConditionNegationMChildCondition>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAnimatedVector2fVariableData {
     pub values: Vec<Vec2>,
@@ -4343,20 +4346,20 @@ pub struct VfxAnimatedVector2fVariableData {
     pub times: Vec<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ResourceResolver {
     pub resource_map: Option<HashMap<u32, u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe90af953 {
     pub unk_0xbe161d6e: u8,
     pub buff: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ByCharLevelInterpolationCalculationPart {
     pub m_start_value: Option<f32>,
@@ -4365,7 +4368,7 @@ pub struct ByCharLevelInterpolationCalculationPart {
     pub m_end_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatByNamedDataValueCalculationPart {
     pub stat_type: Option<u8>,
@@ -4375,21 +4378,21 @@ pub struct StatByNamedDataValueCalculationPart {
     pub use_new_stats: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IntegratedValueVector3 {
     pub dynamics: VfxAnimatedVector3fVariableData,
     pub constant_value: Option<Vec3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MutatorMapVisibilityController {
     pub mutator_name: String,
     pub path_hash: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MinionUpgradeConfig {
     pub hp_max_bonus: f32,
@@ -4404,25 +4407,25 @@ pub struct MinionUpgradeConfig {
     pub hp_upgrade_late: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TransitionClipBlendData {
     pub m_clip_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PerkReplacementList {
     pub m_replacements: Vec<PerkReplacement>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationChoices {
     pub m_choices: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PhysicsMovement {
     pub m_target_height_augment: Option<f32>,
@@ -4436,7 +4439,7 @@ pub struct PhysicsMovement {
     pub m_wall_sliding_friction_multiplier: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x3c2bf0c0 {
     pub transform: Mat4,
@@ -4445,7 +4448,7 @@ pub struct Unk0x3c2bf0c0 {
     pub unk_0xbbe68da1: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ChildMapVisibilityController {
     pub parent_mode: Option<u32>,
@@ -4453,13 +4456,13 @@ pub struct ChildMapVisibilityController {
     pub path_hash: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UpdaterResourceData {
     pub m_updater_data_list: Option<Vec<UpdaterData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpellObject {
     pub bot_data: Option<BotsSpellData>,
@@ -4470,19 +4473,19 @@ pub struct SpellObject {
     pub m_script_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NamedDataValueCalculationPart {
     pub m_data_value: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionMultikillSize {
     pub m_multikill_size: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BasicSkinAugment {
     pub modifiers: Vec<BasicSkinAugmentModifiers>,
@@ -4491,7 +4494,7 @@ pub struct BasicSkinAugment {
     pub m_name_tra_key: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x51ada002 {
     pub unk_0xa5912d83: bool,
@@ -4499,7 +4502,7 @@ pub struct Unk0x51ada002 {
     pub unk_0xf618789b: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualRule {
     pub m_trigger_event_action: Option<ContextualActionTriggerEvent>,
@@ -4515,7 +4518,7 @@ pub struct ContextualRule {
     pub cooldown_modifications: Option<ContextualActionCooldownModifications>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct BotsSpellData {
     pub unk_0x6d548702: Option<GameCalculation>,
@@ -4524,7 +4527,7 @@ pub struct BotsSpellData {
     pub unk_0x38382c53: Option<Vec<Unk0x150d1b92>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionMinimap {
     pub use_caster_bounding_box: Option<bool>,
@@ -4532,7 +4535,7 @@ pub struct TargeterDefinitionMinimap {
     pub center_locator: Option<DrawablePositionLocator>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationOverrideContext {
     pub m_position: Option<u32>,
@@ -4540,14 +4543,14 @@ pub struct ItemRecommendationOverrideContext {
     pub m_mode_name_string_id: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParticleEventDataPair {
     pub m_bone_name: Option<u32>,
     pub m_target_bone_name: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SkinCharacterDataPropertiesCharacterIdleEffect {
     pub position: Option<Vec3>,
@@ -4557,14 +4560,14 @@ pub struct SkinCharacterDataPropertiesCharacterIdleEffect {
     pub target_bone_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PerkReplacement {
     pub m_replace_target: u32,
     pub m_replace_with: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SpringPhysicsEventData {
     pub m_fire_if_animation_ends_early: Option<bool>,
@@ -4573,7 +4576,7 @@ pub struct SpringPhysicsEventData {
     pub spring_to_affect: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ByCharLevelBreakpointsCalculationPart {
     pub m_level1_value: Option<f32>,
@@ -4581,13 +4584,13 @@ pub struct ByCharLevelBreakpointsCalculationPart {
     pub m_initial_bonus_per_level: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationOverrideStartingItemBundle {
     pub items: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxShapeLegacy {
     pub emit_offset: Option<ValueVector3>,
@@ -4595,13 +4598,13 @@ pub struct VfxShapeLegacy {
     pub emit_rotation_axes: Option<Vec<Vec3>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SameTeamCastRequirement {
     pub m_invert_result: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetingParameters {
     pub m_affects_status_flags: Option<u32>,
@@ -4616,63 +4619,63 @@ pub struct TargetingParameters {
     pub unk_0x791c5fa3: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9be57ed9 {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimationResourceData {
     pub m_animation_file_path: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolInheritsData {
     pub recommended: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xb7b43e1d {
     pub bool_driver: IsAnimationPlayingDynamicMaterialBoolDriver,
     pub percentage: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct StatStoneEventToTrack {
     pub stat_filters: Option<Vec<StatStoneEventToTrackStatFilters>>,
     pub event_to_track: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxShapeBox {
     pub size: Option<Vec3>,
     pub flags: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AiSpellData {
     pub m_block_level: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxColorOverLifeMaterialDriver {
     pub colors: VfxAnimatedColorVariableData,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualActionCooldownModifications {
     pub ignore_timer: Option<bool>,
     pub dont_reset_timer: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldAttractionDefinitionData {
     pub acceleration: Option<ValueFloat>,
@@ -4680,7 +4683,7 @@ pub struct VfxFieldAttractionDefinitionData {
     pub radius: Option<ValueFloat>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxTrailDefinitionData {
     pub m_birth_tiling_size: Option<ValueVector3>,
@@ -4690,7 +4693,7 @@ pub struct VfxTrailDefinitionData {
     pub m_max_added_per_frame: Option<i32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct RemapFloatMaterialDriver {
     pub m_max_value: Option<f32>,
@@ -4700,53 +4703,53 @@ pub struct RemapFloatMaterialDriver {
     pub m_driver: Box<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationItemList {
     pub m_item_list: Vec<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxSystemDefinitionData {
-    pub particle_name: String,
-    pub sound_persistent_default: Option<String>,
-    pub material_override_definitions: Option<Vec<VfxMaterialOverrideDefinitionData>>,
     pub asset_remapping_table: Option<Vec<VfxAssetRemap>>,
-    pub unk_0x8b301739: Option<Unk0x75e34c40>,
-    pub unk_0x9836cd87: Option<u8>,
-    pub particle_path: String,
-    pub m_eye_candy: Option<bool>,
+    pub audio_parameter_flex_id: Option<i32>,
     pub audio_parameter_time_scaled_duration: Option<f32>,
-    pub hud_anchor_position_from_world_projection: Option<bool>,
-    pub voice_over_persistent_default: Option<String>,
-    pub sound_on_create_default: Option<String>,
-    pub self_illumination: Option<f32>,
-    pub visibility_radius: Option<f32>,
-    pub voice_over_on_create_default: Option<String>,
-    pub unk_0xf97b1289: Option<Unk0x7fb92f53>,
-    pub m_is_pose_afterimage: Option<bool>,
+    pub build_up_time: Option<f32>,
     pub clock_to_use: Option<u8>,
-    pub override_scale_cap: Option<f32>,
-    pub scale_dynamically_with_attached_bone: Option<bool>,
     pub complex_emitter_definition_data: Option<Vec<VfxEmitterDefinitionData>>,
     pub drawing_layer: Option<u8>,
-    pub simple_emitter_definition_data: Option<Vec<VfxEmitterDefinitionData>>,
-    pub build_up_time: Option<f32>,
     pub flags: Option<u16>,
-    pub audio_parameter_flex_id: Option<i32>,
+    pub hud_anchor_position_from_world_projection: Option<bool>,
     pub hud_layer_dimension: Option<f32>,
+    pub m_eye_candy: Option<bool>,
+    pub m_is_pose_afterimage: Option<bool>,
+    pub material_override_definitions: Option<Vec<VfxMaterialOverrideDefinitionData>>,
+    pub override_scale_cap: Option<f32>,
+    pub particle_name: String,
+    pub particle_path: String,
+    pub scale_dynamically_with_attached_bone: Option<bool>,
+    pub self_illumination: Option<f32>,
+    pub simple_emitter_definition_data: Option<Vec<VfxEmitterDefinitionData>>,
+    pub sound_on_create_default: Option<String>,
+    pub sound_persistent_default: Option<String>,
     pub transform: Option<Mat4>,
+    pub unk_0x8b301739: Option<Unk0x75e34c40>,
+    pub unk_0x9836cd87: Option<u8>,
+    pub unk_0xf97b1289: Option<Unk0x7fb92f53>,
+    pub visibility_radius: Option<f32>,
+    pub voice_over_on_create_default: Option<String>,
+    pub voice_over_persistent_default: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x280745b1 {
     pub params: Unk0xc7e628b9,
     pub unk_0x50aad250: Vec<Unk0xdd661aab>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct UseableData {
     pub flags: u32,
@@ -4755,52 +4758,52 @@ pub struct UseableData {
     pub use_spell_name: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ParametricPairData {
     pub m_clip_name: u32,
     pub m_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NavGridConfig {
     pub region_groups: Vec<Unk0x2bfb084c>,
     pub terrain_config: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x48f3fe52 {
     pub unk_0xb9cb9ce8: Vec<Unk0x7084628f>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LogicDriverBoolParametricUpdater {
     pub driver: Option<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasUnitTagsCastRequirement {
     pub m_unit_tags: ObjectTags,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x47f13ab0 {
     pub unk_0xe4f7105d: u32,
     pub unk_0xcf19cb5d: Unk0x770f7888,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TriggerOnMovementComplete {
     pub m_actions: Vec<TriggerOnHitMActions>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CharacterPassiveData {
     pub m_display_flags: Option<u8>,
@@ -4811,7 +4814,7 @@ pub struct CharacterPassiveData {
     pub m_child_spells: Option<Vec<u32>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AnimationGraphData {
     pub m_cascade_blend_value: Option<f32>,
@@ -4823,24 +4826,24 @@ pub struct AnimationGraphData {
     pub m_sync_group_data_map: Option<HashMap<u32, SyncGroupData>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SecondaryResourceDisplayFractional {}
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x2363fb10 {
     pub animation_name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FloatGraphMaterialDriver {
     pub graph: VfxAnimatedFloatVariableData,
     pub driver: Box<OneTrueMaterialDriverMDrivers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SubmeshVisibilityBoolDriver {
     pub visible: Option<bool>,
@@ -4848,13 +4851,13 @@ pub struct SubmeshVisibilityBoolDriver {
     pub any_submesh: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MinMaterialDriver {
     pub m_drivers: Box<Vec<OneTrueMaterialDriverMDrivers>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GameCalculationModified {
     pub tooltip_only: Option<bool>,
@@ -4866,7 +4869,7 @@ pub struct GameCalculationModified {
     pub m_expanded_tooltip_calculation_display: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xec733fe2 {
     pub path_hash: u32,
@@ -4875,7 +4878,7 @@ pub struct Unk0xec733fe2 {
     pub name: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CharacterHealthBarDataRecord {
     pub show_character_state_indicator_to_allies: Option<bool>,
@@ -4888,26 +4891,26 @@ pub struct CharacterHealthBarDataRecord {
     pub show_while_untargetable: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HasTypeAndStatusFlags {
     pub m_affects_type_flags: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct CursorData {
     pub m_texture_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct IsSpecifiedUnitCastRequirement {
     pub m_unit: u32,
     pub m_invert_result: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct PersistentVfxData {
     pub target_pos_is_owner: Option<bool>,
@@ -4923,7 +4926,7 @@ pub struct PersistentVfxData {
     pub use_different_key_for_other_team: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SinusoidalHeightSolver {
     pub m_vertical_offset: Option<f32>,
@@ -4932,19 +4935,19 @@ pub struct SinusoidalHeightSolver {
     pub m_number_of_periods: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionWinningTeam {
     pub is_same_team: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualActionTriggerEvent {
     pub m_hashed_situation_trigger: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct AcceleratingMovement {
     pub m_use_height_offset_at_end: Option<bool>,
@@ -4963,7 +4966,7 @@ pub struct AcceleratingMovement {
     pub m_start_bone_skin_overrides: Option<HashMap<u32, String>>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapNavGridOverlay {
     pub regions_filename: String,
@@ -4971,13 +4974,13 @@ pub struct MapNavGridOverlay {
     pub nav_grid_file_name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ItemRecommendationOverrideSet {
     pub m_overrides: Vec<ItemRecommendationOverride>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ColorChooserMaterialDriver {
     pub m_bool_driver: Box<OneTrueMaterialDriverMDrivers>,
@@ -4985,7 +4988,7 @@ pub struct ColorChooserMaterialDriver {
     pub m_color_off: Option<Vec4>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xe6147387 {
     pub default_on: bool,
@@ -4999,7 +5002,7 @@ pub struct Unk0xe6147387 {
     pub orientation_source: Unk0x19da44b2,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxShapeCylinder {
     pub radius: Option<f32>,
@@ -5007,27 +5010,27 @@ pub struct VfxShapeCylinder {
     pub height: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x8958fee2 {
     pub unk_0x79a2e7aa: Option<f32>,
     pub unk_0xffcbd9e2: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TimeBlendData {
     pub m_time: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxFieldOrbitalDefinitionData {
     pub is_local_space: Option<bool>,
     pub direction: Option<ValueVector3>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ToolSoundData {
     pub attack: Option<Vec<String>>,
@@ -5037,7 +5040,7 @@ pub struct ToolSoundData {
     pub ready: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargeterDefinitionArc {
     pub override_radius: FloatPerSpellLevel,
@@ -5049,7 +5052,7 @@ pub struct TargeterDefinitionArc {
     pub is_constrained_to_range: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x3c995caf {
     pub segments: Vec<Vec3>,
@@ -5057,7 +5060,7 @@ pub struct Unk0x3c995caf {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct FixedTimeSplineMovement {
     pub m_start_bone_name: String,
@@ -5067,7 +5070,7 @@ pub struct FixedTimeSplineMovement {
     pub m_spline_info: HermiteSplineInfo,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LerpMaterialDriver {
     pub m_use_broken_old_interpolation: Option<bool>,
@@ -5078,20 +5081,20 @@ pub struct LerpMaterialDriver {
     pub m_on_value: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionAnyOtherHero {
     pub m_child_conditions: Vec<ContextualConditionCharacterMChildConditions>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct DestroyOnMovementComplete {
     pub m_delay: Option<i32>,
     pub render_particles_after_destroy: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct LerpVec4LogicDriver {
     pub bool_driver: Box<OneTrueMaterialDriverMDrivers>,
@@ -5101,7 +5104,7 @@ pub struct LerpVec4LogicDriver {
     pub turn_on_time_sec: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct HermiteSplineInfo {
     pub m_control_point1: Option<Vec3>,
@@ -5110,7 +5113,7 @@ pub struct HermiteSplineInfo {
     pub m_use_missile_position_as_origin: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct TargetLaserComponentEffects {
     pub champ_targeting_effect_definition: Option<SkinCharacterDataPropertiesCharacterIdleEffect>,
@@ -5118,46 +5121,46 @@ pub struct TargetLaserComponentEffects {
     pub tower_targeting_effect_definition: Option<SkinCharacterDataPropertiesCharacterIdleEffect>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionMoveDistance {
     pub m_distance: f32,
     pub m_compare_op: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxPrimitivePlanarProjection {
     pub m_projection: Option<VfxProjectionDefinitionData>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xd91a223 {
     pub unk_0xe2e5b6dd: Vec<u32>,
     pub unk_0x68309c0b: bool,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterHasTimeRemainingForAnimation {
     pub m_animation_name: u32,
     pub m_min_remaining_time: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SyncGroupData {
     pub m_type: Option<u32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GdsMapObjectBannerInfo {
     pub banner_data: u32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct GdsMapObject {
     pub box_min: Option<Vec3>,
@@ -5169,27 +5172,27 @@ pub struct GdsMapObject {
     pub r#type: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterDistance {
     pub m_distance: f32,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct ContextualConditionCharacterHealth {
     pub m_target_health: Option<f32>,
     pub m_compare_op: u8,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x150d1b92 {
     pub unk_0xe38f54f7: Option<u32>,
     pub unk_0x717e686: Option<bool>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct SineMaterialDriver {
     pub m_driver: Box<OneTrueMaterialDriverMDrivers>,
@@ -5198,13 +5201,13 @@ pub struct SineMaterialDriver {
     pub m_frequency: Option<f32>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0xc76c1b9a {
     pub modifiers: Vec<Unk0xc76c1b9aModifiers>,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct Unk0x9d9f60d2 {
     pub unk_0xde46f1d8: Option<String>,
@@ -5217,7 +5220,7 @@ pub struct Unk0x9d9f60d2 {
     pub skin: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct MapCubemapProbe {
     pub transform: Mat4,
@@ -5226,7 +5229,7 @@ pub struct MapCubemapProbe {
     pub name: String,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct NotMaterialDriver {
     pub m_driver: Box<OneTrueMaterialDriverMDrivers>,

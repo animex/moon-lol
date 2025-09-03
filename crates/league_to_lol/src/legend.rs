@@ -36,10 +36,14 @@ pub async fn save_legends(
         };
 
         for vfx_emitter_definition_data in complex_emitter_definition_data {
-            let Some(ref texture) = vfx_emitter_definition_data.texture else {
-                continue;
-            };
-            save_wad_entry_to_file(&loader, &texture).await?;
+            if let Some(ref texture) = vfx_emitter_definition_data.texture {
+                save_wad_entry_to_file(&loader, &texture).await?;
+            }
+            if let Some(ref texture) = vfx_emitter_definition_data.particle_color_texture {
+                if !texture.is_empty() {
+                    save_wad_entry_to_file(&loader, &texture).await?;
+                }
+            }
         }
     }
 

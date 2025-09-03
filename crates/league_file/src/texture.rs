@@ -13,7 +13,7 @@ pub struct LeagueTexture {
     pub width: u16,
     pub height: u16,
 
-    _is_extended_format_maybe: u8,
+    pub _is_extended_format_maybe: u8,
 
     #[br(map = |v:u8| match v {
         1 => LeagueTextureFormat::Etc1,

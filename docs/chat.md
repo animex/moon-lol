@@ -13,3 +13,8 @@
 我已经决定不使用 rvo 进行寻路和避障了，而是采用 A* 算法直接规划路径，将这部分代码放在 navigation.rs，movement.rs 只负责按路径移动，而且 movement 去掉 MovementDestination，只保留 MovementPath，CommandMovementMoveTo 时只需要传一个 length 为 1 的 path，游戏的导航网格的定义在 config.rs 中，网格有预制的启发式值可以给 A* 算法用
 
 A\* 算法的实现我运行起来了，寻路出现了死循环，能找到问题就解决，找不到问题就输出一些 debug 日志，在 moon-lol.log 中查看运行日志
+
+
+如何管理多种shader的变体
+
+shader 有 N 个 feature，

@@ -33,10 +33,8 @@ pub async fn save_character(
     if let Some(Some(resource_map)) = resource_resolver.map(|v| v.resource_map) {
         for (hash, link) in resource_map {
             let Some(entry_data) = flat_map.get(&link) else {
-                println!("lost skin: {:?}, link: {:?}", skin, link);
                 continue;
             };
-            println!("get entry_data for skin: {:?} link: {:?}", skin, link);
             let vfx_system_definition_data = from_entry::<VfxSystemDefinitionData>(entry_data);
             vfx_system_definition_datas.insert(hash, vfx_system_definition_data);
         }

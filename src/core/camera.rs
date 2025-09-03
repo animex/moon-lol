@@ -1,4 +1,5 @@
-use bevy::{input::mouse::MouseWheel, prelude::*, window::CursorGrabMode};
+// use bevy::window::CursorGrabMode;
+use bevy::{input::mouse::MouseWheel, prelude::*};
 
 // 相机基础偏移量
 pub const CAMERA_OFFSET_X: f32 = 0.0;

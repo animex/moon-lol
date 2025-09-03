@@ -3,7 +3,11 @@ use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
 };
-use moon_lol::core::{CustomMaterial, PluginParticle};
+use moon_lol::core::{
+    CustomMaterial, ParticleLifeState, PluginParticle, PluginResource, UniformsPixel,
+    UniformsVertex,
+};
+use moon_lol::particles::ParticleQuad;
 
 fn main() {
     App::new()
@@ -24,6 +28,7 @@ fn main() {
                 ..default()
             }),))
         .add_plugins(PluginParticle)
+        .add_plugins(PluginResource)
         .add_systems(Startup, setup)
         .run();
 }
@@ -39,16 +44,29 @@ fn setup(
         Transform::from_xyz(0.0, 50.0, 0.0).looking_at(Vec3::ZERO, Vec3::NEG_Z),
     ));
 
+    let mesh = res_mesh.add(ParticleQuad::default());
+
     commands.spawn((
-        Mesh3d(res_mesh.add(Plane3d::new(vec3(0.0, 1.0, 0.0), Vec2::splat(10.0)))),
+        Mesh3d(mesh),
         MeshMaterial3d(res_material.add(CustomMaterial {
-            texture: Some(asset_server.load("fiora_base_passive_timeout_flash_sw.png")),
+            uniforms_vertex: UniformsVertex::default(),
+            uniforms_pixel: UniformsPixel {
+                slice_range: vec2(0.1, 100.),
+            },
             particle_color_texture: Some(
-                asset_server.load("fiora_base_passive_color-rampdown32.png"),
+                asset_server.load("ASSETS/Characters/Fiora/Skins/Base/Particles/Fiora_Base_Passive_color-rampdown32.tex"),
             ),
-            color: LinearRgba::WHITE,
+            texture: Some(asset_server.load("ASSETS/Characters/Fiora/Skins/Base/Particles/Fiora_Base_Passive_timeout_flash_SW.tex")),
+            cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: Some(
+                asset_server.load("ASSETS/Characters/Fiora/Skins/Base/Particles/Fiora_Base_Passive_color-rampdown32.tex"),
+            ),
+            sampler_fow: None,
             alpha_mode: AlphaMode::Blend,
             is_local_orientation: true,
         })),
+        ParticleLifeState {
+            timer: Timer::from_seconds(1.0, TimerMode::Repeating),
+        },
+        Transform::from_translation(vec3(10., 0., 0.))
     ));
 }

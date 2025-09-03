@@ -29,7 +29,7 @@ impl Plugin for PluginFiora {
 
 const VITAL_DISTANCE: f32 = 1000.0;
 const VITAL_ADD_DURATION: f32 = 1.0;
-const VITAL_DURATION: f32 = 10.0;
+const VITAL_DURATION: f32 = 2.0;
 
 #[derive(Clone)]
 pub enum Direction {
@@ -112,7 +112,6 @@ fn update_add_vital(
                 remove_timer: Timer::from_seconds(VITAL_DURATION, TimerMode::Once),
             });
 
-            println!("add vital: {:?}", target_entity);
             commands
                 .entity(target_entity)
                 .trigger(CommandParticleSpawn {
@@ -158,7 +157,6 @@ fn update_remove_vital(
 
             if vital.remove_timer.finished() {
                 commands.entity(target_entity).remove::<FioraVital>();
-                println!("remove vital: {:?}", target_entity);
             }
         }
     }

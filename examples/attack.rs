@@ -4,10 +4,11 @@ use bevy::render::{
     RenderPlugin,
 };
 
-use league_utils::hash_bin;
-use lol_config::{ConfigGame, ConfigMap, ConfigNavigationGrid};
+use lol_config::{ConfigGame, ConfigNavigationGrid};
 use lol_core::Team;
-use moon_lol::core::{spawn_skin_entity, Attack, Controller, Focus, Health, Movement, PluginGame};
+use moon_lol::core::{
+    spawn_skin_entity, Attack, CameraState, Controller, Focus, Health, Movement, PluginGame,
+};
 use moon_lol::entities::{Fiora, PluginBarrack};
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
@@ -21,8 +22,8 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
-                        // resolution: (300.0, 300.0).into(),
-                        // position: WindowPosition::At((0, 1920).into()),
+                        resolution: (300.0, 300.0).into(),
+                        position: WindowPosition::At((0, 1920).into()),
                         ..default()
                     }),
                     ..default()
@@ -39,18 +40,23 @@ fn main() {
             PluginEntities.build().disable::<PluginBarrack>(),
         ))
         .add_systems(Startup, setup)
+        .add_systems(
+            Update,
+            |mut q_camera_state: Query<&mut CameraState, Added<CameraState>>| {
+                for mut state in q_camera_state.iter_mut() {
+                    state.scale = 0.1;
+                }
+            },
+        )
         .run();
 }
 
 pub fn setup(
     mut commands: Commands,
-    mut res_mesh: ResMut<Assets<Mesh>>,
-    mut res_material: ResMut<Assets<StandardMaterial>>,
     res_navigation_grid: Res<ConfigNavigationGrid>,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     asset_server: Res<AssetServer>,
     config_game: Res<ConfigGame>,
-    config_map: Res<ConfigMap>,
 ) {
     for (_, team, skin) in config_game.legends.iter() {
         let map_center_position = res_navigation_grid.get_map_center_position();
@@ -99,34 +105,5 @@ pub fn setup(
                 Fiora,
             ))
             .log_components();
-
-        // let quad_mesh = res_mesh.add(Plane3d::new(vec3(0.0, 1.0, 0.0), Vec2::splat(100.0)));
-
-        // let texture_path = &config_map
-        //     .vfx_system_definition_datas
-        //     .get(&hash_bin("Fiora_Passive_NE"))
-        //     .unwrap()
-        //     .complex_emitter_definition_data
-        //     .as_ref()
-        //     .unwrap()
-        //     .iter()
-        //     .next()
-        //     .unwrap()
-        //     .texture
-        //     .as_ref()
-        //     .unwrap()
-        //     .clone();
-
-        // let texture = asset_server.load::<Image>(texture_path);
-
-        // println!("texture_path: {:?}", texture_path);
-
-        // let red_material = res_material.add(StandardMaterial {
-        //     base_color_texture: Some(texture),
-        //     unlit: true,
-        //     depth_bias: -80.0,
-        //     alpha_mode: AlphaMode::Blend,
-        //     ..default()
-        // });
     }
 }
