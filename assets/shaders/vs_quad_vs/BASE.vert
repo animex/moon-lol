@@ -7,7 +7,7 @@ struct CameraView {
     mat4 world_from_view;
     mat4 view_from_world;
     mat4 clip_from_view;
-    mat4 view_from_clip
+    mat4 view_from_clip;
     vec3 world_position;
 };
 

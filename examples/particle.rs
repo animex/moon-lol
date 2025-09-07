@@ -19,13 +19,6 @@ fn main() {
                     ..default()
                 }),
                 ..default()
-            })
-            .set(RenderPlugin {
-                render_creation: RenderCreation::Automatic(WgpuSettings {
-                    backends: Some(Backends::VULKAN),
-                    ..default()
-                }),
-                ..default()
             }),))
         .add_plugins(PluginParticle)
         .add_plugins(PluginResource)

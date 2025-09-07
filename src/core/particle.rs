@@ -41,6 +41,15 @@ pub struct CommandParticleSpawn {
     pub particle: u32,
 }
 
+pub const ATTRIBUTE_WORLD_POSITION: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertext_World_Position", 7, VertexFormat::Float32x3);
+
+pub const ATTRIBUTE_UV_FRAME: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertext_Frame", 8, VertexFormat::Float32x4);
+
+pub const ATTRIBUTE_LIFETIME: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertext_Life", 9, VertexFormat::Float32x2);
+
 #[derive(Clone, ShaderType)]
 pub struct UniformsVertex {
     pub fog_of_war_params: Vec4,
@@ -61,15 +70,6 @@ impl Default for UniformsVertex {
         }
     }
 }
-
-pub const ATTRIBUTE_WORLD_POSITION: MeshVertexAttribute =
-    MeshVertexAttribute::new("Vertext_World_Position", 7, VertexFormat::Float32x3);
-
-pub const ATTRIBUTE_UV_FRAME: MeshVertexAttribute =
-    MeshVertexAttribute::new("Vertext_Frame", 8, VertexFormat::Float32x4);
-
-pub const ATTRIBUTE_LIFETIME: MeshVertexAttribute =
-    MeshVertexAttribute::new("Vertext_Life", 9, VertexFormat::Float32x2);
 
 #[derive(Clone, ShaderType)]
 pub struct UniformsPixel {
@@ -300,24 +300,24 @@ fn update_emitter(
                 .unwrap_or(0.0);
 
             let material = res_material.add(CustomMaterial {
+                uniforms_vertex: UniformsVertex::default(),
                 uniforms_pixel: UniformsPixel {
                     slice_range: vec2(range, 1.0 / (range * range)),
                 },
-                texture: Some(texture),
                 particle_color_texture: Some(particle_color_texture),
-                alpha_mode: AlphaMode::Blend,
+                texture: Some(texture),
+                cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: None,
+                sampler_fow: None,
                 is_local_orientation: vfx_emitter_definition_data
                     .is_local_orientation
                     .unwrap_or(false),
-                cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: None,
-                uniforms_vertex: UniformsVertex::default(),
-                sampler_fow: None,
+                alpha_mode: AlphaMode::Blend,
             });
 
             let target = commands.spawn((
                 Mesh3d(mesh),
                 MeshMaterial3d(material),
-                Transform::from_translation(vec3(0.0, 100.0, 0.0)),
+                Transform::from_translation(vec3(0.0, 20.0, 0.0)),
                 ParticleLifeState {
                     timer: Timer::from_seconds(lifetime, TimerMode::Repeating),
                 },
