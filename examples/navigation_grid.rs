@@ -341,7 +341,13 @@ fn command_navigation_to(
 
             astar_vis.optimized_path = world_path.clone();
 
-            commands.trigger_targets(CommandMovementStart(world_path), entity);
+            commands.trigger_targets(
+                CommandMovementStart {
+                    path: world_path,
+                    speed: None,
+                },
+                entity,
+            );
         }
     }
 }

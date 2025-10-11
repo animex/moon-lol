@@ -19,6 +19,8 @@ impl Plugin for PluginAnimation {
         app.add_systems(Update, update_transition_out);
         app.add_systems(Update, update_condition_animation);
         app.add_systems(Update, apply_animation_speed);
+
+        app.add_observer(on_command_animation_play);
     }
 }
 
@@ -40,6 +42,11 @@ pub struct AnimationTransitionOut {
     pub weight: f32,
     pub duration: Duration,
     pub start_time: f32,
+}
+
+#[derive(Event)]
+pub struct CommandAnimationPlay {
+    pub hash: u32,
 }
 
 #[derive(Clone)]
@@ -186,8 +193,21 @@ fn on_state_change(
                 animation_state
                     .update_with_duration(hash_bin("Attack1"), attack.total_duration_secs());
             }
+            _ => {}
         }
     }
+}
+
+fn on_command_animation_play(
+    trigger: Trigger<CommandAnimationPlay>,
+    mut query: Query<&mut AnimationState>,
+) {
+    let event = trigger.event();
+    let entity = trigger.target();
+
+    let mut animation_state = query.get_mut(entity).unwrap();
+
+    animation_state.update(event.hash);
 }
 
 fn on_animation_state_change(

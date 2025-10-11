@@ -6,11 +6,11 @@ use bevy::render::{
 
 use lol_config::{ConfigGame, ConfigNavigationGrid};
 use lol_core::Team;
+use moon_lol::abilities::PluginAbilities;
 use moon_lol::core::{
-    spawn_skin_entity, Attack, Bounding, CameraState, Controller, Focus, Health, Movement,
-    PluginGame,
+    spawn_skin_entity, Bounding, CameraState, Controller, Focus, Health, Movement,
 };
-use moon_lol::entities::{Fiora, PluginBarrack};
+use moon_lol::entities::{spawn_fiora, Fiora, PluginBarrack};
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
@@ -37,8 +37,9 @@ fn main() {
                     }),
                     ..default()
                 }),
-            PluginCore.build().disable::<PluginGame>(),
+            PluginCore,
             PluginEntities.build().disable::<PluginBarrack>(),
+            PluginAbilities,
         ))
         .add_systems(Startup, setup)
         .add_systems(
@@ -95,24 +96,10 @@ pub fn setup(
             &skin,
         );
 
+        spawn_fiora(&mut commands, entity);
+
         commands
             .entity(entity)
-            .insert((
-                team.clone(),
-                Controller,
-                Focus,
-                Movement { speed: 325.0 },
-                Health {
-                    value: 600.0,
-                    max: 600.0,
-                },
-                Attack::new(150.0, 0.2, 1.45),
-                Fiora,
-                Bounding {
-                    radius: 35.0,
-                    height: 300.0,
-                },
-            ))
-            .log_components();
+            .insert((team.clone(), Controller::default(), Focus));
     }
 }

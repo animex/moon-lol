@@ -33,14 +33,18 @@ pub struct Movement {
 #[derive(Component, Default)]
 pub struct MovementState {
     pub path: Vec<Vec2>,
+    pub speed: Option<f32>,
     pub direction: Vec2,
     pub velocity: Vec2,
     pub current_target_index: usize,
     pub completed: bool,
 }
 
-#[derive(Event, Debug)]
-pub struct CommandMovementStart(pub Vec<Vec2>);
+#[derive(Event, Debug, Clone)]
+pub struct CommandMovementStart {
+    pub path: Vec<Vec2>,
+    pub speed: Option<f32>,
+}
 
 #[derive(Event, Debug)]
 pub struct CommandMovementStop;
@@ -52,8 +56,9 @@ pub struct EventMovementStart;
 pub struct EventMovementEnd;
 
 impl MovementState {
-    pub fn set_path(&mut self, path: Vec<Vec2>) {
-        self.path = path;
+    pub fn reset_path(&mut self, path: &Vec<Vec2>) {
+        self.path = path.clone();
+        self.speed = None;
         self.current_target_index = 0;
         self.completed = false;
         self.velocity = Vec2::ZERO;
@@ -70,6 +75,11 @@ impl MovementState {
 
     pub fn is_moving(&self) -> bool {
         self.current_target_index < self.path.len() - 1
+    }
+
+    pub fn with_speed(&mut self, speed: f32) -> &mut Self {
+        self.speed = Some(speed);
+        self
     }
 }
 
@@ -88,8 +98,10 @@ fn update_path_movement(
 
         let mut transform = q_transform.get_mut(entity).unwrap();
 
+        let speed = movement_state.speed.unwrap_or(movement.speed);
+
         // 本帧可移动的总距离
-        let mut remaining_distance_this_frame = movement.speed * dt;
+        let mut remaining_distance_this_frame = speed * dt;
         // 记录本帧最后的移动方向，用于更新旋转
         let mut last_direction = Vec2::ZERO;
 
@@ -152,7 +164,7 @@ fn update_path_movement(
             commands.trigger_targets(EventMovementEnd, entity);
         } else {
             movement_state.direction = last_direction;
-            movement_state.velocity = last_direction * movement.speed;
+            movement_state.velocity = last_direction * speed;
         }
 
         // 更新旋转
@@ -170,7 +182,7 @@ fn command_movement_start(
     mut q_transform: Query<&mut MovementState>,
 ) {
     let entity = trigger.target();
-    let path = trigger.event().0.clone();
+    let CommandMovementStart { path, speed } = trigger.event();
 
     if path.is_empty() {
         return;
@@ -180,7 +192,11 @@ fn command_movement_start(
         return;
     };
 
-    movement_state.set_path(path);
+    movement_state.reset_path(path);
+
+    if let Some(speed) = speed {
+        movement_state.with_speed(*speed);
+    }
 
     commands.trigger_targets(EventMovementStart, entity);
 }

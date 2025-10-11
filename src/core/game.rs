@@ -8,11 +8,17 @@ pub struct PluginGame;
 
 impl Plugin for PluginGame {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, setup);
+        app.init_resource::<FixedFrameCount>();
+
+        // app.add_systems(Startup, setup);
+        app.add_systems(FixedLast, fixed_update_frame);
     }
 }
 
-pub fn setup(
+#[derive(Resource, Default)]
+pub struct FixedFrameCount(pub u32);
+
+fn setup(
     mut commands: Commands,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     asset_server: Res<AssetServer>,
@@ -33,7 +39,7 @@ pub fn setup(
             .entity(entity)
             .insert((
                 team.clone(),
-                Controller,
+                Controller::default(),
                 Focus,
                 Movement { speed: 325.0 },
                 Health {
@@ -43,4 +49,8 @@ pub fn setup(
             ))
             .log_components();
     }
+}
+
+fn fixed_update_frame(mut frame: ResMut<FixedFrameCount>) {
+    frame.0 += 1;
 }

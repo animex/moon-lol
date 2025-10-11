@@ -1,12 +1,12 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 use league_utils::hash_bin;
-use lol_core::Team;
-use rand::random;
 
 use crate::{
-    core::{CommandParticleDespawn, CommandParticleSpawn},
+    abilities::{AbilityDuelistsDance, AbilityLunge},
+    core::{
+        Attack, Bounding, Health, Movement, Skill, SkillEffect, SkillEffectAnimation,
+        SkillEffectDash, SkillEffectSequence, SkillOf,
+    },
     entities::champion::Champion,
 };
 
@@ -17,197 +17,43 @@ pub struct Fiora;
 #[derive(Default)]
 pub struct PluginFiora;
 
-#[derive(Resource, Default)]
-pub struct FioraVitalLastDirection {
-    entity_to_last_direction: HashMap<Entity, Direction>,
-}
-
 impl Plugin for PluginFiora {
-    fn build(&self, app: &mut App) {
-        app.init_resource::<FioraVitalLastDirection>();
-        app.add_systems(FixedUpdate, update_add_vital);
-        app.add_systems(FixedUpdate, update_remove_vital);
-    }
+    fn build(&self, _app: &mut App) {}
 }
 
-const VITAL_DISTANCE: f32 = 1000.0;
-const VITAL_ADD_DURATION: f32 = 1.5;
-const VITAL_DURATION: f32 = 4.0;
-const VITAL_TIMEOUT: f32 = 1.5;
-
-#[derive(Clone)]
-pub enum Direction {
-    Left,
-    Right,
-    Up,
-    Down,
-}
-
-fn get_particle_hash(direction: &Direction, suffix: &str) -> u32 {
-    let base_name = match direction {
-        Direction::Up => "Fiora_Passive_NE",
-        Direction::Right => "Fiora_Passive_NW",
-        Direction::Down => "Fiora_Passive_SW",
-        Direction::Left => "Fiora_Passive_SE",
-    };
-    let full_name = format!("{}{}", base_name, suffix);
-    hash_bin(&full_name)
-}
-
-#[derive(Component)]
-pub struct FioraVital {
-    pub direction: Direction,
-    pub active_timer: Timer,
-    pub remove_timer: Timer,
-    /// 用于标记 "TimeOut_Red" 特效是否已触发
-    pub timeout_red_triggered: bool,
-}
-
-impl FioraVital {
-    pub fn is_active(&self) -> bool {
-        self.active_timer.finished()
-    }
-}
-
-fn update_add_vital(
-    mut commands: Commands,
-    q_target_without_vital: Query<
-        (Entity, &Transform, &Team),
-        (With<Champion>, Without<FioraVital>),
-    >,
-    q_fiora: Query<(&Transform, &Team), With<Fiora>>,
-    mut last_direction: ResMut<FioraVitalLastDirection>,
-) {
-    for (fiora_transform, fiora_team) in q_fiora.iter() {
-        for (target_entity, target_transform, target_team) in q_target_without_vital.iter() {
-            if target_team == fiora_team {
-                continue;
-            }
-
-            let distance = target_transform
-                .translation
-                .xz()
-                .distance(fiora_transform.translation.xz());
-
-            if distance > VITAL_DISTANCE {
-                continue;
-            }
-
-            let direction = match last_direction.entity_to_last_direction.get(&target_entity) {
-                Some(direction) => match direction {
-                    Direction::Up | Direction::Right => {
-                        if random::<bool>() {
-                            Direction::Left
-                        } else {
-                            Direction::Down
-                        }
-                    }
-                    Direction::Left | Direction::Down => {
-                        if random::<bool>() {
-                            Direction::Up
-                        } else {
-                            Direction::Right
-                        }
-                    }
-                },
-                None => {
-                    if random::<bool>() {
-                        Direction::Up
-                    } else {
-                        Direction::Left
-                    }
-                }
-            };
-
-            last_direction
-                .entity_to_last_direction
-                .insert(target_entity, direction.clone());
-
-            commands.entity(target_entity).insert(FioraVital {
-                direction: direction.clone(),
-                active_timer: Timer::from_seconds(VITAL_ADD_DURATION, TimerMode::Once),
-                remove_timer: Timer::from_seconds(VITAL_DURATION, TimerMode::Once),
-                timeout_red_triggered: false, // 初始化为 false
-            });
-
-            commands
-                .entity(target_entity)
-                .trigger(CommandParticleSpawn {
-                    particle: get_particle_hash(&direction, "_Warning"),
-                });
-        }
-    }
-}
-
-fn update_remove_vital(
-    mut commands: Commands,
-    mut q_target_with_vital: Query<
-        (Entity, &Transform, &Team, &mut FioraVital),
-        (With<Champion>, With<FioraVital>),
-    >,
-    q_fiora: Query<(&Transform, &Team), With<Fiora>>,
-    time: Res<Time<Fixed>>,
-) {
-    for (fiora_transform, fiora_team) in q_fiora.iter() {
-        for (target_entity, target_transform, target_team, mut vital) in
-            q_target_with_vital.iter_mut()
-        {
-            if target_team == fiora_team {
-                continue;
-            }
-
-            let distance = target_transform
-                .translation
-                .xz()
-                .distance(fiora_transform.translation.xz());
-
-            if distance > VITAL_DISTANCE {
-                commands.entity(target_entity).remove::<FioraVital>();
-                continue;
-            }
-
-            if !vital.is_active() {
-                vital.active_timer.tick(time.delta());
-
-                if vital.is_active() {
-                    commands
-                        .entity(target_entity)
-                        .trigger(CommandParticleSpawn {
-                            particle: get_particle_hash(&vital.direction, ""),
-                        });
-                    commands
-                        .entity(target_entity)
-                        .trigger(CommandParticleSpawn {
-                            particle: hash_bin("Fiora_Q_Slash_Cas"),
-                        });
-                }
-                continue;
-            }
-
-            // --- 新增逻辑 ---
-            // 如果破绽即将消失（剩余时间 <= 1.5s）且尚未触发红色警告特效
-            if !vital.timeout_red_triggered && vital.remove_timer.remaining_secs() <= VITAL_TIMEOUT
-            {
-                commands
-                    .entity(target_entity)
-                    .trigger(CommandParticleDespawn {
-                        particle: get_particle_hash(&vital.direction, ""),
-                    });
-                commands
-                    .entity(target_entity)
-                    .trigger(CommandParticleSpawn {
-                        particle: get_particle_hash(&vital.direction, "_TimeOut_Red"),
-                    });
-                // 标记为已触发，防止重复生成
-                vital.timeout_red_triggered = true;
-            }
-            // --- 结束新增逻辑 ---
-
-            vital.remove_timer.tick(time.delta());
-
-            if vital.remove_timer.finished() {
-                commands.entity(target_entity).remove::<FioraVital>();
-            }
-        }
-    }
+pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
+    commands
+        .entity(entity)
+        .insert((
+            Movement { speed: 325.0 },
+            Health {
+                value: 600.0,
+                max: 600.0,
+            },
+            Attack::new(150.0, 0.2, 1.45),
+            Fiora,
+            Bounding {
+                radius: 35.0,
+                height: 300.0,
+            },
+        ))
+        .with_related::<SkillOf>((Skill { effect: None }, AbilityDuelistsDance))
+        .with_related::<SkillOf>((
+            Skill {
+                effect: Some(SkillEffectSequence::Serial(vec![
+                    SkillEffectSequence::Parallel(vec![
+                        SkillEffectSequence::Single(SkillEffect::Dash(SkillEffectDash::Pointer {
+                            speed: 1000.0,
+                            max: 300.0,
+                        })),
+                        SkillEffectSequence::Single(SkillEffect::Animation(SkillEffectAnimation {
+                            hash: hash_bin("Spell1"),
+                        })),
+                    ]),
+                    SkillEffectSequence::Single(SkillEffect::Missile),
+                ])),
+            },
+            AbilityLunge,
+        ))
+        .log_components();
 }

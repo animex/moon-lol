@@ -57,7 +57,13 @@ fn on_command_navigation_to(
             start.elapsed().as_millis()
         );
         let direct_path = vec![start_pos.xz(), end_pos.xz()];
-        commands.trigger_targets(CommandMovementStart(direct_path), entity);
+        commands.trigger_targets(
+            CommandMovementStart {
+                path: direct_path,
+                speed: None,
+            },
+            entity,
+        );
         return;
     }
 
@@ -72,7 +78,13 @@ fn on_command_navigation_to(
         start.elapsed().as_millis()
     );
 
-    commands.trigger_targets(CommandMovementStart(result), entity);
+    commands.trigger_targets(
+        CommandMovementStart {
+            path: result,
+            speed: None,
+        },
+        entity,
+    );
 }
 
 /// 主要的寻路函数，结合A*和漏斗算法

@@ -5,15 +5,14 @@ use bevy::animation::{AnimationTarget, AnimationTargetId};
 use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use bevy::render::mesh::skinning::SkinnedMesh;
+
 use league_utils::{hash_bin, neg_mat_z};
 use lol_config::{
     ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigGeometryObject, ConfigMap,
 };
-use lol_core::Team;
 
 use crate::core::{
-    Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandBehaviorAttack,
-    CommandBehaviorMoveTo, Controller,
+    Action, Animation, AnimationNode, AnimationNodeF32, AnimationState, CommandBehavior, Controller,
 };
 
 // 基于相机配置的地图边界
@@ -34,7 +33,6 @@ impl Plugin for PluginMap {
     fn build(&self, app: &mut App) {
         app.add_plugins(MeshPickingPlugin);
         app.add_systems(Startup, setup);
-        app.add_systems(Update, on_map_move);
     }
 }
 
@@ -277,71 +275,10 @@ pub fn on_click_map(
     };
     let targets = q_move.iter().collect::<Vec<Entity>>();
 
-    commands.trigger_targets(CommandBehaviorMoveTo(position.xz()), targets);
-}
-
-pub fn on_map_move(
-    mut commands: Commands,
-    camera: Single<(&Camera, &GlobalTransform)>,
-    mut ray_cast: MeshRayCast,
-    q_children: Query<&ChildOf>,
-    q_controller: Query<(Entity, &Team), With<Controller>>,
-    q_map: Query<Entity, With<Map>>,
-    q_target: Query<(Entity, &Transform, &Team)>,
-    res_input: Res<ButtonInput<KeyCode>>,
-    window: Single<&Window>,
-) {
-    if !res_input.just_pressed(KeyCode::KeyA) {
-        return;
-    }
-
-    let Some(viewport_position) = window.cursor_position() else {
-        return;
-    };
-
-    let (camera, camera_transform) = *camera;
-
-    let Ok(ray) = camera.viewport_to_world(camera_transform, viewport_position) else {
-        return;
-    };
-
-    let filter = |v| {
-        for ancestor in q_children.iter_ancestors(v) {
-            if q_map.contains(ancestor) {
-                return true;
-            }
-        }
-        false
-    };
-
-    let mesh_ray_cast_settings = MeshRayCastSettings::default().with_filter(&filter);
-
-    let hits = ray_cast.cast_ray(ray, &mesh_ray_cast_settings);
-
-    let Some(hit) = hits.first() else {
-        return;
-    };
-
-    let position = hit.1.point;
-
-    for (entity, team) in q_controller.iter() {
-        let mut min_distance = f32::MAX;
-        let mut target = None;
-
-        for (entity, transform, target_team) in q_target.iter() {
-            let distance = position.distance(transform.translation);
-            if distance < min_distance && target_team != team {
-                min_distance = distance;
-                target = Some(entity);
-            }
-        }
-
-        let Some(target) = target else {
-            continue;
-        };
-
-        commands
-            .entity(entity)
-            .trigger(CommandBehaviorAttack { target });
-    }
+    commands.trigger_targets(
+        CommandBehavior {
+            action: Action::Move(position.xz()),
+        },
+        targets,
+    );
 }

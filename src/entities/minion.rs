@@ -4,7 +4,7 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Attack, AttackState, Bounding, CommandBehaviorAttack, CommandMovementStart, DamageType,
+    Action, Attack, AttackState, Bounding, CommandBehavior, CommandMovementStart, DamageType,
     EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, State,
 };
 
@@ -143,7 +143,10 @@ pub fn action_continue_minion_path(
     };
 
     commands.trigger_targets(
-        CommandMovementStart(minion_path[closest_index..].to_vec()),
+        CommandMovementStart {
+            path: minion_path[closest_index..].to_vec(),
+            speed: None,
+        },
         trigger.target(),
     );
 }
@@ -191,11 +194,9 @@ fn on_found_aggro_target(
     if is_in_attack_range {
         commands.trigger_targets(EventMovementEnd, trigger.target());
     } else {
-        commands
-            .entity(trigger.target())
-            .trigger(CommandBehaviorAttack {
-                target: event.target,
-            });
+        commands.entity(trigger.target()).trigger(CommandBehavior {
+            action: Action::Attack(event.target),
+        });
     }
 
     if let Ok(mut minion_state) = q_minion_state.get_mut(entity) {
@@ -203,8 +204,8 @@ fn on_found_aggro_target(
             MinionState::MovingOnPath => {
                 *minion_state = MinionState::AttackingTarget;
                 commands.trigger_targets(
-                    CommandBehaviorAttack {
-                        target: event.target,
+                    CommandBehavior {
+                        action: Action::Attack(event.target),
                     },
                     trigger.target(),
                 );

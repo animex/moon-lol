@@ -1,34 +1,24 @@
 use bevy::prelude::*;
 
-use crate::core::{EventAttackStart, EventMovementEnd, EventMovementStart};
+use crate::core::{EventAttackStart, EventMovementEnd};
 
 #[derive(Default)]
 pub struct PluginState;
 
 impl Plugin for PluginState {
     fn build(&self, app: &mut App) {
-        app.add_observer(on_movement_start);
         app.add_observer(on_movement_end);
         app.add_observer(on_command_attack_start);
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Default, PartialEq, Debug)]
 pub enum State {
     #[default]
     Idle,
     Moving,
     Attacking,
-}
-
-fn on_movement_start(trigger: Trigger<EventMovementStart>, mut query: Query<&mut State>) {
-    let entity = trigger.target();
-
-    let Ok(mut state) = query.get_mut(entity) else {
-        return;
-    };
-
-    *state = State::Moving;
+    Dashing,
 }
 
 fn on_movement_end(trigger: Trigger<EventMovementEnd>, mut query: Query<&mut State>) {
@@ -39,7 +29,7 @@ fn on_movement_end(trigger: Trigger<EventMovementEnd>, mut query: Query<&mut Sta
     };
 
     match *state {
-        State::Moving => {
+        State::Moving | State::Dashing => {
             *state = State::Idle;
         }
         _ => {}
