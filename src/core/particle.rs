@@ -13,7 +13,7 @@ pub use vs::*;
 use bevy::prelude::*;
 use bevy::render::mesh::{MeshVertexAttribute, VertexFormat};
 
-use league_core::ValueFloat;
+use league_core::{ValueFloat, ValueVector3};
 use lol_config::ConfigMap;
 
 pub const ATTRIBUTE_WORLD_POSITION: MeshVertexAttribute =
@@ -33,19 +33,22 @@ impl Plugin for PluginParticle {
         app.add_observer(on_command_particle_spawn);
         app.add_observer(on_command_particle_despawn);
 
-        app.add_plugins(MaterialPlugin::<QuadMaterial>::default());
-        app.add_plugins(MaterialPlugin::<QuadSliceMaterial>::default());
+        app.add_plugins(MaterialPlugin::<ParticleMaterialQuad>::default());
+        app.add_plugins(MaterialPlugin::<ParticleMaterialQuadSlice>::default());
+        app.add_plugins(MaterialPlugin::<ParticleMaterialUnlitDecal>::default());
 
-        app.init_asset::<QuadMaterial>();
-        app.init_asset::<QuadSliceMaterial>();
+        app.init_asset::<ParticleMaterialQuad>();
+        app.init_asset::<ParticleMaterialQuadSlice>();
+        app.init_asset::<ParticleMaterialUnlitDecal>();
 
         app.add_systems(Update, update_emitter);
+        app.add_systems(Update, update_decal_intersections);
         app.add_systems(Last, update_particle);
     }
 }
 
 #[derive(Component, Clone)]
-pub struct Particle(pub u32);
+pub struct ParticleId(pub u32);
 
 #[derive(Event)]
 pub struct CommandParticleSpawn {
@@ -82,26 +85,42 @@ fn on_command_particle_spawn(
     }
 
     for vfx_emitter_definition_data in vfx_emitter_definition_datas.into_iter() {
-        let birth_rotation = vfx_emitter_definition_data.birth_rotation0.clone().unwrap();
+        let rate = vfx_emitter_definition_data.rate.clone().unwrap();
+        let particle_lifetime = vfx_emitter_definition_data
+            .particle_lifetime
+            .clone()
+            .unwrap_or(ValueFloat {
+                dynamics: None,
+                constant_value: Some(1.0),
+            });
+        let birth_rotation = vfx_emitter_definition_data
+            .birth_rotation0
+            .clone()
+            .unwrap_or(ValueVector3 {
+                dynamics: None,
+                constant_value: Some(Vec3::ZERO),
+            });
+        let birth_scale =
+            vfx_emitter_definition_data
+                .birth_scale0
+                .clone()
+                .unwrap_or(ValueVector3 {
+                    dynamics: None,
+                    constant_value: Some(Vec3::ONE),
+                });
 
         commands.entity(trigger.target()).with_child((
             vfx_emitter_definition_data.clone(),
-            Particle(trigger.particle),
+            ParticleId(trigger.particle),
             ParticleEmitterState {
                 timer: Timer::from_seconds(
                     vfx_emitter_definition_data.lifetime.unwrap_or(10.0),
                     TimerMode::Repeating,
                 ),
-                rate_sampler: vfx_emitter_definition_data.rate.clone().unwrap().into(),
-                life_sampler: vfx_emitter_definition_data
-                    .particle_lifetime
-                    .clone()
-                    .unwrap_or(ValueFloat {
-                        dynamics: None,
-                        constant_value: Some(1.0),
-                    })
-                    .into(),
+                rate_sampler: rate.into(),
+                lifetime_sampler: particle_lifetime.into(),
                 rotation_sampler: birth_rotation.into(),
+                scale_sampler: birth_scale.into(),
                 emission_debt: 1.0,
             },
             Transform::default(),
@@ -113,7 +132,7 @@ fn on_command_particle_despawn(
     trigger: Trigger<CommandParticleDespawn>,
     mut commands: Commands,
     q_children: Query<&Children>,
-    q_particle_emitter: Query<(Entity, &Particle)>,
+    q_particle_emitter: Query<(Entity, &ParticleId)>,
 ) {
     let Ok(children) = q_children.get(trigger.target()) else {
         return;

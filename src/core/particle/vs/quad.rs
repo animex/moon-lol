@@ -7,11 +7,11 @@ use league_utils::neg_array_z;
 use crate::core::particle::{ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_WORLD_POSITION};
 
 #[derive(Default)]
-pub struct ParticleQuad {}
+pub struct ParticleMeshQuad {}
 
-impl From<ParticleQuad> for Mesh {
-    fn from(_value: ParticleQuad) -> Self {
-        let mut mesh = Mesh::from(Plane3d::new(vec3(0.0, 0.0, 1.0), Vec2::splat(100.0)));
+impl From<ParticleMeshQuad> for Mesh {
+    fn from(_value: ParticleMeshQuad) -> Self {
+        let mut mesh = Mesh::from(Plane3d::new(vec3(0.0, 0.0, 1.0), Vec2::splat(1.0)));
 
         let indices = mesh.indices_mut().unwrap();
 

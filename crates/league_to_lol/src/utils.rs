@@ -42,7 +42,7 @@ pub async fn save_struct_to_file<T: Serialize>(path: &str, data: &T) -> Result<(
 
 pub async fn get_asset_writer(path: &str) -> Result<AsyncFile, Error> {
     let path = format!("assets/{}", path);
-    println!("√ {}", path);
+    // println!("√ {}", path);
     ensure_dir_exists(&path)?;
     let file = AsyncFile::create(path).await?;
     Ok(file)

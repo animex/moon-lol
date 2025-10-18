@@ -173,11 +173,6 @@ fn update_remove_vital(
                         .trigger(CommandParticleSpawn {
                             particle: get_particle_hash(&vital.direction, ""),
                         });
-                    commands
-                        .entity(target_entity)
-                        .trigger(CommandParticleSpawn {
-                            particle: hash_bin("Fiora_Q_Slash_Cas"),
-                        });
                 }
                 continue;
             }

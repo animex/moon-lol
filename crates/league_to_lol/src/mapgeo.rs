@@ -1,5 +1,7 @@
-use league_core::LayerTransitionBehavior;
+use bevy::math::bounding::Aabb3d;
+use league_core::EnvironmentVisibility;
 use league_loader::LeagueWadMapLoader;
+use league_utils::neg_vec_z;
 use lol_config::ConfigGeometryObject;
 
 use crate::{
@@ -11,7 +13,14 @@ pub async fn save_mapgeo(loader: &LeagueWadMapLoader) -> Result<Vec<ConfigGeomet
     let mut geometry_objects = Vec::new();
 
     for (i, map_mesh) in loader.map_geo.meshes.iter().enumerate() {
-        if map_mesh.layer_transition_behavior != LayerTransitionBehavior::Unaffected {
+        // if map_mesh.layer_transition_behavior != LayerTransitionBehavior::Unaffected {
+        //     continue;
+        // }
+
+        if !map_mesh
+            .environment_visibility
+            .contains(EnvironmentVisibility::Layer1)
+        {
             continue;
         }
 
@@ -43,6 +52,19 @@ pub async fn save_mapgeo(loader: &LeagueWadMapLoader) -> Result<Vec<ConfigGeomet
             geometry_objects.push(ConfigGeometryObject {
                 mesh_path,
                 material_path,
+                bounding_box: Aabb3d {
+                    min: map_mesh
+                        .bounding_box
+                        .min
+                        .with_z(-map_mesh.bounding_box.max.z)
+                        .into(),
+                    max: map_mesh
+                        .bounding_box
+                        .max
+                        .with_z(-map_mesh.bounding_box.min.z)
+                        .into(),
+                },
+                geo_mesh: map_mesh.clone(),
             });
         }
     }

@@ -2,9 +2,10 @@ use bevy::prelude::*;
 use binrw::binread;
 use league_core::{EnvironmentVisibility, LayerTransitionBehavior};
 use league_utils::{parse_vec3_array, BoundingBox};
+use serde::{Deserialize, Serialize};
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(magic = b"OEGM")]
 #[br(little)]
 pub struct LeagueMapGeo {
@@ -40,7 +41,7 @@ pub struct LeagueMapGeo {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct SceneGraph {
     pub visibility_controller_path_hash: u32,
@@ -82,7 +83,7 @@ pub struct SceneGraph {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct GeometryBucket {
     pub max_stick_out_x: f32,
@@ -94,7 +95,7 @@ pub struct GeometryBucket {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct PlanarReflector {
     #[br(map = |v: [f32; 16]| Mat4::from_cols_array(&v))]
@@ -105,7 +106,7 @@ pub struct PlanarReflector {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct ShaderTextureOverride {
     pub id: u32,
@@ -113,7 +114,7 @@ pub struct ShaderTextureOverride {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct VertexDeclaration {
     pub usage: u32,
@@ -124,7 +125,7 @@ pub struct VertexDeclaration {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct VertexElement {
     pub name: ElementName,
@@ -132,7 +133,7 @@ pub struct VertexElement {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct VertexBuffer {
     #[br(map = EnvironmentVisibility::from_bits_truncate)]
@@ -144,7 +145,7 @@ pub struct VertexBuffer {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct IndexBuffer {
     #[br(map = EnvironmentVisibility::from_bits_truncate)]
@@ -156,7 +157,7 @@ pub struct IndexBuffer {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little, repr = u32)]
 pub enum ElementFormat {
     Unknown = -1,
@@ -197,7 +198,7 @@ impl ElementFormat {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little, repr = u32)]
 pub enum ElementName {
     Unknown = -1,
@@ -220,7 +221,7 @@ pub enum ElementName {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct LeagueMapGeoMesh {
     pub vertex_count: u32,
@@ -233,7 +234,7 @@ pub struct LeagueMapGeoMesh {
     pub index_count: u32,
     pub index_buffer_id: u32,
 
-    #[br(map = EnvironmentVisibility::from_bits_truncate)]
+    #[br(map = EnvironmentVisibility::from_bits_truncate, dbg)]
     pub environment_visibility: EnvironmentVisibility,
     pub visibility_controller_path_hash: u32,
 
@@ -271,7 +272,7 @@ pub struct LeagueMapGeoMesh {
 }
 
 #[binread]
-#[derive(Debug)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct Submesh {
     pub hash: u32,
@@ -285,7 +286,7 @@ pub struct Submesh {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct Channel {
     pub texture: SizedStringU32,
@@ -296,7 +297,7 @@ pub struct Channel {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct TextureOverride {
     pub sampler_id: u32,
@@ -304,7 +305,7 @@ pub struct TextureOverride {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[br(little)]
 pub struct SizedStringU32 {
     pub len: u32,
@@ -316,7 +317,7 @@ pub struct SizedStringU32 {
     pub text: String,
 }
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq, Copy)]
 pub enum QualityFilter {
     All,
     VeryLow,

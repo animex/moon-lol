@@ -34,6 +34,7 @@ pub struct AnimationState {
     pub current_hash: u32,
     pub last_hash: u32,
     pub current_duration: Option<f32>,
+    pub repeat: bool,
 }
 
 #[derive(Component)]
@@ -47,6 +48,7 @@ pub struct AnimationTransitionOut {
 #[derive(Event)]
 pub struct CommandAnimationPlay {
     pub hash: u32,
+    pub repeat: bool,
 }
 
 #[derive(Clone)]
@@ -132,7 +134,16 @@ impl Animation {
     pub fn play(&mut self, player: &mut AnimationPlayer, key: u32, weight: f32) {
         let node_indices = self.get_node_indices(key);
         for node_index in node_indices {
-            player.play(node_index).set_weight(weight).repeat();
+            player.play(node_index).set_weight(weight);
+        }
+    }
+
+    pub fn repeat(&self, player: &mut AnimationPlayer, key: u32) {
+        let node_indices = self.get_current_node_indices(key);
+        for node_index in node_indices {
+            if let Some(animation) = player.animation_mut(node_index) {
+                animation.repeat();
+            }
         }
     }
 
@@ -163,16 +174,22 @@ impl Animation {
 }
 
 impl AnimationState {
-    pub fn update(&mut self, hash: u32) {
+    pub fn update(&mut self, hash: u32) -> &mut Self {
         self.last_hash = self.current_hash;
         self.current_hash = hash;
         self.current_duration = None;
+        self.repeat = true;
+        self
     }
 
-    pub fn update_with_duration(&mut self, hash: u32, duration: f32) {
-        self.last_hash = self.current_hash;
-        self.current_hash = hash;
+    pub fn with_duration(&mut self, duration: f32) -> &mut Self {
         self.current_duration = Some(duration);
+        self
+    }
+
+    pub fn with_repeat(&mut self, repeat: bool) -> &mut Self {
+        self.repeat = repeat;
+        self
     }
 }
 
@@ -191,7 +208,8 @@ fn on_state_change(
             State::Attacking => {
                 let attack = q_attack.get(entity).unwrap();
                 animation_state
-                    .update_with_duration(hash_bin("Attack1"), attack.total_duration_secs());
+                    .update(hash_bin("Attack1"))
+                    .with_duration(attack.total_duration_secs());
             }
             _ => {}
         }
@@ -207,7 +225,7 @@ fn on_command_animation_play(
 
     let mut animation_state = query.get_mut(entity).unwrap();
 
-    animation_state.update(event.hash);
+    animation_state.update(event.hash).with_repeat(event.repeat);
 }
 
 fn on_animation_state_change(
@@ -241,6 +259,9 @@ fn on_animation_state_change(
         });
 
         animation.play(&mut player, state.current_hash, 1.0);
+        if state.repeat {
+            animation.repeat(&mut player, state.current_hash);
+        }
     }
 }
 

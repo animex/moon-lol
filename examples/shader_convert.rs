@@ -4,17 +4,25 @@ use regex::Regex;
 
 fn main() {
     let convert_list = [
+        // (
+        //     "assets/shaders_reversed/quad.vert",
+        //     "assets/shaders/quad.vert",
+        // ),
+        // (
+        //     "assets/shaders_reversed/quad.frag",
+        //     "assets/shaders/quad.frag",
+        // ),
+        // (
+        //     "assets/shaders_reversed/quad_slice.frag",
+        //     "assets/shaders/quad_slice.frag",
+        // ),
         (
-            "assets/shaders_reversed/quad.vert",
-            "assets/shaders/quad.vert",
+            "assets/shaders_reversed/unlit_decal.frag",
+            "assets/shaders/unlit_decal.frag",
         ),
         (
-            "assets/shaders_reversed/quad.frag",
-            "assets/shaders/quad.frag",
-        ),
-        (
-            "assets/shaders_reversed/quad_slice.frag",
-            "assets/shaders/quad_slice.frag",
+            "assets/shaders_reversed/unlit_decal.vert",
+            "assets/shaders/unlit_decal.vert",
         ),
     ];
 
@@ -41,10 +49,18 @@ fn main() {
 }
 
 fn convert(code: &str) -> String {
+    let need_replace = [
+        ("mProj", "camera_view.clip_from_world"),
+        ("vCamera", "camera_view.world_position"),
+        ("VIEW_PROJECTION_MATRIX", "camera_view.clip_from_world"),
+    ];
+
     // 1. 执行初始的、非上下文相关的替换。这里的顺序很重要。
     //    首先替换最具体的限定用法，然后才替换通用的变量名。
-    let mut result = code.replace("_UniformsVertex.mProj", "camera_view.clip_from_world");
-    result = result.replace("_UniformsVertex.vCamera", "camera_view.world_position");
+    let mut result = code.to_string();
+    for (from, to) in need_replace {
+        result = result.replace(&format!("_UniformsVertex.{}", from), to);
+    }
 
     // 2. 对代码进行逐行处理以实现更复杂的结构性更改。
     let mut processed_lines = Vec::new();
@@ -74,10 +90,17 @@ fn convert(code: &str) -> String {
 
         // 在结构体内部，过滤掉要删除的行
         if in_uniforms_vertex_struct {
-            if trimmed_line.contains("mProj") || trimmed_line.contains("vCamera") {
-                // 跳过这些行
+            let mut is_skip = false;
+            for (from, _) in need_replace {
+                if trimmed_line.contains(from) {
+                    is_skip = true;
+                    break;
+                }
+            }
+            if is_skip {
                 continue;
             }
+
             // 结构体定义的结束
             if trimmed_line.starts_with("};") {
                 in_uniforms_vertex_struct = false;
@@ -120,7 +143,8 @@ struct CameraView {
     vec3 world_position;
 };
 
-layout(set = 0, binding = 0) uniform CameraView camera_view;"#;
+layout(set = 0, binding = 0) uniform CameraView camera_view;
+"#;
 
     let mut final_lines = Vec::new();
     for line in processed_lines {

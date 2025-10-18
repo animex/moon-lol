@@ -1,6 +1,7 @@
 use bitflags::bitflags;
+use serde::{Deserialize, Serialize};
 
-#[derive(Debug, PartialEq, Eq, Clone, Copy)]
+#[derive(Debug, PartialEq, Eq, Clone, Copy, Serialize, Deserialize)]
 pub enum LayerTransitionBehavior {
     Unaffected,
     TurnInvisibleDoesNotMatchNewLayerFilter,
@@ -18,7 +19,7 @@ impl From<u8> for LayerTransitionBehavior {
 }
 
 bitflags! {
-    #[derive(Debug, Clone, Copy, PartialEq, Eq)]
+    #[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
     pub struct EnvironmentVisibility: u8 {
         const NoLayer = 0;
         const Layer1 = 1 << 0;

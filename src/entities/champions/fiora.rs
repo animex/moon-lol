@@ -1,11 +1,12 @@
 use bevy::prelude::*;
+use bevy_behave::{behave, Behave};
 use league_utils::hash_bin;
 
 use crate::{
-    abilities::{AbilityDuelistsDance, AbilityLunge},
+    abilities::AbilityDuelistsDance,
     core::{
         Attack, Bounding, Health, Movement, Skill, SkillEffect, SkillEffectAnimation,
-        SkillEffectDash, SkillEffectSequence, SkillOf,
+        SkillEffectDash, SkillEffectParticle, SkillOf,
     },
     entities::champion::Champion,
 };
@@ -40,20 +41,63 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
         .with_related::<SkillOf>((Skill { effect: None }, AbilityDuelistsDance))
         .with_related::<SkillOf>((
             Skill {
-                effect: Some(SkillEffectSequence::Serial(vec![
-                    SkillEffectSequence::Parallel(vec![
-                        SkillEffectSequence::Single(SkillEffect::Dash(SkillEffectDash::Pointer {
-                            speed: 1000.0,
-                            max: 300.0,
-                        })),
-                        SkillEffectSequence::Single(SkillEffect::Animation(SkillEffectAnimation {
-                            hash: hash_bin("Spell1"),
-                        })),
-                    ]),
-                    SkillEffectSequence::Single(SkillEffect::Missile),
-                ])),
+                effect: Some(behave! {
+                    Behave::Sequence => {
+                        Behave::trigger(
+                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell1") })
+                        ),
+                        Behave::trigger(
+                            SkillEffect::Dash(SkillEffectDash::Pointer { speed: 1000., max: 300. }),
+                        ),
+                        Behave::trigger(
+                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Slash_Cas") }),
+                        ),
+                        Behave::trigger(SkillEffect::Damage),
+                    }
+                }),
             },
-            AbilityLunge,
+        ))
+        .with_related::<SkillOf>((
+            Skill {
+                effect: Some(behave! {
+                    Behave::Sequence => {
+                        Behave::trigger(
+                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Telegraph_Blue") }),
+                        ),
+                        Behave::trigger(
+                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                        ),
+                        Behave::Wait(1.),
+                        Behave::trigger(SkillEffect::Damage),
+                    }
+                }),
+            },
+        ))
+        .with_related::<SkillOf>((
+            Skill {
+                effect: Some(behave! {
+                    Behave::Sequence => {
+                        Behave::trigger(
+                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                        ),
+                        Behave::Wait(1.),
+                        Behave::trigger(SkillEffect::Damage),
+                    }
+                }),
+            },
+        ))
+        .with_related::<SkillOf>((
+            Skill {
+                effect: Some(behave! {
+                    Behave::Sequence => {
+                        Behave::trigger(
+                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                        ),
+                        Behave::Wait(1.),
+                        Behave::trigger(SkillEffect::Damage),
+                    }
+                }),
+            },
         ))
         .log_components();
 }

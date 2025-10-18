@@ -2,6 +2,7 @@ use std::hash::Hasher;
 
 use bevy::prelude::*;
 use binrw::binread;
+use serde::{Deserialize, Serialize};
 use twox_hash::XxHash64;
 
 pub fn parse_vec3(v: [f32; 3]) -> Vec3 {
@@ -76,7 +77,7 @@ pub fn hash_joint(s: &str) -> u32 {
 }
 
 #[binread]
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, Deserialize, Serialize)]
 #[br(little)]
 pub struct BoundingBox {
     #[br(map = Vec3::from_array)]

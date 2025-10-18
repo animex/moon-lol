@@ -14,7 +14,7 @@ use crate::core::particle::{
     UniformsVertexQuad, ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_WORLD_POSITION,
 };
 
-#[derive(Clone, ShaderType)]
+#[derive(Clone, ShaderType, Default)]
 pub struct UniformsPixelQuadSlice {
     pub alpha_test_reference_value: f32,
     pub slice_range: Vec2,
@@ -22,7 +22,7 @@ pub struct UniformsPixelQuadSlice {
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone)]
-pub struct QuadSliceMaterial {
+pub struct ParticleMaterialQuadSlice {
     #[uniform(0)]
     pub uniforms_vertex: UniformsVertexQuad,
     #[uniform(1)]
@@ -43,7 +43,7 @@ pub struct QuadSliceMaterial {
     pub blend_mode: u8,
 }
 
-impl Material for QuadSliceMaterial {
+impl Material for ParticleMaterialQuadSlice {
     fn fragment_shader() -> ShaderRef {
         "shaders/quad_slice.frag".into()
     }

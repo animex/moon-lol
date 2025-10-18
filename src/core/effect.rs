@@ -1,11 +1,13 @@
-use std::time::Duration;
+use bevy::prelude::*;
 
-#[derive(Debug, Clone)]
+#[derive(Component, Debug, Clone)]
 pub enum SkillEffect {
     // 造成伤害
     Damage,
     // 位移/冲刺
     Dash(SkillEffectDash),
+    // 播放粒子特效
+    Particle(SkillEffectParticle),
     // 施加状态效果 (Buff/Debuff)
     ApplyStatus,
     // 移除状态效果
@@ -31,18 +33,11 @@ pub enum SkillEffectDash {
 }
 
 #[derive(Debug, Clone)]
-pub enum SkillEffectSequence {
-    // 单个原子效果
-    Single(SkillEffect),
-    // 串行执行，前一个完成后再执行下一个
-    Serial(Vec<SkillEffectSequence>),
-    // 并行执行，所有效果同时开始
-    Parallel(Vec<SkillEffectSequence>),
-    // 延迟一段时间后再执行
-    Delay(Duration),
+pub struct SkillEffectAnimation {
+    pub hash: u32,
 }
 
 #[derive(Debug, Clone)]
-pub struct SkillEffectAnimation {
+pub struct SkillEffectParticle {
     pub hash: u32,
 }

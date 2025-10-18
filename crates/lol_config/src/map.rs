@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
-use bevy::prelude::*;
+use bevy::{math::bounding::Aabb3d, prelude::*};
+use league_file::LeagueMapGeoMesh;
 use serde::{Deserialize, Serialize};
 
 use league_core::{
@@ -28,4 +29,6 @@ pub struct ConfigMap {
 pub struct ConfigGeometryObject {
     pub mesh_path: String,
     pub material_path: String,
+    pub bounding_box: Aabb3d,
+    pub geo_mesh: LeagueMapGeoMesh,
 }

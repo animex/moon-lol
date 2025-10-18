@@ -12,75 +12,85 @@ use bevy::{
     },
 };
 
-use crate::core::particle::{ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_WORLD_POSITION};
-
 #[derive(Clone, ShaderType, Debug)]
-pub struct UniformsVertexQuad {
+pub struct UniformsVertexUnlitDecal {
     pub fog_of_war_params: Vec4,
     pub fog_of_war_always_below_y: Vec4,
     pub fow_height_fade: Vec4,
-    pub nav_grid_xform: Vec4,
-    pub particle_depth_push_pull: f32,
-    pub texture_info: Vec4,
-    pub texture_info_2: Vec4,
+    pub decal_world_matrix: Mat4,
+    pub decal_world_to_uv_matrix: Mat4,
+    pub decal_projection_y_range: Vec4,
 }
 
-impl Default for UniformsVertexQuad {
+impl Default for UniformsVertexUnlitDecal {
     fn default() -> Self {
         Self {
             fog_of_war_params: Vec4::ZERO,
             fog_of_war_always_below_y: Vec4::ZERO,
             fow_height_fade: Vec4::ZERO,
-            nav_grid_xform: Vec4::ZERO,
-            particle_depth_push_pull: 0.0,
-            texture_info: Vec4::ONE,
-            texture_info_2: Vec4::ONE,
+            decal_world_matrix: Mat4::IDENTITY,
+            decal_world_to_uv_matrix: Mat4::IDENTITY,
+            decal_projection_y_range: Vec4::splat(100.0),
+        }
+    }
+}
+
+#[derive(Clone, ShaderType, Debug)]
+pub struct UniformsPixelUnlitDecal {
+    pub color_uv: Vec4,
+    pub modulate_color: Vec4,
+}
+
+impl Default for UniformsPixelUnlitDecal {
+    fn default() -> Self {
+        Self {
+            color_uv: Vec4::ONE,
+            modulate_color: Vec4::ONE,
         }
     }
 }
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Debug)]
-#[bind_group_data(ConditionalMaterialKey)]
-pub struct ParticleMaterialQuad {
+#[bind_group_data(ParticleMaterialKeyUnlitDecal)]
+pub struct ParticleMaterialUnlitDecal {
     #[uniform(0)]
-    pub uniforms_vertex: UniformsVertexQuad,
+    pub uniforms_vertex: UniformsVertexUnlitDecal,
+    #[uniform(1)]
+    pub uniforms_pixel: UniformsPixelUnlitDecal,
     #[texture(2)]
     #[sampler(3)]
-    pub texture: Option<Handle<Image>>,
+    pub diffuse_map: Option<Handle<Image>>,
     #[texture(4)]
     #[sampler(5)]
     pub particle_color_texture: Option<Handle<Image>>,
     #[texture(6)]
     #[sampler(7)]
-    pub cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: Option<Handle<Image>>,
-    #[texture(8)]
-    #[sampler(9)]
-    pub sampler_fow: Option<Handle<Image>>,
+    pub cmb_tex_fow_map_smp_clamp_no_mip: Option<Handle<Image>>,
     pub is_local_orientation: bool,
     pub blend_mode: u8,
 }
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
-pub struct ConditionalMaterialKey {
+pub struct ParticleMaterialKeyUnlitDecal {
     blend_mode: u8,
 }
 
 // 2. 为 Key 实现 From Trait
-impl From<&ParticleMaterialQuad> for ConditionalMaterialKey {
-    fn from(material: &ParticleMaterialQuad) -> Self {
+impl From<&ParticleMaterialUnlitDecal> for ParticleMaterialKeyUnlitDecal {
+    fn from(material: &ParticleMaterialUnlitDecal) -> Self {
         Self {
             blend_mode: material.blend_mode,
         }
     }
 }
 
-impl Material for ParticleMaterialQuad {
+impl Material for ParticleMaterialUnlitDecal {
     fn fragment_shader() -> ShaderRef {
-        "shaders/quad.frag".into()
+        "shaders/unlit_decal.frag".into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/quad.vert".into()
+        "shaders/unlit_decal.vert".into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {
@@ -113,13 +123,13 @@ impl Material for ParticleMaterialQuad {
             });
         }
 
-        let vertex_layout = layout.0.get_layout(&[
-            ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
-            Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
-            ATTRIBUTE_UV_FRAME.at_shader_location(8),
-            ATTRIBUTE_LIFETIME.at_shader_location(9),
-        ])?;
-        descriptor.vertex.buffers = vec![vertex_layout];
+        // let vertex_layout = layout.0.get_layout(&[
+        //     ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
+        //     Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
+        //     ATTRIBUTE_UV_FRAME.at_shader_location(8),
+        //     ATTRIBUTE_LIFETIME.at_shader_location(9),
+        // ])?;
+        // descriptor.vertex.buffers = vec![vertex_layout];
 
         Ok(())
     }

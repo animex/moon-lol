@@ -48,15 +48,41 @@ macro_rules! impl_sampler_traits {
             }
         }
 
+        // --- 我们将重点修改这里的 From Trait 实现 ---
         impl From<$Value> for $Sampler {
             fn from(value: $Value) -> Self {
+                // 首先检查是否存在 dynamics 动态数据块
                 if let Some(dynamics) = value.dynamics {
-                    Self::Curve(
-                        UnevenSampleAutoCurve::new(dynamics.times.into_iter().zip(dynamics.values))
-                            .unwrap(),
-                    )
+                    // 根据样本点的数量来决定如何处理
+                    match dynamics.times.len() {
+                        0 => {
+                            // 如果有 dynamics 块但里面没有点，
+                            // 逻辑上应该回退到使用外层的 constant_value
+                            Self::Constant(value.constant_value.unwrap_or_default())
+                        }
+                        1 => {
+                            // 核心逻辑：如果只有一个点，它代表一个恒定值。
+                            // 这个值就是这个点的值。
+                            // 我们可以安全地 unwrap，因为我们已经检查了长度是 1。
+                            Self::Constant(dynamics.values.into_iter().next().unwrap())
+                        }
+                        _ => {
+                            // 2 个或更多点
+                            // 这是原来的逻辑，尝试创建一条曲线
+                            let samples = dynamics.times.into_iter().zip(dynamics.values);
+                            match UnevenSampleAutoCurve::new(samples) {
+                                Ok(curve) => Self::Curve(curve),
+                                Err(_) => {
+                                    // 如果因为某些原因（比如时间点不递增）创建曲线失败，
+                                    // 安全地回退到 constant_value
+                                    Self::Constant(value.constant_value.unwrap_or_default())
+                                }
+                            }
+                        }
+                    }
                 } else {
-                    Self::Constant(value.constant_value.unwrap())
+                    // 如果根本没有 dynamics 数据块，那么它就是一个简单的常量
+                    Self::Constant(value.constant_value.unwrap_or_default())
                 }
             }
         }

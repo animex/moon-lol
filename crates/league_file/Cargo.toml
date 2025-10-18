@@ -9,3 +9,4 @@ binrw.workspace = true
 league_core.workspace = true
 league_utils.workspace = true
 bitflags.workspace = true
+serde.workspace = true

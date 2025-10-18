@@ -3,6 +3,8 @@ use core::f32;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
+use crate::core::rotate_to_direction;
+
 #[derive(Default)]
 pub struct PluginMovement;
 
@@ -169,9 +171,7 @@ fn update_path_movement(
 
         // 更新旋转
         if last_direction.length_squared() > 0.0 {
-            transform.rotation = Quat::from_rotation_y(
-                -(last_direction.y.atan2(last_direction.x) + f32::consts::PI / 2.0),
-            );
+            rotate_to_direction(&mut transform, last_direction);
         }
     }
 }

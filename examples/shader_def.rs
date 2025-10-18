@@ -1,13 +1,11 @@
 use bevy::{
-    color::palettes::tailwind,
     pbr::{MaterialPipeline, MaterialPipelineKey},
     prelude::*,
     reflect::TypePath,
     render::{
         mesh::MeshVertexBufferLayoutRef,
         render_resource::{
-            AsBindGroup, RenderPipelineDescriptor, ShaderRef, ShaderType,
-            SpecializedMeshPipelineError,
+            AsBindGroup, RenderPipelineDescriptor, ShaderRef, SpecializedMeshPipelineError,
         },
     },
 };
@@ -20,20 +18,9 @@ fn main() {
         .run();
 }
 
-#[derive(Clone, Default, Debug, ShaderType)]
-struct ConditionalUniforms {
-    base_color: Vec4,
-
-    highlight_color: Vec4,
-    special_effect_color: Vec4,
-}
-
 #[derive(Asset, TypePath, AsBindGroup, Debug, Clone)]
 #[bind_group_data(ConditionalMaterialKey)]
 struct ConditionalMaterial {
-    #[uniform(0)]
-    uniforms: ConditionalUniforms,
-
     use_highlight: bool,
     use_special_effect: bool,
 }
@@ -105,11 +92,6 @@ fn setup(
     commands.spawn((
         Mesh3d(mesh),
         MeshMaterial3d(materials.add(ConditionalMaterial {
-            uniforms: ConditionalUniforms {
-                base_color: tailwind::BLUE_500.to_vec4(),
-                highlight_color: tailwind::GREEN_500.to_vec4(),
-                special_effect_color: tailwind::RED_500.to_vec4(),
-            },
             use_highlight: false,
             use_special_effect: true,
         })),

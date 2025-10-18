@@ -26,7 +26,12 @@ impl Default for Controller {
         Self {
             attack_key: KeyCode::KeyA,
             stop_key: KeyCode::KeyS,
-            skill_key_map: HashMap::from([(1, KeyCode::KeyQ)]),
+            skill_key_map: HashMap::from([
+                (1, KeyCode::KeyQ),
+                (2, KeyCode::KeyW),
+                (3, KeyCode::KeyE),
+                (4, KeyCode::KeyR),
+            ]),
         }
     }
 }
@@ -84,22 +89,20 @@ pub fn on_key_pressed(
     let position = hit.1.point;
 
     for (entity, team, controller) in q_controller.iter() {
-        let mut min_distance = f32::MAX;
-        let mut target = None;
-
-        for (entity, transform, target_team) in q_target.iter() {
-            let distance = position.distance(transform.translation);
-            if distance < min_distance && target_team != team {
-                min_distance = distance;
-                target = Some(entity);
-            }
-        }
-
-        let Some(target) = target else {
-            continue;
-        };
-
         let action = if res_input.just_pressed(controller.attack_key()) {
+            let mut min_distance = f32::MAX;
+            let mut target = None;
+            for (entity, transform, target_team) in q_target.iter() {
+                let distance = position.distance(transform.translation);
+                if distance < min_distance && target_team != team {
+                    min_distance = distance;
+                    target = Some(entity);
+                }
+            }
+
+            let Some(target) = target else {
+                continue;
+            };
             Some(Action::Attack(target))
         } else if res_input.just_pressed(controller.stop_key()) {
             Some(Action::Stop)
