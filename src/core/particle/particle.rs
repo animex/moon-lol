@@ -43,7 +43,7 @@ pub fn update_particle(
         } else {
             Mat4::from_scale_rotation_translation(
                 parent_global_transform.scale(),
-                transform.rotation,
+                Quat::default(),
                 parent_global_transform.translation(),
             )
         };

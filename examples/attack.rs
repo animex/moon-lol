@@ -63,7 +63,7 @@ pub fn setup(
     for (_, team, skin) in config_game.legends.iter() {
         let map_center_position = res_navigation_grid.get_map_center_position();
 
-        let chaos_entity = spawn_skin_entity(
+        let target = spawn_skin_entity(
             &mut commands,
             &mut res_animation_graph,
             &asset_server,
@@ -71,22 +71,15 @@ pub fn setup(
             &skin,
         );
 
-        commands
-            .entity(chaos_entity)
-            .insert((
-                Team::Chaos,
-                Movement { speed: 325.0 },
-                Health {
-                    value: 6000.0,
-                    max: 6000.0,
-                },
-                Fiora,
-                Bounding {
-                    radius: 35.0,
-                    height: 300.0,
-                },
-            ))
-            .log_components();
+        spawn_fiora(&mut commands, target);
+
+        commands.entity(target).insert((
+            Team::Chaos,
+            Health {
+                value: 6000.0,
+                max: 6000.0,
+            },
+        ));
 
         let entity = spawn_skin_entity(
             &mut commands,

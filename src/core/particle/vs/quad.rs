@@ -1,3 +1,5 @@
+use std::f32::consts::PI;
+
 use bevy::{
     prelude::*,
     render::mesh::{Indices, VertexAttributeValues},
@@ -11,7 +13,36 @@ pub struct ParticleMeshQuad {}
 
 impl From<ParticleMeshQuad> for Mesh {
     fn from(_value: ParticleMeshQuad) -> Self {
-        let mut mesh = Mesh::from(Plane3d::new(vec3(0.0, 0.0, 1.0), Vec2::splat(1.0)));
+        // let mut mesh = Mesh::from(Cuboid::new(1.0, 1.0, 1.0));
+        let mut mesh: Mesh = Plane3d::new(Vec3::NEG_Z, Vec2::splat(1.0)).into();
+
+        let transform = Transform::from_rotation(Quat::from_rotation_z(PI / 2.));
+
+        let VertexAttributeValues::Float32x3(values) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+        else {
+            panic!();
+        };
+
+        let values = values
+            .into_iter()
+            .map(|v| transform.transform_point(Vec3::from_array(*v)))
+            .collect::<Vec<_>>();
+
+        mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, values.clone());
+
+        let VertexAttributeValues::Float32x3(values) =
+            mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
+        else {
+            panic!();
+        };
+
+        let values = values
+            .into_iter()
+            .map(|v| neg_array_z(v))
+            .collect::<Vec<_>>();
+
+        mesh.insert_attribute(ATTRIBUTE_WORLD_POSITION, values.clone());
 
         let indices = mesh.indices_mut().unwrap();
 
@@ -32,19 +63,6 @@ impl From<ParticleMeshQuad> for Mesh {
             .collect::<Vec<_>>();
 
         mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, values.clone());
-
-        let VertexAttributeValues::Float32x3(values) =
-            mesh.attribute(Mesh::ATTRIBUTE_POSITION).unwrap()
-        else {
-            panic!();
-        };
-
-        let values = values
-            .into_iter()
-            .map(|v| neg_array_z(v))
-            .collect::<Vec<_>>();
-
-        mesh.insert_attribute(ATTRIBUTE_WORLD_POSITION, values.clone());
 
         let VertexAttributeValues::Float32x2(uv_values) =
             mesh.attribute(Mesh::ATTRIBUTE_UV_0).unwrap()

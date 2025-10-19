@@ -9,7 +9,7 @@ use league_core::{
     Unk0xee39916f, VfxEmitterDefinitionData, VfxEmitterDefinitionDataPrimitive,
     VfxEmitterDefinitionDataSpawnShape, VfxPrimitivePlanarProjection,
 };
-use league_utils::neg_vec_z;
+use league_utils::{neg_rotation_z, neg_vec_z};
 
 use crate::core::{
     particle::{
@@ -101,22 +101,39 @@ pub fn update_emitter(
                 .is_local_orientation
                 .unwrap_or(true);
 
+            let is_uniform_scale = vfx_emitter_definition_data
+                .is_uniform_scale
+                .unwrap_or(false);
+
             let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(4);
 
-            let mut transform =
-                Transform::from_translation(offset).with_scale(vec3(scale.x, scale.y, scale.z));
+            let rotation_quat = Quat::from_euler(
+                EulerRot::XYZEx,
+                rotation.x.to_radians(),
+                rotation.y.to_radians(),
+                rotation.z.to_radians(),
+            );
 
-            transform.rotate_x((rotation.x).to_radians());
-            transform.rotate_y((rotation.y).to_radians());
-            transform.rotate_z((rotation.z).to_radians());
+            let rotation_quat = neg_rotation_z(&rotation_quat);
+
+            let mut transform = Transform::from_translation(offset)
+                .with_scale(if is_uniform_scale {
+                    Vec3::splat(scale.x)
+                } else {
+                    scale
+                })
+                .with_rotation(rotation_quat);
+
+            println!("--------------------------------");
+            println!("scale: {:?}", scale);
 
             if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
                 VfxPrimitivePlanarProjection { ref m_projection },
             ) = primitive
             {
-                transform.scale.z = transform.scale.z * 1.5;
-                transform.scale.x = transform.scale.x * 1.5;
+                transform.scale.x = transform.scale.x * 2.;
                 transform.scale.y = m_projection.clone().unwrap().m_y_range.unwrap();
+                transform.scale.z = -transform.scale.z * 2.;
             }
 
             let local_matrix = transform.compute_matrix();
@@ -135,7 +152,10 @@ pub fn update_emitter(
 
             if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(..) = primitive {
                 let material_handle = res_unlit_decal_material.add(ParticleMaterialUnlitDecal {
-                    uniforms_vertex: UniformsVertexUnlitDecal::default(),
+                    uniforms_vertex: UniformsVertexUnlitDecal {
+                        decal_projection_y_range: Vec4::splat(transform.scale.y),
+                        ..default()
+                    },
                     uniforms_pixel: UniformsPixelUnlitDecal::default(),
                     diffuse_map: Some(texture.clone()),
                     particle_color_texture: particle_color_texture.clone(), // 使用上面定义的 texture
@@ -252,7 +272,7 @@ pub fn update_decal_intersections(
         // 4. 计算粒子当前的“世界变换矩阵”和“世界包围盒”
         let world_matrix = source_transform.compute_matrix() * particle_state.local_matrix;
         let (scale, _rotation, translation) = world_matrix.to_scale_rotation_translation();
-        let current_bounding_box = Aabb3d::new(translation, scale / 2.);
+        let current_bounding_box = Aabb3d::new(translation, scale.abs());
 
         // 5. 获取这个贴花粒子“上一帧”的子实体
         // 我们将从中移除本帧仍然相交的，最后剩下的就是需要销毁的
