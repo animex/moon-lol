@@ -2158,8 +2158,8 @@ pub struct ScriptDataObject {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxAnimatedColorVariableData {
-    pub times: Option<Vec<f32>>,
-    pub values: Option<Vec<Vec4>>,
+    pub times: Vec<f32>,
+    pub values: Vec<Vec4>,
     pub probability_tables: Option<Vec<VfxProbabilityTableData>>,
 }
 

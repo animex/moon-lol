@@ -1,7 +1,6 @@
 use bevy::math::bounding::Aabb3d;
 use league_core::EnvironmentVisibility;
 use league_loader::LeagueWadMapLoader;
-use league_utils::neg_vec_z;
 use lol_config::ConfigGeometryObject;
 
 use crate::{

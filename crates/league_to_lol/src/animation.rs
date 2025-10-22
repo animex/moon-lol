@@ -1,8 +1,7 @@
 use bevy::prelude::*;
 use binrw::BinRead;
 use league_file::{
-    AnimationFile, CompressedTransformType, LeagueSkeleton, LeagueSkinnedMesh,
-    LeagueSkinnedMeshInternal, UncompressedData,
+    AnimationFile, CompressedTransformType, LeagueSkeleton, LeagueSkinnedMesh, UncompressedData,
 };
 use league_loader::LeagueWadLoader;
 use league_property::{from_entry, EntryData};
@@ -63,8 +62,7 @@ pub async fn save_character(
     let mut reader = loader
         .get_wad_entry_no_seek_reader_by_path(&simple_skin)
         .unwrap();
-    let league_skinned_mesh =
-        LeagueSkinnedMesh::from(LeagueSkinnedMeshInternal::read(&mut reader).unwrap());
+    let league_simple_mesh = LeagueSkinnedMesh::read(&mut reader).unwrap();
 
     let animation_map = load_animation_map(
         flat_map
@@ -91,8 +89,8 @@ pub async fn save_character(
 
     let mut submesh_paths = Vec::new();
 
-    for (i, range) in league_skinned_mesh.ranges.iter().enumerate() {
-        let mesh = skinned_mesh_to_intermediate(&league_skinned_mesh, i);
+    for (i, range) in league_simple_mesh.ranges.iter().enumerate() {
+        let mesh = skinned_mesh_to_intermediate(&league_simple_mesh, i);
         let mesh_path = format!("ASSETS/{}/meshes/{}.mesh", skin, &range.name);
         save_struct_to_file(&mesh_path, &mesh).await?;
 

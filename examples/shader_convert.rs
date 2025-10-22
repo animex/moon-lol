@@ -24,6 +24,22 @@ fn main() {
             "assets/shaders_reversed/unlit_decal.vert",
             "assets/shaders/unlit_decal.vert",
         ),
+        (
+            "assets/shaders_reversed/mesh.frag",
+            "assets/shaders/mesh.frag",
+        ),
+        (
+            "assets/shaders_reversed/mesh.vert",
+            "assets/shaders/mesh.vert",
+        ),
+        (
+            "assets/shaders_compiled/skinned_mesh/ps/particle/BASE.frag",
+            "assets/shaders/skinned_mesh/particle.frag",
+        ),
+        (
+            "assets/shaders_compiled/skinned_mesh/vs/particle/BASE.vert",
+            "assets/shaders/skinned_mesh/particle.vert",
+        ),
     ];
 
     // 使用 for 循环遍历 convert_list

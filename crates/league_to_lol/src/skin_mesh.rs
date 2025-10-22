@@ -2,7 +2,6 @@ use league_file::{LeagueSkinnedMesh, SkinnedMeshVertex};
 use league_utils::{neg_array_z, reverse_indices};
 use lol_config::IntermediateMesh;
 
-/// 从LeagueSkinnedMesh转换到中间结构
 pub fn skinned_mesh_to_intermediate(
     skinned_mesh: &LeagueSkinnedMesh,
     submesh_index: usize,

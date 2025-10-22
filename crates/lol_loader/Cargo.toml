@@ -10,4 +10,5 @@ binrw.workspace = true
 lol_config.workspace = true
 league_utils.workspace = true
 league_file.workspace = true
+league_to_lol.workspace = true
 thiserror.workspace = true

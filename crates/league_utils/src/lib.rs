@@ -85,3 +85,15 @@ pub struct BoundingBox {
     #[br(map = Vec3::from_array)]
     pub max: Vec3,
 }
+
+pub fn get_padded_string_64(bytes: [u8; 64]) -> String {
+    String::from_utf8_lossy(&bytes)
+        .trim_end_matches('\0')
+        .to_string()
+}
+
+pub fn get_padded_string_128(bytes: [u8; 128]) -> String {
+    String::from_utf8_lossy(&bytes)
+        .trim_end_matches('\0')
+        .to_string()
+}

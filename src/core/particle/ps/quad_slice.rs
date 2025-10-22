@@ -39,7 +39,6 @@ pub struct ParticleMaterialQuadSlice {
     #[texture(8)]
     #[sampler(9)]
     pub sampler_fow: Option<Handle<Image>>,
-    pub is_local_orientation: bool,
     pub blend_mode: u8,
 }
 
@@ -91,6 +90,7 @@ impl Material for ParticleMaterialQuadSlice {
             ATTRIBUTE_LIFETIME.at_shader_location(9),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
+        descriptor.primitive.cull_mode = None;
 
         Ok(())
     }

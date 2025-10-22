@@ -71,6 +71,8 @@ fn generate_define_combinations(base_defines: &[String]) -> Vec<Vec<String>> {
 
 fn main() -> std::io::Result<()> {
     let paths = vec![
+        "assets/ASSETS/shaders/hlsl/skinnedmesh/particle_vs.vs.glsl",
+        "assets/ASSETS/shaders/hlsl/skinnedmesh/particle_ps.ps.glsl",
         // "assets/ASSETS/shaders/hlsl/particlesystem/distortion_mesh_ps.ps.glsl",
         // "assets/ASSETS/shaders/hlsl/particlesystem/distortion_mesh_vs.vs.glsl",
         // "assets/ASSETS/shaders/hlsl/particlesystem/distortion_ps.ps.glsl",
@@ -91,8 +93,8 @@ fn main() -> std::io::Result<()> {
         // "assets/ASSETS/shaders/hlsl/particlesystem/shadow_quad_vs.vs.glsl",
         // "assets/ASSETS/shaders/hlsl/particlesystem/simple_projected_ps.ps.glsl",
         // "assets/ASSETS/shaders/hlsl/particlesystem/simple_projected_vs.vs.glsl",
-        "assets/ASSETS/shaders/hlsl/environment/unlit_decal_vs.vs.glsl",
-        "assets/ASSETS/shaders/hlsl/environment/unlit_decal_ps.ps.glsl",
+        // "assets/ASSETS/shaders/hlsl/environment/unlit_decal_vs.vs.glsl",
+        // "assets/ASSETS/shaders/hlsl/environment/unlit_decal_ps.ps.glsl",
     ];
 
     // 确保 shaders 输出目录存在

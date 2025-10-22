@@ -1,29 +1,42 @@
 mod emitter;
 mod particle;
 mod ps;
+mod skinned_mesh;
 mod utils;
 mod vs;
 
 pub use emitter::*;
 pub use particle::*;
 pub use ps::*;
+pub use skinned_mesh::*;
 pub use utils::*;
 pub use vs::*;
+
+use bevy::platform::collections::HashMap;
+use league_core::{
+    Unk0xee39916f, ValueColor, ValueFloat, ValueVector2, ValueVector3,
+    VfxEmitterDefinitionDataSpawnShape, VfxShapeLegacy,
+};
+use league_utils::hash_wad;
 
 use bevy::prelude::*;
 use bevy::render::mesh::{MeshVertexAttribute, VertexFormat};
 
-use league_core::{ValueFloat, ValueVector3};
 use lol_config::ConfigMap;
+
+use crate::core::{Lifetime, LifetimeMode};
 
 pub const ATTRIBUTE_WORLD_POSITION: MeshVertexAttribute =
     MeshVertexAttribute::new("Vertext_World_Position", 7, VertexFormat::Float32x3);
 
 pub const ATTRIBUTE_UV_FRAME: MeshVertexAttribute =
-    MeshVertexAttribute::new("Vertext_Frame", 8, VertexFormat::Float32x4);
+    MeshVertexAttribute::new("Vertext_UV_FRAME", 8, VertexFormat::Float32x4);
 
 pub const ATTRIBUTE_LIFETIME: MeshVertexAttribute =
-    MeshVertexAttribute::new("Vertext_Life", 9, VertexFormat::Float32x2);
+    MeshVertexAttribute::new("Vertext_LIFETIME", 9, VertexFormat::Float32x2);
+
+pub const ATTRIBUTE_UV_MULT: MeshVertexAttribute =
+    MeshVertexAttribute::new("Vertext_UV_MULT", 99, VertexFormat::Float32x2);
 
 #[derive(Default)]
 pub struct PluginParticle;
@@ -36,16 +49,33 @@ impl Plugin for PluginParticle {
         app.add_plugins(MaterialPlugin::<ParticleMaterialQuad>::default());
         app.add_plugins(MaterialPlugin::<ParticleMaterialQuadSlice>::default());
         app.add_plugins(MaterialPlugin::<ParticleMaterialUnlitDecal>::default());
+        app.add_plugins(MaterialPlugin::<ParticleMaterialMesh>::default());
+        app.add_plugins(MaterialPlugin::<ParticleMaterialSkinnedMeshParticle>::default());
 
         app.init_asset::<ParticleMaterialQuad>();
         app.init_asset::<ParticleMaterialQuadSlice>();
         app.init_asset::<ParticleMaterialUnlitDecal>();
+        app.init_asset::<ParticleMaterialMesh>();
+        app.init_asset::<ParticleMaterialSkinnedMeshParticle>();
 
-        app.add_systems(Update, update_emitter);
-        app.add_systems(Update, update_decal_intersections);
-        app.add_systems(Last, update_particle);
+        app.init_resource::<ParticleMesh>();
+
+        app.add_systems(
+            PostUpdate,
+            (
+                update_emitter_position,
+                update_emitter,
+                update_decal_intersections,
+                update_particle,
+            )
+                .chain()
+                .after(TransformSystem::TransformPropagate),
+        );
     }
 }
+
+#[derive(Resource, Default)]
+pub struct ParticleMesh(HashMap<u64, Handle<Mesh>>);
 
 #[derive(Component, Clone)]
 pub struct ParticleId(pub u32);
@@ -60,6 +90,12 @@ pub struct CommandParticleDespawn {
     pub particle: u32,
 }
 
+impl ParticleMesh {
+    pub fn get_mesh_handle(self: &Self, path: &str) -> Option<Handle<Mesh>> {
+        return self.0.get(&hash_wad(path)).cloned();
+    }
+}
+
 fn on_command_particle_spawn(
     trigger: Trigger<CommandParticleSpawn>,
     mut commands: Commands,
@@ -69,6 +105,13 @@ fn on_command_particle_spawn(
         .vfx_system_definition_datas
         .get(&trigger.particle)
         .unwrap();
+
+    if !vfx_system_definition_data
+        .particle_name
+        .ends_with("Fiora_Base_W_Cas")
+    {
+        return;
+    }
 
     let mut vfx_emitter_definition_datas = Vec::new();
 
@@ -85,6 +128,10 @@ fn on_command_particle_spawn(
     }
 
     for vfx_emitter_definition_data in vfx_emitter_definition_datas.into_iter() {
+        if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Mesh_windup" {
+            continue;
+        }
+
         let rate = vfx_emitter_definition_data.rate.clone().unwrap();
         let particle_lifetime = vfx_emitter_definition_data
             .particle_lifetime
@@ -93,14 +140,49 @@ fn on_command_particle_spawn(
                 dynamics: None,
                 constant_value: Some(1.0),
             });
-        let birth_rotation = vfx_emitter_definition_data
+        let color = vfx_emitter_definition_data
+            .color
+            .clone()
+            .unwrap_or(ValueColor {
+                dynamics: None,
+                constant_value: Some(Vec4::ONE),
+            });
+        let scale0 = vfx_emitter_definition_data
+            .scale0
+            .clone()
+            .unwrap_or(ValueVector3 {
+                dynamics: None,
+                constant_value: Some(Vec3::ONE),
+            });
+        let birth_velocity = vfx_emitter_definition_data
+            .birth_velocity
+            .clone()
+            .unwrap_or(ValueVector3 {
+                dynamics: None,
+                constant_value: Some(Vec3::ZERO),
+            });
+        let birth_acceleration = vfx_emitter_definition_data
+            .birth_acceleration
+            .clone()
+            .unwrap_or(ValueVector3 {
+                dynamics: None,
+                constant_value: Some(Vec3::ONE),
+            });
+        let birth_color = vfx_emitter_definition_data
+            .birth_color
+            .clone()
+            .unwrap_or(ValueColor {
+                dynamics: None,
+                constant_value: Some(Vec4::ONE),
+            });
+        let birth_rotation0 = vfx_emitter_definition_data
             .birth_rotation0
             .clone()
             .unwrap_or(ValueVector3 {
                 dynamics: None,
                 constant_value: Some(Vec3::ZERO),
             });
-        let birth_scale =
+        let birth_scale0 =
             vfx_emitter_definition_data
                 .birth_scale0
                 .clone()
@@ -108,21 +190,64 @@ fn on_command_particle_spawn(
                     dynamics: None,
                     constant_value: Some(Vec3::ONE),
                 });
+        let birth_uv_offset = vfx_emitter_definition_data
+            .birth_uv_offset
+            .clone()
+            .unwrap_or(ValueVector2 {
+                dynamics: None,
+                constant_value: Some(Vec2::ZERO),
+            });
+        let birth_uv_scroll_rate = vfx_emitter_definition_data
+            .birth_uv_scroll_rate
+            .clone()
+            .unwrap_or(ValueVector2 {
+                dynamics: None,
+                constant_value: Some(Vec2::ZERO),
+            });
+        let spawn_shape = vfx_emitter_definition_data
+            .spawn_shape
+            .clone()
+            .and_then(|v| match v {
+                VfxEmitterDefinitionDataSpawnShape::Unk0xee39916f(Unk0xee39916f {
+                    emit_offset,
+                }) => emit_offset.map(|v| ValueVector3 {
+                    dynamics: None,
+                    constant_value: Some(v),
+                }),
+                VfxEmitterDefinitionDataSpawnShape::VfxShapeLegacy(VfxShapeLegacy {
+                    emit_offset,
+                    ..
+                }) => emit_offset,
+                _ => todo!(),
+            })
+            .unwrap_or(ValueVector3 {
+                dynamics: None,
+                constant_value: Some(Vec3::ZERO),
+            });
 
         commands.entity(trigger.target()).with_child((
             vfx_emitter_definition_data.clone(),
             ParticleId(trigger.particle),
             ParticleEmitterState {
-                timer: Timer::from_seconds(
-                    vfx_emitter_definition_data.lifetime.unwrap_or(10.0),
-                    TimerMode::Repeating,
-                ),
-                rate_sampler: rate.into(),
-                lifetime_sampler: particle_lifetime.into(),
-                rotation_sampler: birth_rotation.into(),
-                scale_sampler: birth_scale.into(),
+                birth_acceleration: birth_acceleration.into(),
+                birth_color: birth_color.into(),
+                birth_rotation0: birth_rotation0.into(),
+                birth_scale0: birth_scale0.into(),
+                birth_uv_offset: birth_uv_offset.into(),
+                birth_uv_scroll_rate: birth_uv_scroll_rate.into(),
+                birth_velocity: birth_velocity.into(),
+                color: color.into(),
+                scale0: scale0.into(),
                 emission_debt: 1.0,
+                particle_lifetime: particle_lifetime.into(),
+                rate: rate.into(),
+                spawn_shape: spawn_shape.into(),
+                world_matrix: Mat4::default(),
             },
+            Lifetime::new(
+                vfx_emitter_definition_data.lifetime.unwrap_or(1.0),
+                LifetimeMode::TimerAndNoChildren,
+            ),
             Transform::default(),
         ));
     }

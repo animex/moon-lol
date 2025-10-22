@@ -10,6 +10,7 @@ mod damage;
 mod effect;
 mod game;
 mod life;
+mod lifetime;
 mod map;
 mod movement;
 mod navigation;
@@ -32,6 +33,7 @@ pub use damage::*;
 pub use effect::*;
 pub use game::*;
 pub use life::*;
+pub use lifetime::*;
 pub use map::*;
 pub use movement::*;
 pub use navigation::*;
@@ -55,13 +57,14 @@ plugin_group! {
         :PluginDamage,
         :PluginGame,
         :PluginLife,
+        :PluginLifetime,
         :PluginMap,
         :PluginMovement,
         :PluginNavigaton,
-        :PluginResource,
-        :PluginState,
-        :PluginUI,
         :PluginParticle,
+        :PluginResource,
         :PluginSkill,
+        :PluginState,
+        // :PluginUI,
     }
 }

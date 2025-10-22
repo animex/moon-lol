@@ -2,7 +2,8 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
-use league_core::{ValueFloat, ValueVector3};
+use league_core::{ValueColor, ValueFloat, ValueVector2, ValueVector3, VfxProbabilityTableData};
+use rand::Rng;
 
 pub fn create_black_pixel_texture() -> Image {
     let image = Image::new_fill(
@@ -48,40 +49,21 @@ macro_rules! impl_sampler_traits {
             }
         }
 
-        // --- 我们将重点修改这里的 From Trait 实现 ---
         impl From<$Value> for $Sampler {
             fn from(value: $Value) -> Self {
-                // 首先检查是否存在 dynamics 动态数据块
                 if let Some(dynamics) = value.dynamics {
-                    // 根据样本点的数量来决定如何处理
                     match dynamics.times.len() {
-                        0 => {
-                            // 如果有 dynamics 块但里面没有点，
-                            // 逻辑上应该回退到使用外层的 constant_value
-                            Self::Constant(value.constant_value.unwrap_or_default())
-                        }
-                        1 => {
-                            // 核心逻辑：如果只有一个点，它代表一个恒定值。
-                            // 这个值就是这个点的值。
-                            // 我们可以安全地 unwrap，因为我们已经检查了长度是 1。
-                            Self::Constant(dynamics.values.into_iter().next().unwrap())
-                        }
+                        0 => Self::Constant(value.constant_value.unwrap_or_default()),
+                        1 => Self::Constant(dynamics.values.into_iter().next().unwrap()),
                         _ => {
-                            // 2 个或更多点
-                            // 这是原来的逻辑，尝试创建一条曲线
                             let samples = dynamics.times.into_iter().zip(dynamics.values);
                             match UnevenSampleAutoCurve::new(samples) {
                                 Ok(curve) => Self::Curve(curve),
-                                Err(_) => {
-                                    // 如果因为某些原因（比如时间点不递增）创建曲线失败，
-                                    // 安全地回退到 constant_value
-                                    Self::Constant(value.constant_value.unwrap_or_default())
-                                }
+                                Err(_) => Self::Constant(value.constant_value.unwrap_or_default()),
                             }
                         }
                     }
                 } else {
-                    // 如果根本没有 dynamics 数据块，那么它就是一个简单的常量
                     Self::Constant(value.constant_value.unwrap_or_default())
                 }
             }
@@ -92,3 +74,218 @@ macro_rules! impl_sampler_traits {
 impl_sampler_traits!(Sampler<f32>, ValueFloat, f32, Interval::EVERYWHERE);
 
 impl_sampler_traits!(Sampler<Vec3>, ValueVector3, Vec3, Interval::EVERYWHERE);
+
+impl_sampler_traits!(Sampler<Vec2>, ValueVector2, Vec2, Interval::EVERYWHERE);
+
+impl_sampler_traits!(Sampler<Vec4>, ValueColor, Vec4, Interval::EVERYWHERE);
+
+#[derive(Debug, Clone)]
+pub enum ProbabilityCurve {
+    Constant(f32),
+    Curve(UnevenSampleAutoCurve<f32>),
+}
+
+impl ProbabilityCurve {
+    pub fn new(table: VfxProbabilityTableData) -> Option<Self> {
+        let (times, values) = match (table.key_times, table.key_values) {
+            (Some(times), Some(values)) => (times, values),
+            _ => return None,
+        };
+
+        if times.len() != values.len() {
+            return None;
+        }
+
+        match times.len() {
+            0 => None,
+            1 => Some(Self::Constant(values[0])),
+            _ => {
+                let samples = times.into_iter().zip(values);
+
+                UnevenSampleAutoCurve::new(samples).ok().map(Self::Curve)
+            }
+        }
+    }
+
+    pub fn sample(&self, rng: &mut impl Rng) -> f32 {
+        match self {
+            Self::Constant(v) => *v,
+
+            Self::Curve(c) => {
+                let t = rng.random_range(0.0..=1.0);
+                c.sample_clamped(t)
+            }
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct StochasticSampler<T> {
+    pub base_sampler: Sampler<T>,
+
+    pub prob_curves: Vec<Option<ProbabilityCurve>>,
+}
+
+impl From<ValueFloat> for StochasticSampler<f32> {
+    fn from(value: ValueFloat) -> Self {
+        let base_sampler = Sampler::<f32>::from(value.clone());
+
+        let mut prob_curves = Vec::new();
+
+        if let Some(dynamics) = value.dynamics.as_ref() {
+            if let Some(tables) = dynamics.probability_tables.as_ref() {
+                let curve_opt = tables
+                    .iter()
+                    .next()
+                    .cloned()
+                    .and_then(ProbabilityCurve::new);
+                prob_curves.push(curve_opt);
+            }
+        }
+
+        Self {
+            base_sampler,
+            prob_curves,
+        }
+    }
+}
+
+impl From<ValueVector3> for StochasticSampler<Vec3> {
+    fn from(value: ValueVector3) -> Self {
+        let base_sampler = Sampler::<Vec3>::from(value.clone());
+
+        let mut prob_curves = Vec::new();
+
+        if let Some(dynamics) = value.dynamics.as_ref() {
+            if let Some(tables) = dynamics.probability_tables.as_ref() {
+                for table_data in tables.iter().cloned() {
+                    prob_curves.push(ProbabilityCurve::new(table_data));
+                }
+            }
+        }
+
+        Self {
+            base_sampler,
+            prob_curves,
+        }
+    }
+}
+
+impl From<ValueVector2> for StochasticSampler<Vec2> {
+    fn from(value: ValueVector2) -> Self {
+        let base_sampler = Sampler::<Vec2>::from(value.clone());
+
+        let mut prob_curves = Vec::new();
+
+        if let Some(dynamics) = value.dynamics.as_ref() {
+            if let Some(tables) = dynamics.probability_tables.as_ref() {
+                for table_data in tables.iter().cloned() {
+                    prob_curves.push(ProbabilityCurve::new(table_data));
+                }
+            }
+        }
+
+        Self {
+            base_sampler,
+            prob_curves,
+        }
+    }
+}
+
+impl From<ValueColor> for StochasticSampler<Vec4> {
+    fn from(value: ValueColor) -> Self {
+        let base_sampler = Sampler::<Vec4>::from(value.clone());
+
+        let mut prob_curves = Vec::new();
+
+        if let Some(dynamics) = value.dynamics.as_ref() {
+            if let Some(tables) = dynamics.probability_tables.as_ref() {
+                for table_data in tables.iter().cloned() {
+                    prob_curves.push(ProbabilityCurve::new(table_data));
+                }
+            }
+        }
+
+        Self {
+            base_sampler,
+            prob_curves,
+        }
+    }
+}
+
+impl<T> StochasticSampler<T> {
+    pub fn sample_clamped(&self, t: f32) -> T
+    where
+        T: CombineMultiplicative + Copy + 'static,
+        Sampler<T>: Curve<T>,
+    {
+        let mut rng = rand::rng();
+
+        let base_value = self.base_sampler.sample_clamped(t);
+
+        let random_components: Vec<f32> = self
+            .prob_curves
+            .iter()
+            .map(|opt_curve| {
+                opt_curve
+                    .as_ref()
+                    .map_or(1.0, |curve| curve.sample(&mut rng))
+            })
+            .collect();
+
+        base_value.combine_mul(&random_components)
+    }
+}
+
+pub trait CombineMultiplicative {
+    fn combine_mul(&self, components: &[f32]) -> Self;
+}
+
+impl CombineMultiplicative for f32 {
+    fn combine_mul(&self, components: &[f32]) -> Self {
+        let rand_multiplier = components.get(0).unwrap_or(&1.0);
+        self * rand_multiplier
+    }
+}
+
+impl CombineMultiplicative for Vec3 {
+    fn combine_mul(&self, components: &[f32]) -> Self {
+        let rand_x = components.get(0).unwrap_or(&1.0);
+        let rand_y = components.get(1).unwrap_or(&1.0);
+        let rand_z = components.get(2).unwrap_or(&1.0);
+
+        Vec3 {
+            x: self.x * rand_x,
+            y: self.y * rand_y,
+            z: self.z * rand_z,
+        }
+    }
+}
+
+impl CombineMultiplicative for Vec2 {
+    fn combine_mul(&self, components: &[f32]) -> Self {
+        let rand_x = components.get(0).unwrap_or(&1.0);
+        let rand_y = components.get(1).unwrap_or(&1.0);
+
+        Vec2 {
+            x: self.x * rand_x,
+            y: self.y * rand_y,
+        }
+    }
+}
+
+impl CombineMultiplicative for Vec4 {
+    fn combine_mul(&self, components: &[f32]) -> Self {
+        let rand_x = components.get(0).unwrap_or(&1.0);
+        let rand_y = components.get(1).unwrap_or(&1.0);
+        let rand_z = components.get(2).unwrap_or(&1.0);
+        let rand_w = components.get(3).unwrap_or(&1.0);
+
+        Vec4::new(
+            self.x * rand_x,
+            self.y * rand_y,
+            self.z * rand_z,
+            self.w * rand_w,
+        )
+    }
+}

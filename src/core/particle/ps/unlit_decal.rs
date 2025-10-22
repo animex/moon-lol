@@ -12,28 +12,7 @@ use bevy::{
     },
 };
 
-#[derive(Clone, ShaderType, Debug)]
-pub struct UniformsVertexUnlitDecal {
-    pub fog_of_war_params: Vec4,
-    pub fog_of_war_always_below_y: Vec4,
-    pub fow_height_fade: Vec4,
-    pub decal_world_matrix: Mat4,
-    pub decal_world_to_uv_matrix: Mat4,
-    pub decal_projection_y_range: Vec4,
-}
-
-impl Default for UniformsVertexUnlitDecal {
-    fn default() -> Self {
-        Self {
-            fog_of_war_params: Vec4::ZERO,
-            fog_of_war_always_below_y: Vec4::ZERO,
-            fow_height_fade: Vec4::ZERO,
-            decal_world_matrix: Mat4::IDENTITY,
-            decal_world_to_uv_matrix: Mat4::IDENTITY,
-            decal_projection_y_range: Vec4::splat(100.0),
-        }
-    }
-}
+use crate::core::UniformsVertexUnlitDecal;
 
 #[derive(Clone, ShaderType, Debug)]
 pub struct UniformsPixelUnlitDecal {
@@ -66,7 +45,6 @@ pub struct ParticleMaterialUnlitDecal {
     #[texture(6)]
     #[sampler(7)]
     pub cmb_tex_fow_map_smp_clamp_no_mip: Option<Handle<Image>>,
-    pub is_local_orientation: bool,
     pub blend_mode: u8,
 }
 
@@ -104,7 +82,7 @@ impl Material for ParticleMaterialUnlitDecal {
     fn specialize(
         _pipeline: &MaterialPipeline<Self>,
         descriptor: &mut RenderPipelineDescriptor,
-        layout: &MeshVertexBufferLayoutRef,
+        _layout: &MeshVertexBufferLayoutRef,
         key: MaterialPipelineKey<Self>,
     ) -> Result<(), SpecializedMeshPipelineError> {
         descriptor.vertex.entry_point = "main".into();
@@ -122,14 +100,7 @@ impl Material for ParticleMaterialUnlitDecal {
                 alpha: BlendComponent::OVER,
             });
         }
-
-        // let vertex_layout = layout.0.get_layout(&[
-        //     ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
-        //     Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
-        //     ATTRIBUTE_UV_FRAME.at_shader_location(8),
-        //     ATTRIBUTE_LIFETIME.at_shader_location(9),
-        // ])?;
-        // descriptor.vertex.buffers = vec![vertex_layout];
+        descriptor.primitive.cull_mode = None;
 
         Ok(())
     }

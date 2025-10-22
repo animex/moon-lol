@@ -6,11 +6,10 @@ use bevy::render::{
 
 use lol_config::{ConfigGame, ConfigNavigationGrid};
 use lol_core::Team;
+
 use moon_lol::abilities::PluginAbilities;
-use moon_lol::core::{
-    spawn_skin_entity, Bounding, CameraState, Controller, Focus, Health, Movement,
-};
-use moon_lol::entities::{spawn_fiora, Fiora, PluginBarrack};
+use moon_lol::core::{spawn_skin_entity, CameraState, Controller, Focus, Health};
+use moon_lol::entities::{spawn_fiora, PluginBarrack};
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
@@ -23,8 +22,8 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
-                        // resolution: (300.0, 300.0).into(),
-                        // position: WindowPosition::At((0, 0).into()),
+                        resolution: (300.0, 300.0).into(),
+                        position: WindowPosition::At((0, 0).into()),
                         ..default()
                     }),
                     ..default()
@@ -46,7 +45,7 @@ fn main() {
             Update,
             |mut q_camera_state: Query<&mut CameraState, Added<CameraState>>| {
                 for mut state in q_camera_state.iter_mut() {
-                    // state.scale = 0.1;
+                    state.scale = 0.1;
                 }
             },
         )

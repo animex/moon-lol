@@ -24,15 +24,15 @@ impl Plugin for PluginAnimation {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Clone)]
 pub struct Animation {
     pub hash_to_node: HashMap<u32, AnimationNode>,
 }
 
-#[derive(Component)]
+#[derive(Component, Clone, Debug)]
 pub struct AnimationState {
     pub current_hash: u32,
-    pub last_hash: u32,
+    pub last_hash: Option<u32>,
     pub current_duration: Option<f32>,
     pub repeat: bool,
 }
@@ -175,7 +175,7 @@ impl Animation {
 
 impl AnimationState {
     pub fn update(&mut self, hash: u32) -> &mut Self {
-        self.last_hash = self.current_hash;
+        self.last_hash = Some(self.current_hash);
         self.current_hash = hash;
         self.current_duration = None;
         self.repeat = true;
@@ -243,20 +243,27 @@ fn on_animation_state_change(
     time: Res<Time>,
 ) {
     for (entity, mut player, mut animation, state) in query.iter_mut() {
-        if state.current_hash == state.last_hash {
-            continue;
+        match state.last_hash {
+            Some(last_hash) => {
+                if state.current_hash == last_hash {
+                    continue;
+                }
+            }
+            None => {}
         }
 
         if let Ok(transition_out) = q_transition_out.get(entity) {
             animation.stop(&mut player, transition_out.hash);
         }
 
-        commands.entity(entity).insert(AnimationTransitionOut {
-            hash: state.last_hash,
-            weight: 1.0,
-            duration: Duration::from_millis(200),
-            start_time: time.elapsed_secs(),
-        });
+        if let Some(last_hash) = state.last_hash {
+            commands.entity(entity).insert(AnimationTransitionOut {
+                hash: last_hash,
+                weight: 1.0,
+                duration: Duration::from_millis(0),
+                start_time: time.elapsed_secs(),
+            });
+        }
 
         animation.play(&mut player, state.current_hash, 1.0);
         if state.repeat {

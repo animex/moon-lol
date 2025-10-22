@@ -43,25 +43,10 @@ pub struct BoundingSphere {
     pub radius: f32,
 }
 
-#[derive(Debug)]
-pub struct LeagueSkinnedMesh {
-    pub major: u16,
-    pub minor: u16,
-    pub ranges: Vec<SkinnedMeshRange>,
-    pub flags: Option<u32>,
-    pub bounding_box: Option<BoundingBox>,
-    pub bounding_sphere: Option<BoundingSphere>,
-    pub index_count: u32,
-    pub vertex_count: u32,
-    pub vertex_declaration: SkinnedMeshVertex,
-    pub index_buffer: Vec<u8>,
-    pub vertex_buffer: Vec<u8>,
-}
-
 #[binread]
 #[derive(Debug)]
 #[br(little)]
-pub struct LeagueSkinnedMeshInternal {
+pub struct LeagueSkinnedMesh {
     #[br(magic = b"\x33\x22\x11\x00")]
     _magic: (),
     pub major: u16,
@@ -112,7 +97,7 @@ pub struct LeagueSkinnedMeshInternal {
     pub vertex_buffer: Vec<u8>,
 }
 
-impl LeagueSkinnedMeshInternal {
+impl LeagueSkinnedMesh {
     fn parse_vertex_declaration(
         major: u16,
         vertex_size: Option<u32>,
@@ -128,36 +113,6 @@ impl LeagueSkinnedMeshInternal {
             (56, 1) => SkinnedMeshVertex::Color,
             (72, 2) => SkinnedMeshVertex::Tangent,
             _ => panic!("不支持的顶点格式: size={}, type={}", size, v_type),
-        }
-    }
-}
-
-impl From<LeagueSkinnedMeshInternal> for LeagueSkinnedMesh {
-    fn from(internal: LeagueSkinnedMeshInternal) -> Self {
-        let mut final_ranges = internal.ranges;
-
-        if internal.major == 0 {
-            final_ranges = vec![SkinnedMeshRange {
-                name: "".to_string(),
-                start_vertex: 0,
-                vertex_count: internal.vertex_count,
-                start_index: 0,
-                index_count: internal.index_count,
-            }];
-        }
-
-        Self {
-            major: internal.major,
-            minor: internal.minor,
-            ranges: final_ranges,
-            flags: internal.flags,
-            bounding_box: internal.bounding_box,
-            bounding_sphere: internal.bounding_sphere,
-            index_count: internal.index_count,
-            vertex_count: internal.vertex_count,
-            vertex_declaration: internal.vertex_declaration,
-            index_buffer: internal.index_buffer,
-            vertex_buffer: internal.vertex_buffer,
         }
     }
 }

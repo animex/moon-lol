@@ -4,7 +4,7 @@ use league_to_lol::{
 use lol_config::{ConfigGame, ConfigMap, ConfigNavigationGrid};
 use lol_loader::{
     LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMaterial, LeagueLoaderMesh,
-    LeagueLoaderSkinnedMeshInverseBindposes,
+    LeagueLoaderMeshStatic, LeagueLoaderSkinnedMeshInverseBindposes,
 };
 
 use bevy::prelude::*;
@@ -17,6 +17,7 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderMaterial>();
         app.init_asset_loader::<LeagueLoaderImage>();
         app.init_asset_loader::<LeagueLoaderMesh>();
+        app.init_asset_loader::<LeagueLoaderMeshStatic>();
         app.init_asset_loader::<LeagueLoaderAnimationClip>();
         app.init_asset_loader::<LeagueLoaderSkinnedMeshInverseBindposes>();
 

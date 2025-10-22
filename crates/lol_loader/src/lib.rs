@@ -12,10 +12,7 @@ use bevy::{
     prelude::*,
     render::{
         alpha::AlphaMode,
-        mesh::{
-            skinning::SkinnedMeshInverseBindposes, Indices, PrimitiveTopology,
-            VertexAttributeValues,
-        },
+        mesh::skinning::SkinnedMeshInverseBindposes,
         render_resource::{
             Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
@@ -23,7 +20,8 @@ use bevy::{
 };
 use bincode::deserialize;
 use binrw::BinRead;
-use league_file::{LeagueTexture, LeagueTextureFormat};
+use league_file::{LeagueMeshStatic, LeagueTexture, LeagueTextureFormat};
+use league_to_lol::mesh_static_to_bevy_mesh;
 use league_utils::{neg_rotation_z, neg_vec_z};
 use thiserror::Error;
 
@@ -118,50 +116,39 @@ impl AssetLoader for LeagueLoaderMesh {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
         let mesh: IntermediateMesh = bincode::deserialize(&buf)?;
+        Ok(mesh.into())
+    }
 
-        let mut bevy_mesh = Mesh::new(
-            PrimitiveTopology::TriangleList,
-            RenderAssetUsages::default(),
-        );
+    fn extensions(&self) -> &[&str] {
+        &["mesh"]
+    }
+}
 
-        // 插入必需的位置属性
-        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh.positions.clone());
+#[derive(Default)]
+pub struct LeagueLoaderMeshStatic;
 
-        // 插入可选属性
-        if let Some(ref normals) = mesh.normals {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
-        }
+impl AssetLoader for LeagueLoaderMeshStatic {
+    type Asset = Mesh;
 
-        if let Some(ref uvs) = mesh.uvs {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs.clone());
-        }
+    type Settings = ();
 
-        if let Some(ref colors) = mesh.colors {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.clone());
-        }
+    type Error = Error;
 
-        if let Some(ref tangents) = mesh.tangents {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents.clone());
-        }
+    async fn load(
+        &self,
+        reader: &mut dyn bevy::asset::io::Reader,
+        _settings: &Self::Settings,
+        _load_context: &mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf).await?;
+        let mut reader = Cursor::new(buf);
+        let mesh = LeagueMeshStatic::read(&mut reader)?;
+        Ok(mesh_static_to_bevy_mesh(mesh))
+    }
 
-        // 插入骨骼动画属性
-        if let Some(ref joint_indices) = mesh.joint_indices {
-            bevy_mesh.insert_attribute(
-                Mesh::ATTRIBUTE_JOINT_INDEX,
-                VertexAttributeValues::Uint16x4(joint_indices.clone()),
-            );
-        }
-
-        if let Some(ref joint_weights) = mesh.joint_weights {
-            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights.clone());
-        }
-
-        let indices = mesh.indices.clone();
-
-        // 插入索引
-        bevy_mesh.insert_indices(Indices::U16(indices));
-
-        Ok(bevy_mesh)
+    fn extensions(&self) -> &[&str] {
+        &["scb"]
     }
 }
 

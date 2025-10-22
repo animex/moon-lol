@@ -1,4 +1,8 @@
-use bevy::prelude::*;
+use bevy::{
+    asset::RenderAssetUsages,
+    prelude::*,
+    render::mesh::{Indices, PrimitiveTopology, VertexAttributeValues},
+};
 use binrw::{BinRead, BinWrite};
 use serde::{Deserialize, Serialize};
 
@@ -256,5 +260,53 @@ impl IntermediateMesh {
         }
 
         Ok(())
+    }
+}
+
+impl From<IntermediateMesh> for Mesh {
+    fn from(mesh: IntermediateMesh) -> Self {
+        let mut bevy_mesh = Mesh::new(
+            PrimitiveTopology::TriangleList,
+            RenderAssetUsages::default(),
+        );
+
+        // 插入必需的位置属性
+        bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh.positions.clone());
+
+        // 插入可选属性
+        if let Some(ref normals) = mesh.normals {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
+        }
+
+        if let Some(ref uvs) = mesh.uvs {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_UV_0, uvs.clone());
+        }
+
+        if let Some(ref colors) = mesh.colors {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_COLOR, colors.clone());
+        }
+
+        if let Some(ref tangents) = mesh.tangents {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents.clone());
+        }
+
+        // 插入骨骼动画属性
+        if let Some(ref joint_indices) = mesh.joint_indices {
+            bevy_mesh.insert_attribute(
+                Mesh::ATTRIBUTE_JOINT_INDEX,
+                VertexAttributeValues::Uint16x4(joint_indices.clone()),
+            );
+        }
+
+        if let Some(ref joint_weights) = mesh.joint_weights {
+            bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_JOINT_WEIGHT, joint_weights.clone());
+        }
+
+        let indices = mesh.indices.clone();
+
+        // 插入索引
+        bevy_mesh.insert_indices(Indices::U16(indices));
+
+        bevy_mesh
     }
 }

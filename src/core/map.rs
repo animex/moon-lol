@@ -105,7 +105,7 @@ pub fn on_click_map(
     click: Trigger<Pointer<Pressed>>,
     mut commands: Commands,
     q_move: Query<Entity, With<Controller>>,
-    q_map_geo: Query<&MapGeometry>,
+    // q_map_geo: Query<&MapGeometry>,
 ) {
     let Some(position) = click.hit.position else {
         return;

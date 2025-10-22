@@ -7,21 +7,35 @@ use bevy::{
         mesh::MeshVertexBufferLayoutRef,
         render_resource::{
             AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState,
-            RenderPipelineDescriptor, ShaderDefVal, ShaderRef, SpecializedMeshPipelineError,
+            RenderPipelineDescriptor, ShaderRef, ShaderType, SpecializedMeshPipelineError,
         },
     },
 };
 
-use crate::core::{
-    particle::{ATTRIBUTE_UV_FRAME, ATTRIBUTE_WORLD_POSITION},
-    UniformsVertexQuad, ATTRIBUTE_UV_MULT,
-};
+use crate::core::UniformsVertexMesh;
+
+#[derive(Clone, ShaderType, Debug)]
+pub struct UniformsPixelMesh {
+    pub fow_edge_control: Vec4,
+    pub color_lookup_uv: Vec2,
+}
+
+impl Default for UniformsPixelMesh {
+    fn default() -> Self {
+        Self {
+            fow_edge_control: Vec4::ONE,
+            color_lookup_uv: Vec2::ONE,
+        }
+    }
+}
 
 #[derive(Asset, TypePath, AsBindGroup, Clone, Debug)]
-#[bind_group_data(ConditionalMaterialKey)]
-pub struct ParticleMaterialQuad {
+#[bind_group_data(ParticleMaterialKeyMesh)]
+pub struct ParticleMaterialMesh {
     #[uniform(0)]
-    pub uniforms_vertex: UniformsVertexQuad,
+    pub uniforms_vertex: UniformsVertexMesh,
+    #[uniform(1)]
+    pub uniforms_pixel: UniformsPixelMesh,
     #[texture(2)]
     #[sampler(3)]
     pub texture: Option<Handle<Image>>,
@@ -33,36 +47,31 @@ pub struct ParticleMaterialQuad {
     pub cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: Option<Handle<Image>>,
     #[texture(8)]
     #[sampler(9)]
-    pub sampler_fow: Option<Handle<Image>>,
-    #[texture(12)]
-    #[sampler(13)]
-    pub texturemult: Option<Handle<Image>>,
+    pub cmb_tex_fow_map_smp_clamp_no_mip: Option<Handle<Image>>,
     pub blend_mode: u8,
 }
 
 #[derive(Copy, Clone, Hash, Eq, PartialEq, Debug)]
-pub struct ConditionalMaterialKey {
+pub struct ParticleMaterialKeyMesh {
     blend_mode: u8,
-    mult_pass: bool,
 }
 
 // 2. 为 Key 实现 From Trait
-impl From<&ParticleMaterialQuad> for ConditionalMaterialKey {
-    fn from(material: &ParticleMaterialQuad) -> Self {
+impl From<&ParticleMaterialMesh> for ParticleMaterialKeyMesh {
+    fn from(material: &ParticleMaterialMesh) -> Self {
         Self {
             blend_mode: material.blend_mode,
-            mult_pass: material.texturemult.is_some(),
         }
     }
 }
 
-impl Material for ParticleMaterialQuad {
+impl Material for ParticleMaterialMesh {
     fn fragment_shader() -> ShaderRef {
-        "shaders/quad.frag".into()
+        "shaders/mesh.frag".into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/quad.vert".into()
+        "shaders/mesh.vert".into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {
@@ -87,40 +96,18 @@ impl Material for ParticleMaterialQuad {
         if key.bind_group_data.blend_mode == 4 {
             target.blend = Some(BlendState {
                 color: BlendComponent {
-                    // 源颜色乘以它自己的 alpha 值
                     src_factor: BlendFactor::SrcAlpha,
-                    // 目标颜色乘以 1
                     dst_factor: BlendFactor::One,
-                    // 操作：源 + 目标
                     operation: BlendOperation::Add,
                 },
-                alpha: BlendComponent {
-                    // 通常在加法混合中，我们不想修改目标 Alpha
-                    // 源 Alpha * 0
-                    src_factor: BlendFactor::Zero,
-                    // 目标 Alpha * 1
-                    dst_factor: BlendFactor::One,
-                    // 操作：(S.alpha * 0) + (D.alpha * 1) = D.alpha
-                    operation: BlendOperation::Add,
-                },
+                alpha: BlendComponent::OVER,
             });
         }
 
-        if key.bind_group_data.mult_pass {
-            fragment
-                .shader_defs
-                .push(ShaderDefVal::Bool("MULT_PASS".to_string(), true));
-            descriptor
-                .vertex
-                .shader_defs
-                .push(ShaderDefVal::Bool("MULT_PASS".to_string(), true));
-        }
-
         let vertex_layout = layout.0.get_layout(&[
-            ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
-            Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
-            ATTRIBUTE_UV_FRAME.at_shader_location(8),
-            ATTRIBUTE_UV_MULT.at_shader_location(9),
+            Mesh::ATTRIBUTE_POSITION.at_shader_location(0),
+            Mesh::ATTRIBUTE_NORMAL.at_shader_location(2),
+            Mesh::ATTRIBUTE_UV_0.at_shader_location(8),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         descriptor.primitive.cull_mode = None;

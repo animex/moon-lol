@@ -81,16 +81,12 @@ pub struct SkillEffectBehaveCtx(pub BehaveCtx);
 fn on_dash_end(
     trigger: Trigger<EventMovementEnd>,
     mut commands: Commands,
-    q: Query<(&State, &SkillEffectBehaveCtx)>,
+    q: Query<&SkillEffectBehaveCtx>,
 ) {
     let entity = trigger.target();
-    let Ok((state, SkillEffectBehaveCtx(ctx))) = q.get(entity) else {
+    let Ok(SkillEffectBehaveCtx(ctx)) = q.get(entity) else {
         return;
     };
-
-    if *state != State::Dashing {
-        return;
-    }
 
     commands.trigger(ctx.success());
 }

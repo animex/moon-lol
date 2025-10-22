@@ -51,7 +51,7 @@ void main()
     // --- 计算 TEXCOORD1 (主纹理和多重纹理的 UV) ---
     float frame = floor(ATTR8.z);
 
-    #ifdef MULT_PASS
+#ifdef MULT_PASS
     // MULT_PASS 模式：为两张纹理图集计算 UV
     // 计算主纹理 UV
     float u_offset = floor(frame * uniforms_vertext.TEXTURE_INFO.y);
@@ -68,7 +68,7 @@ void main()
     );
 
     TEXCOORD1 = vec4(uv1, uv2);
-    #else
+#else
     // 单 Pass 模式：只为主纹理图集计算 UV，第二组 UV 直接使用输入
     float u_offset = floor(frame * uniforms_vertext.TEXTURE_INFO.y);
     vec2 uv1 = vec2(
@@ -77,36 +77,36 @@ void main()
     );
 
     TEXCOORD1 = vec4(uv1, ATTR9.xy);
-    #endif
+#endif
 
 
     // --- 计算 TEXCOORD2 (战争迷雾和导航网格的 UV) ---
-    #ifndef DISABLE_FOW
+#ifndef DISABLE_FOW
     // 战争迷雾已启用
     vec2 fow_uv = (ATTR0.xz * uniforms_vertext.FOG_OF_WAR_PARAMS.xy) + uniforms_vertext.FOG_OF_WAR_PARAMS.zw;
-    #ifdef MASKED
+#ifdef MASKED
         // 同时启用 MASKED
         vec2 nav_grid_uv = (uniforms_vertext.NAV_GRID_XFORM.xy * ATTR0.xz) + uniforms_vertext.NAV_GRID_XFORM.zw;
         TEXCOORD2 = vec4(fow_uv, nav_grid_uv);
-    #else
+#else
         // 未启用 MASKED
         TEXCOORD2 = fow_uv;
-    #endif
-    #else
+#endif
+#else
     // 战争迷雾已禁用 (DISABLE_FOW)
-    #ifdef MASKED
+#ifdef MASKED
         // 但启用了 MASKED
         vec2 nav_grid_uv = (uniforms_vertext.NAV_GRID_XFORM.xy * ATTR0.xz) + uniforms_vertext.NAV_GRID_XFORM.zw;
         TEXCOORD2 = vec4(vec2(0.0), nav_grid_uv);
-    #else
+#else
         // 两者都未启用
         TEXCOORD2 = vec2(0.0);
-    #endif
-    #endif
+#endif
+#endif
 
 
     // --- 计算 TEXCOORD3 (Alpha 侵蚀) ---
-    #ifdef ALPHA_EROSION
+#ifdef ALPHA_EROSION
     TEXCOORD3 = ATTR8.w;
-    #endif
+#endif
 }
