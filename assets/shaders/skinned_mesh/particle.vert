@@ -39,6 +39,7 @@ struct Mesh {
 };
 
 layout(set = 2, binding = 0) uniform UniformsVertex uniforms_vertext;
+
 #ifdef PER_OBJECT_BUFFER_BATCH_SIZE
 layout(set = 1, binding = 0) uniform Mesh Meshes[#{PER_OBJECT_BUFFER_BATCH_SIZE}];
 #else
@@ -46,6 +47,7 @@ layout(set = 1, binding = 0) readonly buffer _Meshes {
     Mesh Meshes[];
 };
 #endif // PER_OBJECT_BUFFER_BATCH_SIZE
+
 layout(set = 1, binding = 1) readonly buffer JointMatrices { mat4 joint_matrices[]; };
 
 layout(location = 0) in vec3 ATTR0;
@@ -58,15 +60,6 @@ layout(location = 1) out vec3 TEXCOORD1;
 layout(location = 2) out vec2 TEXCOORD2;
 layout(location = 3) out vec3 COLOR0;
 
-mat4 affine_to_square(mat3x4 affine) {
-    return transpose(mat4(
-        affine[0],
-        affine[1],
-        affine[2],
-        vec4(0.0, 0.0, 0.0, 1.0)
-    ));
-}
-
 void main()
 {
     vec3 _63 = vec3(0.0);
@@ -76,8 +69,8 @@ void main()
     for (int _68 = 0; _68 < 4; )
     {
         uint _72 = uint(_68);
-        _63 += ((mat4x3(joint_matrices[Meshes[gl_InstanceIndex].current_skin_index + ATTR7[_72]]) * vec4(ATTR0, 1.0)) * ATTR1[_72]);
-        _66 += ((mat4x3(joint_matrices[Meshes[gl_InstanceIndex].current_skin_index + ATTR7[_72]]) * vec4(ATTR2, 0.0)) * ATTR1[_72]);
+        _63 += ((uniforms_vertext.BONES[ATTR7[_72]] * vec4(ATTR0, 1.0)) * ATTR1[_72]);
+        _66 += ((uniforms_vertext.BONES[ATTR7[_72]] * vec4(ATTR2, 0.0)) * ATTR1[_72]);
         _68++;
         continue;
     }

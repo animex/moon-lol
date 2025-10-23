@@ -7,8 +7,9 @@ use bevy::{
 };
 
 use league_core::{
-    VfxEmitterDefinitionData, VfxEmitterDefinitionDataPrimitive, VfxPrimitiveAttachedMesh,
-    VfxPrimitiveMesh, VfxPrimitivePlanarProjection,
+    Unk0xee39916f, VfxEmitterDefinitionData, VfxEmitterDefinitionDataPrimitive,
+    VfxEmitterDefinitionDataSpawnShape, VfxPrimitiveAttachedMesh, VfxPrimitiveMesh,
+    VfxPrimitivePlanarProjection, VfxShapeLegacy,
 };
 use league_utils::{neg_rotation_z, neg_vec_z};
 
@@ -37,7 +38,7 @@ pub struct ParticleEmitterState {
     pub emission_debt: f32,
     pub particle_lifetime: StochasticSampler<f32>,
     pub rate: StochasticSampler<f32>,
-    pub spawn_shape: StochasticSampler<Vec3>,
+    pub emitter_position: StochasticSampler<Vec3>,
     pub world_matrix: Mat4,
 }
 
@@ -60,13 +61,13 @@ pub fn update_emitter_position(
 
         let progress = lifetime.progress();
 
-        let spawn_shape = emitter.spawn_shape.sample_clamped(progress);
+        let emitter_position = emitter.emitter_position.sample_clamped(progress);
 
         let parent_global_transform = q_global_transform.get(parent).unwrap();
 
         let parent_world = parent_global_transform.compute_matrix();
 
-        let translation = neg_vec_z(&spawn_shape);
+        let translation = neg_vec_z(&emitter_position);
 
         let is_local_orientation = vfx_emitter_definition_data
             .is_local_orientation
@@ -123,7 +124,8 @@ pub fn update_emitter(
         &VfxEmitterDefinitionData,
         &ParticleId,
     )>,
-    q_skin_mesh: Query<(&Mesh3d, &SkinnedMesh)>,
+    q_mesh3d: Query<&Mesh3d>,
+    q_skinned_mesh: Query<&SkinnedMesh>,
     q_children: Query<&Children>,
     q_animation_target: Query<(Entity, &Transform, &AnimationTarget)>,
     time: Res<Time>,
@@ -166,6 +168,12 @@ pub fn update_emitter(
             .is_uniform_scale
             .unwrap_or(false);
 
+        let scale = if is_uniform_scale {
+            Vec3::splat(birth_scale0.x)
+        } else {
+            birth_scale0
+        };
+
         let primitive = vfx_emitter_definition_data
             .primitive
             .clone()
@@ -190,6 +198,25 @@ pub fn update_emitter(
         let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(1);
 
         for _ in 0..particles_to_spawn {
+            let translation = neg_vec_z(
+                &vfx_emitter_definition_data
+                    .spawn_shape
+                    .clone()
+                    .and_then(|v| match v {
+                        VfxEmitterDefinitionDataSpawnShape::Unk0xee39916f(Unk0xee39916f {
+                            emit_offset,
+                        }) => emit_offset,
+                        VfxEmitterDefinitionDataSpawnShape::VfxShapeLegacy(VfxShapeLegacy {
+                            emit_offset,
+                            ..
+                        }) => emit_offset.and_then(|v| {
+                            Some(StochasticSampler::<Vec3>::from(v).sample_clamped(progress))
+                        }),
+                        _ => todo!(),
+                    })
+                    .unwrap_or(Vec3::ZERO),
+            );
+
             let rotation_quat = Quat::from_euler(
                 EulerRot::XYZEx,
                 birth_rotation0.x.to_radians(),
@@ -199,12 +226,9 @@ pub fn update_emitter(
 
             let rotation_quat = neg_rotation_z(&rotation_quat);
 
-            let mut transform =
-                Transform::from_rotation(rotation_quat).with_scale(if is_uniform_scale {
-                    Vec3::splat(birth_scale0.x)
-                } else {
-                    birth_scale0
-                });
+            let mut transform = Transform::from_rotation(rotation_quat)
+                .with_translation(translation)
+                .with_scale(birth_scale0);
 
             if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
                 VfxPrimitivePlanarProjection { ref m_projection },
@@ -222,7 +246,7 @@ pub fn update_emitter(
                         birth_uv_offset,
                         birth_uv_scroll_rate,
                         birth_color,
-                        birth_scale0,
+                        scale,
                         velocity: neg_vec_z(&birth_velocity),
                         acceleration: birth_acceleration,
                     },
@@ -343,7 +367,8 @@ pub fn update_emitter(
                         particle_entity,
                         parent,
                         material,
-                        q_skin_mesh,
+                        q_mesh3d,
+                        q_skinned_mesh,
                         q_children,
                         q_animation_target,
                     );

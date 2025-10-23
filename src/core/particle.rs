@@ -1,16 +1,14 @@
 mod emitter;
+mod environment;
 mod particle;
-mod ps;
 mod skinned_mesh;
 mod utils;
-mod vs;
 
 pub use emitter::*;
+pub use environment::*;
 pub use particle::*;
-pub use ps::*;
 pub use skinned_mesh::*;
 pub use utils::*;
-pub use vs::*;
 
 use bevy::platform::collections::HashMap;
 use league_core::{
@@ -66,7 +64,9 @@ impl Plugin for PluginParticle {
                 update_emitter_position,
                 update_emitter,
                 update_decal_intersections,
+                update_particle_transform,
                 update_particle,
+                update_particle_skinned_mesh_particle,
             )
                 .chain()
                 .after(TransformSystem::TransformPropagate),
@@ -106,12 +106,12 @@ fn on_command_particle_spawn(
         .get(&trigger.particle)
         .unwrap();
 
-    if !vfx_system_definition_data
-        .particle_name
-        .ends_with("Fiora_Base_W_Cas")
-    {
-        return;
-    }
+    // if !vfx_system_definition_data
+    //     .particle_name
+    //     .ends_with("Fiora_Base_Passive_SW")
+    // {
+    //     return;
+    // }
 
     let mut vfx_emitter_definition_datas = Vec::new();
 
@@ -128,9 +128,13 @@ fn on_command_particle_spawn(
     }
 
     for vfx_emitter_definition_data in vfx_emitter_definition_datas.into_iter() {
-        if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Mesh_windup" {
-            continue;
-        }
+        // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "decal" {
+        //     continue;
+        // }
+
+        let is_single_particle = vfx_emitter_definition_data
+            .is_single_particle
+            .unwrap_or(false);
 
         let rate = vfx_emitter_definition_data.rate.clone().unwrap();
         let particle_lifetime = vfx_emitter_definition_data
@@ -166,7 +170,7 @@ fn on_command_particle_spawn(
             .clone()
             .unwrap_or(ValueVector3 {
                 dynamics: None,
-                constant_value: Some(Vec3::ONE),
+                constant_value: Some(Vec3::ZERO),
             });
         let birth_color = vfx_emitter_definition_data
             .birth_color
@@ -204,22 +208,9 @@ fn on_command_particle_spawn(
                 dynamics: None,
                 constant_value: Some(Vec2::ZERO),
             });
-        let spawn_shape = vfx_emitter_definition_data
-            .spawn_shape
+        let emitter_position = vfx_emitter_definition_data
+            .emitter_position
             .clone()
-            .and_then(|v| match v {
-                VfxEmitterDefinitionDataSpawnShape::Unk0xee39916f(Unk0xee39916f {
-                    emit_offset,
-                }) => emit_offset.map(|v| ValueVector3 {
-                    dynamics: None,
-                    constant_value: Some(v),
-                }),
-                VfxEmitterDefinitionDataSpawnShape::VfxShapeLegacy(VfxShapeLegacy {
-                    emit_offset,
-                    ..
-                }) => emit_offset,
-                _ => todo!(),
-            })
             .unwrap_or(ValueVector3 {
                 dynamics: None,
                 constant_value: Some(Vec3::ZERO),
@@ -238,10 +229,10 @@ fn on_command_particle_spawn(
                 birth_velocity: birth_velocity.into(),
                 color: color.into(),
                 scale0: scale0.into(),
-                emission_debt: 1.0,
+                emission_debt: if is_single_particle { 1. } else { 0. },
                 particle_lifetime: particle_lifetime.into(),
                 rate: rate.into(),
-                spawn_shape: spawn_shape.into(),
+                emitter_position: emitter_position.into(),
                 world_matrix: Mat4::default(),
             },
             Lifetime::new(

@@ -20,6 +20,7 @@ mod skill;
 mod spawn;
 mod ui;
 mod utils;
+mod view_visibility;
 
 pub use animation::*;
 pub use attack::*;
@@ -43,6 +44,7 @@ pub use skill::*;
 pub use spawn::*;
 pub use ui::*;
 pub use utils::*;
+pub use view_visibility::*;
 
 use bevy::app::plugin_group;
 
@@ -65,6 +67,6 @@ plugin_group! {
         :PluginResource,
         :PluginSkill,
         :PluginState,
-        // :PluginUI,
+        :PluginUI,
     }
 }

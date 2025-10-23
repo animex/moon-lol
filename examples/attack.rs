@@ -1,4 +1,5 @@
 use bevy::prelude::*;
+use bevy::render::settings::WgpuLimits;
 use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
@@ -23,7 +24,7 @@ fn main() {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
                         resolution: (300.0, 300.0).into(),
-                        position: WindowPosition::At((0, 0).into()),
+                        position: WindowPosition::At((0, 1000).into()),
                         ..default()
                     }),
                     ..default()
@@ -31,7 +32,6 @@ fn main() {
                 .set(RenderPlugin {
                     render_creation: RenderCreation::Automatic(WgpuSettings {
                         backends: Some(Backends::VULKAN),
-                        // limits: WgpuLimits::downlevel_webgl2_defaults(),
                         ..default()
                     }),
                     ..default()

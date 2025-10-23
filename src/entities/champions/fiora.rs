@@ -65,12 +65,12 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                             SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Telegraph_Blue") }),
                         ),
                         Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Cas") }),
-                        ),
-                        Behave::trigger(
                             SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2_In") })
                         ),
-                        Behave::Wait(0.75),
+                        Behave::trigger(
+                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Cas") }),
+                        ),
+                        Behave::Wait(0.5),
                         Behave::trigger(
                             SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
                         ),

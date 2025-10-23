@@ -8,7 +8,9 @@ use bevy::render::mesh::skinning::SkinnedMesh;
 use league_utils::hash_bin;
 use lol_config::{ConfigCharacterSkin, ConfigCharacterSkinAnimation};
 
-use crate::core::{Animation, AnimationNode, AnimationNodeF32, AnimationState};
+use crate::core::{
+    Animation, AnimationNode, AnimationNodeF32, AnimationState, ViewVisibilityForce,
+};
 
 pub fn spawn_skin_entity(
     commands: &mut Commands,
@@ -133,6 +135,8 @@ pub fn spawn_skin_entity(
         ));
     }
 
+    commands.entity(entity).insert(skinned_mesh.clone());
+
     entity
 }
 
@@ -141,11 +145,14 @@ pub fn spawn_shadow_skin_entity<M: Material>(
     target: Entity,
     skin_entity: Entity,
     material: MeshMaterial3d<M>,
-    q_skin_mesh: Query<(&Mesh3d, &SkinnedMesh)>,
+    q_mesh3d: Query<&Mesh3d>,
+    q_skinned_mesh: Query<&SkinnedMesh>,
     q_children: Query<&Children>,
     q_animation_target: Query<(Entity, &Transform, &AnimationTarget)>,
 ) {
     let children = q_children.get(skin_entity).unwrap();
+
+    let skinned_mesh = q_skinned_mesh.get(skin_entity).unwrap();
 
     commands.entity(target).insert(material.clone());
 
@@ -169,25 +176,27 @@ pub fn spawn_shadow_skin_entity<M: Material>(
         &mut joint_map,
     );
 
+    let new_joints = skinned_mesh
+        .joints
+        .iter()
+        .map(|old_joint_entity| *joint_map.get(old_joint_entity).unwrap())
+        .collect::<Vec<_>>();
+
+    let new_skinned_mesh = SkinnedMesh {
+        inverse_bindposes: skinned_mesh.inverse_bindposes.clone(),
+        joints: new_joints,
+    };
+
+    commands.entity(target).insert(new_skinned_mesh.clone());
+
     for child in children.iter() {
-        if let Ok((mesh, skinned_mesh)) = q_skin_mesh.get(child) {
-            let new_joints = skinned_mesh
-                .joints
-                .iter()
-                .map(|old_joint_entity| *joint_map.get(old_joint_entity).unwrap())
-                .collect::<Vec<_>>();
-
-            let new_skinned_mesh = SkinnedMesh {
-                inverse_bindposes: skinned_mesh.inverse_bindposes.clone(),
-                joints: new_joints,
-            };
-
+        if let Ok(mesh) = q_mesh3d.get(child) {
             commands.entity(target).with_child((
                 mesh.clone(),
                 material.clone(),
                 // skinned_mesh.clone(),
                 // mat.clone(),
-                new_skinned_mesh,
+                new_skinned_mesh.clone(),
             ));
         }
     }
@@ -204,10 +213,7 @@ pub fn duplicate_joints_to_target(
 ) {
     for (joint_entity, transform, anim_target) in joints {
         let new_joint_entity = commands
-            .spawn((
-                transform.clone(),
-                // anim_target.clone()
-            ))
+            .spawn((transform.clone(), ViewVisibilityForce))
             .id();
 
         commands.entity(parent).add_child(new_joint_entity);
