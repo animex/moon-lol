@@ -8,9 +8,7 @@ use bevy::render::mesh::skinning::SkinnedMesh;
 use league_utils::hash_bin;
 use lol_config::{ConfigCharacterSkin, ConfigCharacterSkinAnimation};
 
-use crate::core::{
-    Animation, AnimationNode, AnimationNodeF32, AnimationState, ViewVisibilityForce,
-};
+use crate::core::{Animation, AnimationNode, AnimationNodeF32, AnimationState};
 
 pub fn spawn_skin_entity(
     commands: &mut Commands,
@@ -213,7 +211,7 @@ pub fn duplicate_joints_to_target(
 ) {
     for (joint_entity, transform, anim_target) in joints {
         let new_joint_entity = commands
-            .spawn((transform.clone(), ViewVisibilityForce))
+            .spawn((transform.clone(), anim_target.clone()))
             .id();
 
         commands.entity(parent).add_child(new_joint_entity);

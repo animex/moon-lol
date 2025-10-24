@@ -47,6 +47,9 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                             SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell1") })
                         ),
                         Behave::trigger(
+                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Dash_Trail_ground") }),
+                        ),
+                        Behave::trigger(
                             SkillEffect::Dash(SkillEffectDash::Pointer { speed: 1000., max: 300. }),
                         ),
                         Behave::trigger(
@@ -84,7 +87,7 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
-                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Passive_Hit_Tar") }),
                         ),
                         Behave::Wait(1.),
                         Behave::trigger(SkillEffect::Damage),

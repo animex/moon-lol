@@ -11,10 +11,7 @@ pub use skinned_mesh::*;
 pub use utils::*;
 
 use bevy::platform::collections::HashMap;
-use league_core::{
-    Unk0xee39916f, ValueColor, ValueFloat, ValueVector2, ValueVector3,
-    VfxEmitterDefinitionDataSpawnShape, VfxShapeLegacy,
-};
+use league_core::{ValueColor, ValueFloat, ValueVector2, ValueVector3};
 use league_utils::hash_wad;
 
 use bevy::prelude::*;
@@ -108,7 +105,7 @@ fn on_command_particle_spawn(
 
     // if !vfx_system_definition_data
     //     .particle_name
-    //     .ends_with("Fiora_Base_Passive_SW")
+    //     .ends_with("Dash_Trail_ground")
     // {
     //     return;
     // }
@@ -128,7 +125,7 @@ fn on_command_particle_spawn(
     }
 
     for vfx_emitter_definition_data in vfx_emitter_definition_datas.into_iter() {
-        // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "decal" {
+        // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Temp_Trail1" {
         //     continue;
         // }
 

@@ -168,7 +168,7 @@ pub fn update_emitter(
             .is_uniform_scale
             .unwrap_or(false);
 
-        let scale = if is_uniform_scale {
+        let mut birth_scale0 = if is_uniform_scale {
             Vec3::splat(birth_scale0.x)
         } else {
             birth_scale0
@@ -226,18 +226,18 @@ pub fn update_emitter(
 
             let rotation_quat = neg_rotation_z(&rotation_quat);
 
-            let mut transform = Transform::from_rotation(rotation_quat)
-                .with_translation(translation)
-                .with_scale(birth_scale0);
-
             if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
                 VfxPrimitivePlanarProjection { ref m_projection },
             ) = primitive
             {
-                transform.scale.x = transform.scale.x * 1.5;
-                transform.scale.y = m_projection.clone().unwrap().m_y_range.unwrap();
-                transform.scale.z = -transform.scale.z * 1.5;
+                birth_scale0.x = birth_scale0.x * 2.;
+                birth_scale0.y = m_projection.as_ref().unwrap().m_y_range.unwrap();
+                birth_scale0.z = -birth_scale0.z * 2.;
             }
+
+            let transform = Transform::from_rotation(rotation_quat)
+                .with_translation(translation)
+                .with_scale(birth_scale0);
 
             let particle_entity = commands
                 .spawn((
@@ -246,16 +246,20 @@ pub fn update_emitter(
                         birth_uv_offset,
                         birth_uv_scroll_rate,
                         birth_color,
-                        scale,
+                        birth_scale0,
                         velocity: neg_vec_z(&birth_velocity),
                         acceleration: birth_acceleration,
                     },
                     Lifetime::new_timer(particle_lifetime),
+                    transform,
+                    Pickable::IGNORE,
+                    ChildOf(emitter_entity),
                 ))
                 .id();
 
             match primitive {
-                VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryQuad => {
+                VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryQuad
+                | VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryTrail(..) => {
                     let mesh = res_mesh.add(ParticleMeshQuad::default());
 
                     commands.entity(particle_entity).insert(Mesh3d(mesh));
@@ -295,11 +299,15 @@ pub fn update_emitter(
                         ));
                     };
                 }
-                VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(..) => {
+                VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
+                    VfxPrimitivePlanarProjection { ref m_projection },
+                ) => {
                     let material_handle =
                         res_unlit_decal_material.add(ParticleMaterialUnlitDecal {
                             uniforms_vertex: UniformsVertexUnlitDecal {
-                                decal_projection_y_range: Vec4::splat(transform.scale.y),
+                                decal_projection_y_range: Vec4::splat(
+                                    m_projection.as_ref().unwrap().m_y_range.unwrap(),
+                                ),
                                 ..default()
                             },
                             uniforms_pixel: UniformsPixelUnlitDecal::default(),
@@ -377,12 +385,6 @@ pub fn update_emitter(
                     continue;
                 }
             }
-
-            commands.entity(particle_entity).insert((
-                transform,
-                Pickable::IGNORE,
-                ChildOf(emitter_entity),
-            ));
         }
     }
 }

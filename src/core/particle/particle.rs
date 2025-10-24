@@ -25,7 +25,7 @@ pub struct ParticleState {
     pub birth_uv_offset: Vec2,
     pub birth_uv_scroll_rate: Vec2,
     pub birth_color: Vec4,
-    pub scale: Vec3,
+    pub birth_scale0: Vec3,
     pub velocity: Vec3,
     pub acceleration: Vec3,
 }
@@ -152,7 +152,7 @@ pub fn update_particle_transform(
 
         let scale0 = emitter.scale0.sample_clamped(life);
 
-        transform.scale = scale0 * particle.scale;
+        transform.scale = scale0 * particle.birth_scale0;
     }
 }
 
