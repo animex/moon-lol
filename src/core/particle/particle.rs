@@ -2,11 +2,14 @@ mod mesh;
 mod quad;
 mod quad_slice;
 
+use league_core::VfxEmitterDefinitionDataPrimitive;
+use lol_config::ConfigMap;
 pub use mesh::*;
 pub use quad::*;
 pub use quad_slice::*;
 
 use bevy::{
+    math::VectorSpace,
     prelude::*,
     render::mesh::{
         skinning::{SkinnedMesh, SkinnedMeshInverseBindposes},
@@ -16,7 +19,7 @@ use bevy::{
 
 use crate::core::{
     particle::{ATTRIBUTE_LIFETIME, ATTRIBUTE_WORLD_POSITION},
-    Lifetime, ParticleEmitterState, ParticleMaterialSkinnedMeshParticle,
+    Lifetime, ParticleEmitterState, ParticleId, ParticleMaterialSkinnedMeshParticle,
     ParticleMaterialUnlitDecal,
 };
 
@@ -28,13 +31,22 @@ pub struct ParticleState {
     pub birth_scale0: Vec3,
     pub velocity: Vec3,
     pub acceleration: Vec3,
+    pub frame: f32,
 }
 
 pub fn update_particle(
     mut res_mesh: ResMut<Assets<Mesh>>,
     mut res_particle_material_unlit_decal: ResMut<Assets<ParticleMaterialUnlitDecal>>,
     mut res_particle_material_mesh: ResMut<Assets<ParticleMaterialMesh>>,
-    q_particle_state: Query<(Entity, &Transform, &ChildOf, &Lifetime, &ParticleState)>,
+    res_config_map: Res<ConfigMap>,
+    q_particle_state: Query<(
+        Entity,
+        &Transform,
+        &ChildOf,
+        &Lifetime,
+        &ParticleState,
+        &ParticleId,
+    )>,
     q_particle_material_unlit_decal: Query<
         &MeshMaterial3d<ParticleMaterialUnlitDecal>,
         With<ParticleState>,
@@ -43,8 +55,11 @@ pub fn update_particle(
     q_particle_emitter_state: Query<&ParticleEmitterState>,
     q_global_transform: Query<&GlobalTransform>,
     q_mesh3d: Query<&Mesh3d>,
+    q_camera_transform: Query<&Transform, With<Camera3d>>,
 ) {
-    for (particle_entity, transform, child_of, lifetime, particle) in q_particle_state.iter() {
+    for (particle_entity, transform, child_of, lifetime, particle, particle_id) in
+        q_particle_state.iter()
+    {
         let parent = child_of.parent();
 
         let life = lifetime.progress();
@@ -53,8 +68,13 @@ pub fn update_particle(
 
         let color = particle.birth_color * emitter.color.sample_clamped(life);
 
-        let world_matrix =
-            q_global_transform.get(parent).unwrap().compute_matrix() * transform.compute_matrix();
+        let emitter_global_transform = q_global_transform.get(parent).unwrap().compute_transform();
+
+        let mut world_transform = emitter_global_transform.mul_transform(*transform);
+
+        let world_matrix = world_transform.compute_matrix();
+
+        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
 
         if let Ok(material) = q_particle_material_unlit_decal.get(particle_entity) {
             if let Some(material) = res_particle_material_unlit_decal.get_mut(material.0.id()) {
@@ -66,14 +86,33 @@ pub fn update_particle(
         if let Ok(material) = q_particle_material_mesh.get(particle_entity) {
             if let Some(material) = res_particle_material_mesh.get_mut(material.0.id()) {
                 material.uniforms_vertex.m_world = world_matrix;
+                let frame = particle.frame;
 
-                let current_uv_offset: Vec2 = particle.birth_uv_offset
-                    + particle.birth_uv_scroll_rate * lifetime.elapsed_secs();
+                let Vec2 {
+                    x: col_num,
+                    y: row_num,
+                } = vfx_emitter_definition_data.tex_div.unwrap_or(Vec2::ONE);
+
+                let scale_x = 1.0 / col_num;
+                let scale_y = 1.0 / row_num;
+
+                let current_col = frame % col_num;
+                let current_row = (frame / col_num).floor();
+
+                let current_uv_offset: Vec2 = (particle.birth_uv_offset
+                    + particle.birth_uv_scroll_rate * lifetime.elapsed_secs())
+                    % 1.0;
+
+                let translate_x = current_col * scale_x;
+                let translate_y = current_row * scale_y;
+
+                let final_translate_x = current_uv_offset.x * scale_x + translate_x;
+                let final_translate_y = current_uv_offset.y * scale_y + translate_y;
 
                 material.uniforms_vertex.v_particle_uvtransform = [
-                    Vec3::X,
-                    Vec3::Y,
-                    vec3(current_uv_offset.x, current_uv_offset.y, 0.),
+                    vec3(scale_x, 0., 0.),
+                    vec3(0., scale_y, 0.),
+                    vec3(final_translate_x, final_translate_y, 0.),
                     Vec3::ZERO,
                 ];
 
@@ -99,6 +138,7 @@ pub fn update_particle(
             VertexAttributeValues::Float32x2(items) => {
                 for item in items {
                     item[0] = life;
+                    item[1] = 0.0;
                 }
             }
             _ => panic!(),
@@ -110,11 +150,21 @@ pub fn update_particle(
             panic!();
         };
 
+        if vfx_emitter_definition_data.primitive.is_none()
+            || matches!(
+                vfx_emitter_definition_data.primitive,
+                Some(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad)
+            )
+        {
+            let camera_transform = q_camera_transform.single().unwrap();
+            world_transform = world_transform.looking_at(camera_transform.translation, Vec3::ZERO);
+        }
+
         let postion_values = postion_values
-            .iter_mut()
+            .iter()
             .map(|v| {
                 let vertext_position = Vec3::from_array(*v);
-                world_matrix.transform_point(vertext_position).to_array()
+                world_transform.transform_point(vertext_position).to_array()
             })
             .collect::<Vec<_>>();
 
@@ -204,7 +254,7 @@ pub fn update_particle_skinned_mesh_particle(
         material.uniforms_vertex.v_particle_uvtransform = [
             Vec3::X,
             Vec3::Y,
-            vec3(current_uv_offset.y, current_uv_offset.x, 0.),
+            vec3(current_uv_offset.x, current_uv_offset.y, 0.),
             Vec3::ZERO,
         ];
 

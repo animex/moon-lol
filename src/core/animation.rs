@@ -45,10 +45,11 @@ pub struct AnimationTransitionOut {
     pub start_time: f32,
 }
 
-#[derive(Event)]
+#[derive(Event, Default)]
 pub struct CommandAnimationPlay {
     pub hash: u32,
     pub repeat: bool,
+    pub duration: Option<f32>,
 }
 
 #[derive(Clone)]
@@ -226,6 +227,10 @@ fn on_command_animation_play(
     let mut animation_state = query.get_mut(entity).unwrap();
 
     animation_state.update(event.hash).with_repeat(event.repeat);
+
+    if let Some(duration) = event.duration {
+        animation_state.with_duration(duration);
+    }
 }
 
 fn on_animation_state_change(
@@ -263,6 +268,7 @@ fn on_animation_state_change(
                 duration: Duration::from_millis(0),
                 start_time: time.elapsed_secs(),
             });
+            animation.stop(&mut player, last_hash);
         }
 
         animation.play(&mut player, state.current_hash, 1.0);

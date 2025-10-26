@@ -1,5 +1,7 @@
 use bevy::prelude::*;
 
+use crate::core::AAction;
+
 #[derive(Clone)]
 pub enum Action {
     Attack(Entity),
@@ -12,4 +14,9 @@ pub enum Action {
 pub enum Action2 {
     Attack,
     Move,
+}
+
+#[derive(Event)]
+pub struct CommandAction {
+    action: AAction,
 }

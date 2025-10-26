@@ -126,9 +126,10 @@ fn check_and_action(
 ) {
     if position.distance(target_position) > range {
         if attack_auto.timer.just_finished() {
-            commands
-                .entity(entity)
-                .trigger(CommandNavigationTo(target_position));
+            commands.entity(entity).trigger(CommandNavigationTo {
+                priority: 0,
+                target: target_position,
+            });
             attack_auto.timer.reset();
         }
     } else {

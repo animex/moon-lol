@@ -7,7 +7,10 @@ use crate::core::{find_grid_path, CommandMovementStart, Movement};
 use crate::system_debug;
 
 #[derive(Event, Debug)]
-pub struct CommandNavigationTo(pub Vec2);
+pub struct CommandNavigationTo {
+    pub priority: i32,
+    pub target: Vec2,
+}
 
 #[derive(Default)]
 pub struct PluginNavigaton;
@@ -32,21 +35,34 @@ fn on_command_navigation_to(
     mut q_transform: Query<&Transform>,
 ) {
     let entity = trigger.target();
-    let destination = trigger.event().0;
+    let event = trigger.event();
 
     // 获取当前位置
     let Ok(transform) = q_transform.get_mut(entity) else {
         return;
     };
 
-    let start_pos = transform.translation;
-    let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
+    let start_pos = transform.translation.xz();
 
+    if let Some(path) = get_nav_path(start_pos, event.target, &grid) {
+        commands.entity(entity).trigger(CommandMovementStart {
+            priority: event.priority,
+            path,
+            speed: None,
+        });
+    }
+}
+
+pub fn get_nav_path(
+    start_pos: Vec2,
+    end_pos: Vec2,
+    grid: &ConfigNavigationGrid,
+) -> Option<Vec<Vec2>> {
     let start = Instant::now();
 
     // 检查起点和终点是否可直达
-    let start_grid_pos = (start_pos.xz() - grid.min_position) / grid.cell_size;
-    let end_grid_pos = (end_pos.xz() - grid.min_position) / grid.cell_size;
+    let start_grid_pos = (start_pos - grid.min_position) / grid.cell_size;
+    let end_grid_pos = (end_pos - grid.min_position) / grid.cell_size;
 
     let is_walkable_fn = |x, y| grid.get_cell_by_xy((x, y)).is_walkable();
 
@@ -56,21 +72,11 @@ fn on_command_navigation_to(
             "Direct path found in {:.6}ms",
             start.elapsed().as_millis()
         );
-        let direct_path = vec![start_pos.xz(), end_pos.xz()];
-        commands.trigger_targets(
-            CommandMovementStart {
-                path: direct_path,
-                speed: None,
-            },
-            entity,
-        );
-        return;
+        return Some(vec![start_pos, end_pos]);
     }
 
     // 如果不可直达，则使用A*算法规划路径
-    let Some(result) = find_path(&grid, start_pos, end_pos) else {
-        return;
-    };
+    let result = find_path(&grid, start_pos, end_pos);
 
     system_debug!(
         "command_movement_move_to",
@@ -78,17 +84,11 @@ fn on_command_navigation_to(
         start.elapsed().as_millis()
     );
 
-    commands.trigger_targets(
-        CommandMovementStart {
-            path: result,
-            speed: None,
-        },
-        entity,
-    );
+    return result;
 }
 
 /// 主要的寻路函数，结合A*和漏斗算法
-pub fn find_path(grid: &ConfigNavigationGrid, start: Vec3, end: Vec3) -> Option<Vec<Vec2>> {
+pub fn find_path(grid: &ConfigNavigationGrid, start: Vec2, end: Vec2) -> Option<Vec<Vec2>> {
     // 首先使用A*找到网格路径
     let grid_path = find_grid_path(grid, start, end)?;
 
@@ -98,8 +98,8 @@ pub fn find_path(grid: &ConfigNavigationGrid, start: Vec3, end: Vec3) -> Option<
 pub fn post_process_path(
     grid: &ConfigNavigationGrid,
     path: &Vec<(usize, usize)>,
-    start: &Vec3,
-    end: &Vec3,
+    start: &Vec2,
+    end: &Vec2,
 ) -> Vec<Vec2> {
     if path.is_empty() {
         return Vec::new();
@@ -111,10 +111,10 @@ pub fn post_process_path(
         .collect::<Vec<_>>();
 
     path.remove(0);
-    path.insert(0, (start.xz() - grid.min_position) / grid.cell_size);
+    path.insert(0, (start - grid.min_position) / grid.cell_size);
 
     path.pop();
-    path.push((end.xz() - grid.min_position) / grid.cell_size);
+    path.push((end - grid.min_position) / grid.cell_size);
 
     let path = optimize_path(&path, &|x, y| grid.get_cell_by_xy((x, y)).is_walkable());
 

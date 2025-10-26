@@ -7,7 +7,10 @@ use league_utils::hash_bin;
 use lol_core::Team;
 
 use crate::{
-    core::{CommandParticleDespawn, CommandParticleSpawn, Direction, SkillOf},
+    core::{
+        is_in_direction, CommandDamageCreate, CommandParticleDespawn, CommandParticleSpawn,
+        DamageType, Direction, EventDamageCreate, Health, SkillOf,
+    },
     entities::Champion,
 };
 
@@ -24,6 +27,7 @@ impl Plugin for PluginDuelistsDance {
         app.init_resource::<FioraVitalLastDirection>();
         app.add_systems(FixedUpdate, update_add_vital);
         app.add_systems(FixedUpdate, update_remove_vital);
+        app.add_observer(on_damage_create);
     }
 }
 
@@ -200,4 +204,102 @@ fn update_remove_vital(
             }
         }
     }
+}
+
+/// 监听伤害事件并创建伤害数字
+fn on_damage_create(
+    trigger: Trigger<EventDamageCreate>,
+    mut commands: Commands,
+    q_target_with_vital: Query<(&GlobalTransform, &Team, &Health, &Vital)>,
+    q_transform: Query<(&GlobalTransform, &Team)>,
+    mut last_direction: ResMut<FioraVitalLastDirection>,
+) {
+    let target_entity = trigger.target();
+    let (transform, team) = q_transform.get(trigger.source).unwrap();
+
+    let Ok((target_transform, target_team, hp, vital)) = q_target_with_vital.get(target_entity)
+    else {
+        return;
+    };
+
+    if target_team == team {
+        return;
+    }
+
+    if !vital.is_active() {
+        return;
+    }
+
+    let source_position = transform.translation().xz();
+    let target_position = target_transform.translation().xz();
+
+    if !is_in_direction(source_position, target_position, &vital.direction) {
+        return;
+    }
+
+    commands
+        .entity(target_entity)
+        .trigger(CommandParticleSpawn {
+            particle: hash_bin("Fiora_Passive_Hit_Tar"),
+        });
+    commands
+        .entity(target_entity)
+        .trigger(CommandParticleDespawn {
+            particle: get_particle_hash(&vital.direction, ""),
+        });
+
+    let distance = source_position.distance(target_position);
+
+    if distance > VITAL_DISTANCE {
+        return;
+    }
+
+    let direction = match last_direction.entity_to_last_direction.get(&target_entity) {
+        Some(direction) => match direction {
+            Direction::Up | Direction::Right => {
+                if random::<bool>() {
+                    Direction::Left
+                } else {
+                    Direction::Down
+                }
+            }
+            Direction::Left | Direction::Down => {
+                if random::<bool>() {
+                    Direction::Up
+                } else {
+                    Direction::Right
+                }
+            }
+        },
+        None => {
+            if random::<bool>() {
+                Direction::Up
+            } else {
+                Direction::Left
+            }
+        }
+    };
+
+    last_direction
+        .entity_to_last_direction
+        .insert(target_entity, direction.clone());
+
+    commands.entity(target_entity).insert(Vital {
+        direction: direction.clone(),
+        active_timer: Timer::from_seconds(VITAL_ADD_DURATION, TimerMode::Once),
+        remove_timer: Timer::from_seconds(VITAL_DURATION, TimerMode::Once),
+        timeout_red_triggered: false,
+    });
+
+    commands
+        .entity(target_entity)
+        .trigger(CommandParticleSpawn {
+            particle: get_particle_hash(&direction, "_Warning"),
+        });
+
+    commands.entity(target_entity).trigger(CommandDamageCreate {
+        source: trigger.source,
+        damage_type: DamageType::True,
+        amount: hp.max * 0.05,
+    });
 }

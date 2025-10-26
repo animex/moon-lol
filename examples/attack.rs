@@ -22,8 +22,8 @@ fn main() {
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
-                        resolution: (300.0, 300.0).into(),
-                        position: WindowPosition::At((0, 1000).into()),
+                        // resolution: (450.0, 800.0).into(),
+                        // position: WindowPosition::At((0, 1000).into()),
                         ..default()
                     }),
                     ..default()
@@ -44,12 +44,51 @@ fn main() {
             Update,
             |mut q_camera_state: Query<&mut CameraState, Added<CameraState>>| {
                 for mut state in q_camera_state.iter_mut() {
-                    state.scale = 0.1;
+                    // state.scale = 0.1;
+                }
+            },
+        )
+        .add_systems(
+            FixedUpdate,
+            |mut commands: Commands,
+             q_t: Query<&AttackTarget>,
+             mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
+             asset_server: Res<AssetServer>,
+             res_navigation_grid: Res<ConfigNavigationGrid>,
+             config_game: Res<ConfigGame>| {
+                if q_t.single().is_ok() {
+                    return;
+                }
+
+                for (_, team, skin) in config_game.legends.iter() {
+                    let map_center_position = res_navigation_grid.get_map_center_position();
+
+                    let target = spawn_skin_entity(
+                        &mut commands,
+                        &mut res_animation_graph,
+                        &asset_server,
+                        Transform::from_translation(map_center_position + vec3(100.0, 0.0, -100.0)),
+                        &skin,
+                    );
+
+                    spawn_fiora(&mut commands, target);
+
+                    commands.entity(target).insert((
+                        Team::Chaos,
+                        Health {
+                            value: 6000.0,
+                            max: 6000.0,
+                        },
+                        AttackTarget,
+                    ));
                 }
             },
         )
         .run();
 }
+
+#[derive(Component)]
+struct AttackTarget;
 
 pub fn setup(
     mut commands: Commands,
@@ -61,24 +100,6 @@ pub fn setup(
     for (_, team, skin) in config_game.legends.iter() {
         let map_center_position = res_navigation_grid.get_map_center_position();
 
-        let target = spawn_skin_entity(
-            &mut commands,
-            &mut res_animation_graph,
-            &asset_server,
-            Transform::from_translation(map_center_position + vec3(100.0, 0.0, -100.0)),
-            &skin,
-        );
-
-        spawn_fiora(&mut commands, target);
-
-        commands.entity(target).insert((
-            Team::Chaos,
-            Health {
-                value: 6000.0,
-                max: 6000.0,
-            },
-        ));
-
         let entity = spawn_skin_entity(
             &mut commands,
             &mut res_animation_graph,
@@ -89,8 +110,11 @@ pub fn setup(
 
         spawn_fiora(&mut commands, entity);
 
-        commands
-            .entity(entity)
-            .insert((team.clone(), Controller::default(), Focus));
+        commands.entity(entity).insert((
+            team.clone(),
+            Controller::default(),
+            Focus,
+            Pickable::IGNORE,
+        ));
     }
 }

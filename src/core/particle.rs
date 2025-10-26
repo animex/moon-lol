@@ -11,7 +11,7 @@ pub use skinned_mesh::*;
 pub use utils::*;
 
 use bevy::platform::collections::HashMap;
-use league_core::{ValueColor, ValueFloat, ValueVector2, ValueVector3};
+use league_core::{ValueColor, ValueFloat, ValueVector2, ValueVector3, VfxEmitterDefinitionData};
 use league_utils::hash_wad;
 
 use bevy::prelude::*;
@@ -75,7 +75,24 @@ impl Plugin for PluginParticle {
 pub struct ParticleMesh(HashMap<u64, Handle<Mesh>>);
 
 #[derive(Component, Clone)]
-pub struct ParticleId(pub u32);
+pub struct ParticleId {
+    hash: u32,
+    index: usize,
+}
+
+impl ParticleId {
+    pub fn get_def<'a>(self: &Self, config_map: &'a ConfigMap) -> &'a VfxEmitterDefinitionData {
+        config_map
+            .vfx_system_definition_datas
+            .get(&self.hash)
+            .unwrap()
+            .complex_emitter_definition_data
+            .as_ref()
+            .unwrap()
+            .get(self.index)
+            .unwrap()
+    }
+}
 
 #[derive(Event)]
 pub struct CommandParticleSpawn {
@@ -124,14 +141,10 @@ fn on_command_particle_spawn(
         vfx_emitter_definition_datas.extend(simple_emitter_definition_data);
     }
 
-    for vfx_emitter_definition_data in vfx_emitter_definition_datas.into_iter() {
-        // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Temp_Trail1" {
+    for (i, vfx_emitter_definition_data) in vfx_emitter_definition_datas.into_iter().enumerate() {
+        // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Fiora_Flash" {
         //     continue;
         // }
-
-        let is_single_particle = vfx_emitter_definition_data
-            .is_single_particle
-            .unwrap_or(false);
 
         let rate = vfx_emitter_definition_data.rate.clone().unwrap();
         let particle_lifetime = vfx_emitter_definition_data
@@ -196,7 +209,7 @@ fn on_command_particle_spawn(
             .clone()
             .unwrap_or(ValueVector2 {
                 dynamics: None,
-                constant_value: Some(Vec2::ZERO),
+                constant_value: Some(Vec2::ONE),
             });
         let birth_uv_scroll_rate = vfx_emitter_definition_data
             .birth_uv_scroll_rate
@@ -214,8 +227,10 @@ fn on_command_particle_spawn(
             });
 
         commands.entity(trigger.target()).with_child((
-            vfx_emitter_definition_data.clone(),
-            ParticleId(trigger.particle),
+            ParticleId {
+                hash: trigger.particle,
+                index: i,
+            },
             ParticleEmitterState {
                 birth_acceleration: birth_acceleration.into(),
                 birth_color: birth_color.into(),
@@ -226,7 +241,7 @@ fn on_command_particle_spawn(
                 birth_velocity: birth_velocity.into(),
                 color: color.into(),
                 scale0: scale0.into(),
-                emission_debt: if is_single_particle { 1. } else { 0. },
+                emission_debt: 0.,
                 particle_lifetime: particle_lifetime.into(),
                 rate: rate.into(),
                 emitter_position: emitter_position.into(),
@@ -256,8 +271,9 @@ fn on_command_particle_despawn(
             continue;
         };
 
-        if particle.0 == trigger.particle {
+        if particle.hash == trigger.particle {
             commands.entity(emitter_or_particle_entity).despawn();
+            return;
         }
     }
 }

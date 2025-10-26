@@ -20,8 +20,12 @@ impl Plugin for PluginMovement {
         app.add_observer(command_movement_stop);
 
         app.add_event::<EventMovementEnd>();
+        app.add_observer(on_movement_stop);
 
-        app.add_systems(FixedUpdate, update_path_movement);
+        app.add_systems(
+            FixedPostUpdate,
+            (finalize_decision_system, update_path_movement).chain(),
+        );
     }
 }
 
@@ -44,6 +48,7 @@ pub struct MovementState {
 
 #[derive(Event, Debug, Clone)]
 pub struct CommandMovementStart {
+    pub priority: i32,
     pub path: Vec<Vec2>,
     pub speed: Option<f32>,
 }
@@ -176,29 +181,66 @@ fn update_path_movement(
     }
 }
 
+#[derive(Component, Clone)]
+struct MovementCurrentMovement(CommandMovementStart);
+
 fn command_movement_start(
     trigger: Trigger<CommandMovementStart>,
     mut commands: Commands,
+    query: Query<&MovementCurrentMovement>,
+) {
+    let target_entity = trigger.target();
+
+    let event = trigger.event();
+
+    if event.path.is_empty() {
+        return;
+    }
+
+    if let Ok(current_best) = query.get(target_entity) {
+        // 如果新请求的优先级更高，则替换
+        if event.priority >= current_best.0.priority {
+            commands
+                .entity(target_entity)
+                .insert(MovementCurrentMovement(event.clone()));
+        }
+    } else {
+        // 这是本帧第一个请求，直接插入
+        commands
+            .entity(target_entity)
+            .insert(MovementCurrentMovement(event.clone()));
+    }
+}
+
+fn finalize_decision_system(
+    mut commands: Commands,
+    // 查询所有在本帧被修改过“最佳请求”的实体
+    query: Query<(Entity, &MovementCurrentMovement), Changed<MovementCurrentMovement>>,
     mut q_transform: Query<&mut MovementState>,
 ) {
-    let entity = trigger.target();
-    let CommandMovementStart { path, speed } = trigger.event();
+    for (entity, best_request) in query.iter() {
+        // 1. 添加“最终决策”
 
-    if path.is_empty() {
-        return;
+        let Ok(mut movement_state) = q_transform.get_mut(entity) else {
+            return;
+        };
+
+        movement_state.reset_path(&best_request.0.path);
+
+        if let Some(speed) = best_request.0.speed {
+            movement_state.with_speed(speed);
+        }
+
+        commands.trigger_targets(EventMovementStart, entity);
+
+        // 2. 移除临时组件，为下一帧做准备
     }
+}
 
-    let Ok(mut movement_state) = q_transform.get_mut(entity) else {
-        return;
-    };
-
-    movement_state.reset_path(path);
-
-    if let Some(speed) = speed {
-        movement_state.with_speed(*speed);
-    }
-
-    commands.trigger_targets(EventMovementStart, entity);
+fn on_movement_stop(trigger: Trigger<EventMovementEnd>, mut commands: Commands) {
+    commands
+        .entity(trigger.target())
+        .remove::<MovementCurrentMovement>();
 }
 
 fn command_movement_stop(

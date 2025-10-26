@@ -1,8 +1,10 @@
 use bevy::prelude::*;
+use bevy_behave::{behave, prelude::BehaveTree, Behave};
+use league_utils::hash_bin;
 
 use crate::core::{
-    Action, CommandAttackAutoStart, CommandAttackAutoStop, CommandMovementStop,
-    CommandNavigationTo, CommandSkillStart, EventAttackStart, State,
+    AAction, Action, CommandAnimationPlay, CommandAttackAutoStop, CommandMovementStop,
+    CommandSkillStart, EventAttackStart, SkillAutoAttack, SkillNavigationTo,
 };
 
 #[derive(Default)]
@@ -27,34 +29,43 @@ fn on_attack_cast(trigger: Trigger<EventAttackStart>, mut commands: Commands) {
     commands.trigger_targets(CommandMovementStop, trigger.target());
 }
 
-fn on_command_action(
-    trigger: Trigger<CommandBehavior>,
-    mut commands: Commands,
-    mut q_state: Query<&mut State>,
-) {
+fn on_command_action(trigger: Trigger<CommandBehavior>, mut commands: Commands) {
     let entity = trigger.target();
-    let mut state = q_state.get_mut(entity).unwrap();
 
     match trigger.event().action {
         Action::Attack(target) => {
             commands
                 .entity(entity)
-                .trigger(CommandAttackAutoStart { target });
+                .with_child((BehaveTree::new(behave! {
+                    Behave::trigger(
+                        AAction::AutoAttack(SkillAutoAttack { target })
+                    ),
+                }),));
         }
         Action::Move(target) => {
-            if *state == State::Dashing {
-                return;
-            }
-
-            *state = State::Moving;
-
-            commands.trigger_targets(CommandAttackAutoStop, trigger.target());
-            commands.trigger_targets(CommandNavigationTo(target), trigger.target());
+            commands
+                .entity(entity)
+                .with_child((BehaveTree::new(behave! {
+                    Behave::trigger(
+                        AAction::NavigationTo(SkillNavigationTo { target })
+                    ),
+                }),));
         }
         Action::Skill { index, point } => {
             commands.trigger_targets(CommandAttackAutoStop, trigger.target());
             commands.trigger_targets(CommandSkillStart { index, point }, trigger.target());
         }
-        Action::Stop => todo!(),
+        Action::Stop => {
+            commands.trigger_targets(CommandAttackAutoStop, trigger.target());
+            commands.trigger_targets(CommandMovementStop, trigger.target());
+            commands.trigger_targets(
+                CommandAnimationPlay {
+                    hash: hash_bin("Idle1"),
+                    repeat: true,
+                    ..default()
+                },
+                trigger.target(),
+            );
+        }
     }
 }

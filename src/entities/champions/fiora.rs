@@ -5,8 +5,8 @@ use league_utils::hash_bin;
 use crate::{
     abilities::AbilityDuelistsDance,
     core::{
-        Attack, Bounding, Health, Movement, Skill, SkillEffect, SkillEffectAnimation,
-        SkillEffectDash, SkillEffectParticle, SkillOf,
+        AAction, Attack, Bounding, Health, Movement, Skill, SkillEffectAnimation, SkillEffectDash,
+        SkillEffectParticle, SkillOf,
     },
     entities::champion::Champion,
 };
@@ -44,18 +44,20 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
-                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell1") })
+                            AAction::Animation(SkillEffectAnimation { hash: hash_bin("Spell1") })
                         ),
                         Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Dash_Trail_ground") }),
+                            AAction::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Dash_Trail_ground") }),
                         ),
                         Behave::trigger(
-                            SkillEffect::Dash(SkillEffectDash::Pointer { speed: 1000., max: 300. }),
+                            AAction::Dash(SkillEffectDash::Pointer { speed: 1000., max: 300. }),
                         ),
-                        Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Slash_Cas") }),
-                        ),
-                        Behave::trigger(SkillEffect::Damage),
+                        Behave::IfThen => {
+                            Behave::trigger(AAction::Damage),
+                            Behave::trigger(
+                                AAction::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Q_Slash_Cas") }),
+                            ),
+                        },
                     }
                 }),
             },
@@ -65,19 +67,23 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Telegraph_Blue") }),
+                            AAction::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Telegraph_Blue") }),
                         ),
                         Behave::trigger(
-                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2_In") })
+                            AAction::Animation(SkillEffectAnimation { hash: hash_bin("Spell2_In") })
                         ),
                         Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Cas") }),
+                            AAction::Particle(SkillEffectParticle { hash: hash_bin("Fiora_W_Cas") }),
                         ),
                         Behave::Wait(0.5),
                         Behave::trigger(
-                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                            AAction::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
                         ),
-                        Behave::trigger(SkillEffect::Damage),
+                        Behave::trigger(AAction::Damage),
+                        Behave::Wait(0.1),
+                        Behave::trigger(
+                            AAction::DespawnParticle(hash_bin("Fiora_W_Telegraph_Blue")),
+                        ),
                     }
                 }),
             },
@@ -87,10 +93,10 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
-                            SkillEffect::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Passive_Hit_Tar") }),
+                            AAction::Particle(SkillEffectParticle { hash: hash_bin("Fiora_Passive_Hit_Tar") }),
                         ),
                         Behave::Wait(1.),
-                        Behave::trigger(SkillEffect::Damage),
+                        Behave::trigger(AAction::Damage),
                     }
                 }),
             },
@@ -100,10 +106,10 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
-                            SkillEffect::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
+                            AAction::Animation(SkillEffectAnimation { hash: hash_bin("Spell2") })
                         ),
                         Behave::Wait(1.),
-                        Behave::trigger(SkillEffect::Damage),
+                        Behave::trigger(AAction::Damage),
                     }
                 }),
             },

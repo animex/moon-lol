@@ -48,10 +48,12 @@ impl Default for UniformsVertexQuad {
 }
 
 #[derive(Default)]
-pub struct ParticleMeshQuad {}
+pub struct ParticleMeshQuad {
+    pub frame: f32,
+}
 
 impl From<ParticleMeshQuad> for Mesh {
-    fn from(_value: ParticleMeshQuad) -> Self {
+    fn from(value: ParticleMeshQuad) -> Self {
         // let mut mesh = Mesh::from(Cuboid::new(1.0, 1.0, 1.0));
         let mut mesh: Mesh = Plane3d::new(Vec3::NEG_Z, Vec2::splat(1.0)).into();
 
@@ -113,7 +115,7 @@ impl From<ParticleMeshQuad> for Mesh {
 
         let values = uv_values
             .into_iter()
-            .map(|v| [v[0], v[1], 0.0, 0.0])
+            .map(|v| [v[0], v[1], value.frame as f32, 0.0])
             .collect::<Vec<_>>();
 
         mesh.insert_attribute(ATTRIBUTE_UV_FRAME, values);
@@ -231,7 +233,8 @@ impl Material for ParticleMaterialQuad {
             ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
             Mesh::ATTRIBUTE_COLOR.at_shader_location(3),
             ATTRIBUTE_UV_FRAME.at_shader_location(8),
-            ATTRIBUTE_UV_MULT.at_shader_location(9),
+            ATTRIBUTE_LIFETIME.at_shader_location(9),
+            // ATTRIBUTE_UV_MULT.at_shader_location(9),
         ])?;
         descriptor.vertex.buffers = vec![vertex_layout];
         descriptor.primitive.cull_mode = None;

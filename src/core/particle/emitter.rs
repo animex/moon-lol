@@ -7,11 +7,11 @@ use bevy::{
 };
 
 use league_core::{
-    Unk0xee39916f, VfxEmitterDefinitionData, VfxEmitterDefinitionDataPrimitive,
-    VfxEmitterDefinitionDataSpawnShape, VfxPrimitiveAttachedMesh, VfxPrimitiveMesh,
-    VfxPrimitivePlanarProjection, VfxShapeLegacy,
+    Unk0xee39916f, VfxEmitterDefinitionDataPrimitive, VfxEmitterDefinitionDataSpawnShape,
+    VfxPrimitiveAttachedMesh, VfxPrimitiveMesh, VfxPrimitivePlanarProjection, VfxShapeLegacy,
 };
 use league_utils::{neg_rotation_z, neg_vec_z};
+use lol_config::ConfigMap;
 
 use crate::core::{
     particle::{
@@ -50,13 +50,16 @@ pub fn update_emitter_position(
         &ChildOf,
         &Lifetime,
         &ParticleEmitterState,
-        &VfxEmitterDefinitionData,
+        &ParticleId,
     )>,
+    res_config_map: Res<ConfigMap>,
     q_global_transform: Query<&GlobalTransform>,
 ) {
-    for (emitter_entity, mut transform, child_of, lifetime, emitter, vfx_emitter_definition_data) in
+    for (emitter_entity, mut transform, child_of, lifetime, emitter, particle_id) in
         query.iter_mut()
     {
+        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
+
         let parent = child_of.parent();
 
         let progress = lifetime.progress();
@@ -107,6 +110,7 @@ pub fn update_emitter_position(
 pub fn update_emitter(
     mut commands: Commands,
     mut res_mesh: ResMut<Assets<Mesh>>,
+    res_config_map: Res<ConfigMap>,
     res_asset_server: Res<AssetServer>,
     mut res_image: ResMut<Assets<Image>>,
     mut res_quad_material: ResMut<Assets<ParticleMaterialQuad>>,
@@ -119,9 +123,8 @@ pub fn update_emitter(
     mut query: Query<(
         Entity,
         &ChildOf,
-        &Lifetime,
+        &mut Lifetime,
         &mut ParticleEmitterState,
-        &VfxEmitterDefinitionData,
         &ParticleId,
     )>,
     q_mesh3d: Query<&Mesh3d>,
@@ -130,37 +133,31 @@ pub fn update_emitter(
     q_animation_target: Query<(Entity, &Transform, &AnimationTarget)>,
     time: Res<Time>,
 ) {
-    for (
-        emitter_entity,
-        child_of,
-        lifetime,
-        mut emitter,
-        vfx_emitter_definition_data,
-        particle_id,
-    ) in query.iter_mut()
-    {
-        let progress = lifetime.progress();
-
-        let rate = emitter.rate.sample_clamped(progress);
-        let particle_lifetime = emitter.particle_lifetime.sample_clamped(progress);
-
-        let birth_color = emitter.birth_color.sample_clamped(progress);
-        let birth_velocity = emitter.birth_velocity.sample_clamped(progress);
-        let birth_acceleration = emitter.birth_acceleration.sample_clamped(progress);
-        let birth_rotation0 = emitter.birth_rotation0.sample_clamped(progress);
-        let birth_scale0 = emitter.birth_scale0.sample_clamped(progress);
-        let birth_uv_offset = emitter.birth_uv_offset.sample_clamped(progress);
-        let birth_uv_scroll_rate = emitter.birth_uv_scroll_rate.sample_clamped(progress);
-
-        let parent = child_of.parent();
-
+    for (emitter_entity, child_of, mut lifetime, mut emitter, particle_id) in query.iter_mut() {
         if lifetime.is_dead() {
             continue;
         }
 
+        let progress = lifetime.progress();
+
+        let rate = emitter.rate.sample_clamped(progress);
+
+        let parent = child_of.parent();
+
+        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
+
+        let is_single_particle = vfx_emitter_definition_data
+            .is_single_particle
+            .unwrap_or(false);
+
         let particles_to_spawn_f32 = rate * time.delta_secs() + emitter.emission_debt;
 
-        let particles_to_spawn = particles_to_spawn_f32.floor() as u32;
+        let particles_to_spawn = if is_single_particle {
+            lifetime.dead();
+            rate as u32
+        } else {
+            particles_to_spawn_f32.floor() as u32
+        };
 
         emitter.emission_debt = particles_to_spawn_f32.fract();
 
@@ -168,18 +165,12 @@ pub fn update_emitter(
             .is_uniform_scale
             .unwrap_or(false);
 
-        let mut birth_scale0 = if is_uniform_scale {
-            Vec3::splat(birth_scale0.x)
-        } else {
-            birth_scale0
-        };
-
         let primitive = vfx_emitter_definition_data
             .primitive
             .clone()
-            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryQuad);
+            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
 
-        let texture = vfx_emitter_definition_data
+        let mut texture = vfx_emitter_definition_data
             .texture
             .as_ref()
             .map(|v| res_asset_server.load(v));
@@ -195,9 +186,25 @@ pub fn update_emitter(
             .and_then(|v| v.texture_mult.as_ref())
             .map(|v| res_asset_server.load(v));
 
-        let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(1);
+        let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(4);
 
         for _ in 0..particles_to_spawn {
+            let particle_lifetime = emitter.particle_lifetime.sample_clamped(progress);
+
+            let birth_color = emitter.birth_color.sample_clamped(progress);
+            let birth_velocity = emitter.birth_velocity.sample_clamped(progress);
+            let birth_acceleration = emitter.birth_acceleration.sample_clamped(progress);
+            let birth_rotation0 = emitter.birth_rotation0.sample_clamped(progress);
+            let birth_scale0 = emitter.birth_scale0.sample_clamped(progress);
+            let birth_uv_offset = emitter.birth_uv_offset.sample_clamped(progress);
+            let birth_uv_scroll_rate = emitter.birth_uv_scroll_rate.sample_clamped(progress);
+
+            let mut birth_scale0 = if is_uniform_scale {
+                Vec3::splat(birth_scale0.x)
+            } else {
+                birth_scale0
+            };
+
             let translation = neg_vec_z(
                 &vfx_emitter_definition_data
                     .spawn_shape
@@ -239,6 +246,16 @@ pub fn update_emitter(
                 .with_translation(translation)
                 .with_scale(birth_scale0);
 
+            let num_frames = vfx_emitter_definition_data.num_frames.unwrap_or(0) as f32;
+            let frame = if vfx_emitter_definition_data
+                .is_random_start_frame
+                .unwrap_or(false)
+            {
+                (num_frames * rand::random::<f32>()).floor()
+            } else {
+                (num_frames * progress).floor()
+            };
+
             let particle_entity = commands
                 .spawn((
                     particle_id.clone(),
@@ -249,6 +266,7 @@ pub fn update_emitter(
                         birth_scale0,
                         velocity: neg_vec_z(&birth_velocity),
                         acceleration: birth_acceleration,
+                        frame,
                     },
                     Lifetime::new_timer(particle_lifetime),
                     transform,
@@ -259,17 +277,25 @@ pub fn update_emitter(
 
             match primitive {
                 VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryQuad
-                | VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryTrail(..) => {
-                    let mesh = res_mesh.add(ParticleMeshQuad::default());
+                | VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad => {
+                    let mesh = res_mesh.add(ParticleMeshQuad { frame });
 
                     commands.entity(particle_entity).insert(Mesh3d(mesh));
 
                     let black_pixel_texture = res_image.add(create_black_pixel_texture());
 
+                    let uniforms_vertex = UniformsVertexQuad {
+                        texture_info: match vfx_emitter_definition_data.tex_div {
+                            Some(tex_div) => vec4(tex_div.x, 1.0 / tex_div.x, 1.0 / tex_div.y, 0.),
+                            None => Vec4::ONE,
+                        },
+                        ..default()
+                    };
+
                     if let Some(range) = vfx_emitter_definition_data.slice_technique_range {
                         commands.entity(particle_entity).insert(MeshMaterial3d(
                             res_quad_slice_material.add(ParticleMaterialQuadSlice {
-                                uniforms_vertex: UniformsVertexQuad::default(),
+                                uniforms_vertex,
                                 uniforms_pixel: UniformsPixelQuadSlice {
                                     slice_range: vec2(range, 1.0 / (range * range)),
                                     ..default()
@@ -286,7 +312,7 @@ pub fn update_emitter(
                     } else {
                         commands.entity(particle_entity).insert(MeshMaterial3d(
                             res_quad_material.add(ParticleMaterialQuad {
-                                uniforms_vertex: UniformsVertexQuad::default(),
+                                uniforms_vertex,
                                 particle_color_texture: particle_color_texture.clone(),
                                 texture: texture.clone(),
                                 cmb_tex_pixel_color_remap_ramp_smp_clamp_no_mip: Some(
@@ -356,6 +382,16 @@ pub fn update_emitter(
                     VfxPrimitiveAttachedMesh { .. },
                 ) => {
                     let black_pixel_texture = res_image.add(create_black_pixel_texture());
+                    if let Some(material_override_definitions) =
+                        &vfx_emitter_definition_data.material_override_definitions
+                    {
+                        for material_override_definition in material_override_definitions {
+                            if let Some(base_texture) = &material_override_definition.base_texture {
+                                texture = Some(res_asset_server.load(base_texture));
+                            }
+                        }
+                    }
+
                     let material = MeshMaterial3d(res_particle_material_skinned_mesh_particle.add(
                         ParticleMaterialSkinnedMeshParticle {
                             uniforms_vertex: UniformsVertexSkinnedMeshParticle::default(),

@@ -313,12 +313,12 @@ fn command_navigation_to(
     mut astar_vis: ResMut<AStarVisualization>,
 ) {
     let entity = trigger.target();
-    let destination = trigger.event().0;
+    let destination = trigger.event().target;
 
     // 获取当前位置
     if let Ok(transform) = q_transform.get_mut(entity) {
-        let start_pos = transform.translation;
-        let end_pos = Vec3::new(destination.x, start_pos.y, destination.y);
+        let start_pos = transform.translation.xz();
+        let end_pos = destination;
 
         let start = Instant::now();
         // 使用A*算法规划路径，对于单点移动，创建长度为1的路径
@@ -343,6 +343,7 @@ fn command_navigation_to(
 
             commands.trigger_targets(
                 CommandMovementStart {
+                    priority: 0,
                     path: world_path,
                     speed: None,
                 },
@@ -355,8 +356,8 @@ fn command_navigation_to(
 /// 带可视化的寻路函数
 fn find_path_with_visualization(
     grid: &ConfigNavigationGrid,
-    start: Vec3,
-    end: Vec3,
+    start: Vec2,
+    end: Vec2,
 ) -> Option<AStarResult> {
     // 使用带结果的A*算法
     if let Some(astar_result) = find_grid_path_with_result(grid, start, end) {

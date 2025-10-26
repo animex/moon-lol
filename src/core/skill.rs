@@ -3,11 +3,14 @@ use bevy_behave::{
     prelude::{BehaveCtx, BehavePlugin, BehaveTree, BehaveTrigger, Tree},
     Behave,
 };
+use league_utils::hash_bin;
 use lol_core::Team;
 
 use crate::core::{
-    rotate_to_direction, CommandAnimationPlay, CommandDamageCreate, CommandMovementStart,
-    CommandParticleSpawn, DamageType, EventMovementEnd, SkillEffect, SkillEffectDash, State,
+    rotate_to_direction, AAction, AnimationState, Attack, CommandAnimationPlay,
+    CommandAttackAutoStart, CommandAttackAutoStop, CommandDamageCreate, CommandMovementStart,
+    CommandNavigationTo, CommandParticleDespawn, CommandParticleSpawn, DamageType,
+    EventMovementEnd, SkillEffectDash, SkillNavigationTo, State,
 };
 
 #[derive(Default)]
@@ -92,10 +95,11 @@ fn on_dash_end(
 }
 
 fn on_skill_effect(
-    trigger: Trigger<BehaveTrigger<SkillEffect>>,
+    trigger: Trigger<BehaveTrigger<AAction>>,
     mut commands: Commands,
-    q_skill_effect_ctx: Query<&SkillEffectContext>,
+    q_attack: Query<&Attack>,
     mut q_transform: Query<&mut Transform>,
+    q_skill_effect_ctx: Query<&SkillEffectContext>,
     q_target: Query<(Entity, &Team)>,
     q_team: Query<&Team>,
 ) {
@@ -104,10 +108,10 @@ fn on_skill_effect(
     let entity = ctx.target_entity();
     let behave_entity = ctx.behave_entity();
     let skill_effect = event.inner();
-    let skill_effect_ctx = q_skill_effect_ctx.get(behave_entity).unwrap();
+    let skill_effect_ctx = q_skill_effect_ctx.get(behave_entity).ok();
 
     match skill_effect {
-        SkillEffect::Damage => {
+        AAction::Damage => {
             let mut min_distance = 300.;
             let mut target_bundle: Option<(Entity, &Transform)> = None;
 
@@ -131,6 +135,7 @@ fn on_skill_effect(
             }
 
             let Some((target, target_transform)) = target_bundle else {
+                commands.trigger(ctx.failure());
                 return;
             };
 
@@ -143,10 +148,12 @@ fn on_skill_effect(
                 damage_type: DamageType::Physical,
                 amount: 100.0,
             });
+            commands.trigger(ctx.success());
         }
-        SkillEffect::Dash(skill_effect_dash) => match skill_effect_dash {
+        AAction::Dash(skill_effect_dash) => match skill_effect_dash {
             SkillEffectDash::Fixed(_) => todo!(),
             SkillEffectDash::Pointer { max, speed } => {
+                let skill_effect_ctx = skill_effect_ctx.unwrap();
                 let transform = q_transform.get(entity).unwrap();
                 let vector = skill_effect_ctx.point - transform.translation;
                 let distance = vector.length();
@@ -164,31 +171,58 @@ fn on_skill_effect(
                     .insert(State::Dashing)
                     .insert(SkillEffectBehaveCtx(ctx.clone()))
                     .trigger(CommandMovementStart {
+                        priority: 100,
                         path: vec![destination.xz()],
                         speed: Some(*speed),
                     });
             }
         },
-        SkillEffect::ApplyStatus => todo!(),
-        SkillEffect::RemoveStatus => todo!(),
-        SkillEffect::EnhanceAttack => todo!(),
-        SkillEffect::SpawnArea => todo!(),
-        SkillEffect::CooldownReduction => todo!(),
-        SkillEffect::Conditional => todo!(),
-        SkillEffect::Missile => {
+        AAction::Missile => {
             println!("发送导弹");
             commands.trigger(ctx.success());
         }
-        SkillEffect::Animation(skill_effect_animation) => {
+        AAction::Animation(skill_effect_animation) => {
             commands.entity(entity).trigger(CommandAnimationPlay {
                 hash: skill_effect_animation.hash,
                 repeat: false,
+                ..default()
             });
             commands.trigger(ctx.success());
         }
-        SkillEffect::Particle(skill_effect_particle) => {
+        AAction::Particle(skill_effect_particle) => {
             commands.entity(entity).trigger(CommandParticleSpawn {
                 particle: skill_effect_particle.hash,
+            });
+            commands.trigger(ctx.success());
+        }
+        AAction::DespawnParticle(skill_effect_particle) => {
+            commands.entity(entity).trigger(CommandParticleDespawn {
+                particle: *skill_effect_particle,
+            });
+            commands.trigger(ctx.success());
+        }
+        AAction::NavigationTo(SkillNavigationTo { target }) => {
+            commands.entity(entity).trigger(CommandAttackAutoStop);
+            commands.entity(entity).trigger(CommandNavigationTo {
+                priority: 0,
+                target: *target,
+            });
+            commands.entity(entity).trigger(CommandAnimationPlay {
+                hash: hash_bin("Run"),
+                repeat: true,
+                ..default()
+            });
+            commands.trigger(ctx.success());
+        }
+        AAction::AutoAttack(skill_auto_attack) => {
+            let attack = q_attack.get(entity).unwrap();
+            commands.entity(entity).trigger(CommandAnimationPlay {
+                hash: hash_bin("Attack1"),
+                repeat: true,
+                duration: Some(attack.total_duration_secs()),
+            });
+            commands.entity(entity).trigger(CommandAttackAutoStart {
+                target: skill_auto_attack.target,
             });
             commands.trigger(ctx.success());
         }

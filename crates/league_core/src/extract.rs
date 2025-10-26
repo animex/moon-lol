@@ -1,9 +1,6 @@
 use std::collections::HashMap;
 
-use bevy::{
-    ecs::component::Component,
-    math::{Mat4, Vec2, Vec3, Vec4},
-};
+use bevy::math::{Mat4, Vec2, Vec3, Vec4};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
@@ -609,7 +606,7 @@ pub struct Unk0xfe70e9c4 {
     pub unk_0x4e748038: Option<u8>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Component)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(rename_all = "camelCase")]
 pub struct VfxEmitterDefinitionData {
     pub spawn_shape: Option<VfxEmitterDefinitionDataSpawnShape>,

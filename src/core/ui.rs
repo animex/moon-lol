@@ -1,7 +1,7 @@
+use bevy::color::palettes::css::{BLUE, RED, WHITE};
 use bevy::{color::palettes, prelude::*};
 
-use crate::core::damage::EventDamageCreate;
-use crate::core::{Bounding, Health};
+use crate::core::{Bounding, DamageType, EventDamageCreate, Health};
 use crate::{system_debug, system_info};
 
 #[derive(Default)]
@@ -39,10 +39,8 @@ pub struct DamageNumber {
     pub velocity_y: f32,
     /// 重力加速度
     pub gravity: f32,
-    /// 初始字体大小
-    pub initial_font_size: f32,
     /// 最终字体大小
-    pub final_font_size: f32,
+    pub final_scale: f32,
 }
 
 pub fn init_health_bar(
@@ -197,7 +195,11 @@ pub fn on_damage_create(
             font_size: 24.0,
             ..Default::default()
         },
-        TextColor(Color::Srgba(palettes::css::RED)),
+        TextColor(Color::Srgba(match trigger.damage_type {
+            DamageType::Physical => RED,
+            DamageType::Magic => BLUE,
+            DamageType::True => WHITE,
+        })),
         Node {
             position_type: PositionType::Absolute,
             ..Default::default()
@@ -209,13 +211,7 @@ pub fn on_damage_create(
             start_position: world_position,
             velocity_y: 100.0, // 初始向上速度
             gravity: -200.0,   // 重力加速度
-            initial_font_size: 24.0,
-            final_font_size: 12.0,
-        },
-        UIBind {
-            entity: target_entity,
-            position: Vec3::new(0.0, 0.0, 0.0),
-            offset: Vec2::new(0.0, 0.0),
+            final_scale: 0.5,
         },
     ));
 }
@@ -227,17 +223,17 @@ pub fn update_damage_numbers(
     camera_info: Single<(&Camera, &GlobalTransform), With<Camera3d>>,
     mut damage_numbers: Query<(
         Entity,
+        &mut Transform,
         &mut DamageNumber,
         &mut Node,
-        &mut TextFont,
         &mut TextColor,
     )>,
 ) {
     let (camera, camera_global_transform) = camera_info.into_inner();
     let delta_time = time.delta_secs();
 
-    for (entity, mut damage_number, mut node, mut text_font, mut text_color) in
-        damage_numbers.iter_mut()
+    for (i, (entity, mut transform, mut damage_number, mut node, mut text_color)) in
+        damage_numbers.iter_mut().enumerate()
     {
         // 更新生存时间
         damage_number.lifetime += delta_time;
@@ -266,13 +262,13 @@ pub fn update_damage_numbers(
             camera.world_to_viewport(camera_global_transform, current_world_pos)
         {
             node.left = Val::Px(viewport_position.x - 20.0); // 居中偏移
-            node.top = Val::Px(viewport_position.y);
+            node.top = Val::Px(viewport_position.y + i as f32 * 20.);
         }
 
-        // 字体大小动画：从大到小
-        let current_font_size = damage_number.initial_font_size
-            + (damage_number.final_font_size - damage_number.initial_font_size) * progress;
-        text_font.font_size = current_font_size;
+        // // 字体大小动画：从大到小
+        let current_font_size = 1. - (1. - damage_number.final_scale) * progress;
+
+        transform.scale = Vec3::splat(current_font_size);
 
         // 透明度动画：逐渐消失
         let alpha = 1.0 - progress;

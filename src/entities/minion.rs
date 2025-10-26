@@ -144,6 +144,7 @@ pub fn action_continue_minion_path(
 
     commands.trigger_targets(
         CommandMovementStart {
+            priority: 0,
             path: minion_path[closest_index..].to_vec(),
             speed: None,
         },
