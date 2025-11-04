@@ -5,7 +5,7 @@ use league_file::LeagueMapGeoMesh;
 use serde::{Deserialize, Serialize};
 
 use league_core::{
-    BarracksConfig, CharacterRecord, Unk0x3c2bf0c0, Unk0x9d9f60d2, Unk0xc71ee7fb,
+    BarracksConfig, CharacterRecord, Unk0x9d9f60d2, Unk0xad65d8c4, Unk0xba138ae3,
     VfxSystemDefinitionData,
 };
 use lol_core::Lane;
@@ -16,10 +16,10 @@ use crate::ConfigCharacterSkin;
 pub struct ConfigMap {
     pub geometry_objects: Vec<ConfigGeometryObject>,
     pub minion_paths: HashMap<Lane, Vec<Vec2>>,
-    pub barracks: HashMap<u32, Unk0xc71ee7fb>,
+    pub barracks: HashMap<u32, Unk0xba138ae3>,
     pub characters: HashMap<u32, Unk0x9d9f60d2>,
     pub barrack_configs: HashMap<u32, BarracksConfig>,
-    pub environment_objects: HashMap<u32, Unk0x3c2bf0c0>,
+    pub environment_objects: HashMap<u32, Unk0xad65d8c4>,
     pub skins: HashMap<String, ConfigCharacterSkin>,
     pub character_records: HashMap<String, CharacterRecord>,
     pub vfx_system_definition_datas: HashMap<u32, VfxSystemDefinitionData>,

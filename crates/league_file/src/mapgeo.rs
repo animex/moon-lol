@@ -234,7 +234,7 @@ pub struct LeagueMapGeoMesh {
     pub index_count: u32,
     pub index_buffer_id: u32,
 
-    #[br(map = EnvironmentVisibility::from_bits_truncate, dbg)]
+    #[br(map = EnvironmentVisibility::from_bits_truncate)]
     pub environment_visibility: EnvironmentVisibility,
     pub visibility_controller_path_hash: u32,
 

@@ -1,6 +1,6 @@
 use bevy::{prelude::*, transform};
 
-use crate::core::{rotate_to_direction, Buffs, CommandDamageCreate, DamageType};
+use crate::core::{rotate_to_direction, Buffs, CommandDamageCreate, CommandRotate, DamageType};
 
 #[derive(Default)]
 pub struct PluginAttack;
@@ -143,6 +143,16 @@ impl Attack {
         1.0 / self.current_attack_speed()
     }
 
+    pub fn animation_duration(&self) -> f32 {
+        match self.windup_config {
+            WindupConfig::Legacy { attack_offset } => todo!(),
+            WindupConfig::Modern {
+                attack_cast_time,
+                attack_total_time,
+            } => attack_cast_time * 4.,
+        }
+    }
+
     /// 计算前摇时间
     pub fn windup_duration_secs(&self) -> f32 {
         let total_time = self.total_duration_secs();
@@ -224,11 +234,15 @@ fn on_command_attack_start(
 
         let target_position = q_transform.get(target).unwrap().translation.xz();
 
-        let mut transform = q_transform.get_mut(entity).unwrap();
+        let transform = q_transform.get_mut(entity).unwrap();
 
         let direction = (target_position - transform.translation.xz()).normalize();
 
-        rotate_to_direction(&mut transform, direction);
+        commands.entity(entity).trigger(CommandRotate {
+            priority: 1,
+            direction,
+            angular_velocity: None,
+        });
 
         commands
             .entity(entity)

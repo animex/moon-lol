@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use bevy_behave::prelude::BehaveTrigger;
 
 use crate::core::{
-    CommandMovementStart, EventMovementEnd, MovementWay, SkillEffectBehaveCtx, SkillEffectContext,
+    CommandMovement, MovementAction, EventMovementEnd, MovementWay, SkillEffectBehaveCtx, SkillEffectContext,
 };
 
 #[derive(Debug, Clone)]
@@ -41,10 +41,12 @@ pub fn on_action_dash(
             commands
                 .entity(entity)
                 .insert(SkillEffectBehaveCtx(ctx.clone()))
-                .trigger(CommandMovementStart {
+                .trigger(CommandMovement {
                     priority: 100,
-                    way: MovementWay::Path(vec![destination.xz()]),
-                    speed: Some(*speed),
+                    action: MovementAction::Start {
+                        way: MovementWay::Path(vec![destination.xz()]),
+                        speed: Some(*speed),
+                    },
                 });
         }
     }

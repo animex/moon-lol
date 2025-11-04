@@ -1,5 +1,3 @@
-use std::time::Instant;
-
 use bevy::color::palettes;
 use bevy::prelude::*;
 use bevy::render::{
@@ -9,13 +7,13 @@ use bevy::render::{
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
 use league_core::VisionPathingFlags;
 use lol_config::ConfigNavigationGrid;
+
 use moon_lol::core::{
-    find_grid_path_with_result, on_click_map, post_process_path, AStarResult, CameraState,
-    CommandMovementStart, Map, Movement, MovementWay, PluginCore, PluginNavigaton,
+    find_grid_path_with_result, on_click_map, AStarResult, CameraState, Map, Movement, PluginCore,
+    PluginNavigaton,
 };
 use moon_lol::entities::PluginEntities;
 use moon_lol::logging::PluginLogging;
-use moon_lol::system_debug;
 
 fn main() {
     App::new()
@@ -342,10 +340,12 @@ pub struct AStarVisualization {
 //             astar_vis.optimized_path = world_path.clone();
 
 //             commands.trigger_targets(
-//                 CommandMovementStart {
+//                 CommandMovement {
 //                     priority: 0,
-//                     way: MovementWay::Path(world_path),
-//                     speed: None,
+//                     action: MovementAction::Start {
+//                         way: MovementWay::Path(world_path),
+//                         speed: None,
+//                     },
 //                 },
 //                 entity,
 //             );

@@ -1,12 +1,13 @@
 use core::f32;
+use std::time::Instant;
 
 use bevy::prelude::*;
 use lol_config::ConfigNavigationGrid;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    get_nav_path, rotate_to_direction, ArbitrationPipelinePlugin, FinalDecision, LastDecision,
-    PipelineStages, RequestBuffer,
+    get_nav_path, rotate_to_direction, ArbitrationPipelinePlugin, CommandRotate, FinalDecision,
+    LastDecision, PipelineStages, RequestBuffer,
 };
 
 #[derive(Default)]
@@ -16,26 +17,19 @@ impl Plugin for PluginMovement {
     fn build(&self, app: &mut App) {
         app.register_type::<Movement>();
 
-        app.add_event::<CommandMovementStart>();
-        app.add_event::<CommandMovementStop>();
+        app.add_event::<CommandMovement>();
 
         app.add_event::<EventMovementStart>();
         app.add_event::<EventMovementEnd>();
 
-        app.add_observer(on_command_movement_stop);
         app.add_observer(on_event_movement_end);
 
-        app.add_plugins(ArbitrationPipelinePlugin::<
-            CommandMovementStart,
-            MovementPipeline,
-        >::default());
+        app.add_plugins(ArbitrationPipelinePlugin::<CommandMovement, MovementPipeline>::default());
 
         app.add_systems(
             FixedPostUpdate,
             (
-                // 插入“仲裁”逻辑
                 reduce_movement_by_priority.in_set(MovementPipeline::Reduce),
-                // 插入“应用”逻辑
                 (apply_final_movement_decision, update_path_movement)
                     .in_set(MovementPipeline::Apply),
             ),
@@ -60,22 +54,28 @@ pub struct MovementState {
     pub completed: bool,
 }
 
-#[derive(Event, Debug, Clone)]
-pub struct CommandMovementStart {
+#[derive(Component, Default)]
+pub struct MovementBlock;
+
+#[derive(Event, Debug, Clone, PartialEq)]
+pub struct CommandMovement {
     pub priority: i32,
-    pub way: MovementWay,
-    pub speed: Option<f32>,
+    pub action: MovementAction,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
+pub enum MovementAction {
+    Start {
+        way: MovementWay,
+        speed: Option<f32>,
+    },
+    Stop,
+}
+
+#[derive(Debug, Clone, PartialEq)]
 pub enum MovementWay {
     Pathfind(Vec2),
     Path(Vec<Vec2>),
-}
-
-#[derive(Event, Debug)]
-pub struct CommandMovementStop {
-    pub priority: i32,
 }
 
 #[derive(Event, Debug)]
@@ -137,7 +137,7 @@ impl MovementState {
 
 fn update_path_movement(
     mut commands: Commands,
-    mut query: Query<(Entity, &Movement, &mut MovementState)>,
+    mut query: Query<(Entity, &Movement, &mut MovementState), Without<MovementBlock>>,
     mut q_transform: Query<&mut Transform>,
     time: Res<Time<Fixed>>,
 ) {
@@ -152,14 +152,11 @@ fn update_path_movement(
 
         let speed = movement_state.speed.unwrap_or(movement.speed);
 
-        // 本帧可移动的总距离
         let mut remaining_distance_this_frame = speed * dt;
-        // 记录本帧最后的移动方向，用于更新旋转
+
         let mut last_direction = Vec2::ZERO;
 
-        // 只要本帧还有可移动的距离，就继续处理
         while remaining_distance_this_frame > 0.0 {
-            // 首先，检查当前的目标点是否有效
             let target = match movement_state.path.get(movement_state.current_target_index) {
                 Some(p) => *p,
                 None => {
@@ -207,72 +204,77 @@ fn update_path_movement(
             }
         }
 
-        // 在循环结束后，根据最终状态统一更新
         if movement_state.completed {
             movement_state.velocity = Vec2::ZERO;
             movement_state.direction = Vec2::ZERO;
             movement_state.clear_path();
-            // 恢复您原来的事件触发命令
+
             commands.trigger_targets(EventMovementEnd, entity);
         } else {
             movement_state.direction = last_direction;
             movement_state.velocity = last_direction * speed;
         }
 
-        // 更新旋转
         if last_direction.length_squared() > 0.0 {
-            rotate_to_direction(&mut transform, last_direction);
+            commands.entity(entity).trigger(CommandRotate {
+                priority: 0,
+                direction: last_direction,
+                angular_velocity: None,
+            });
         }
     }
-}
-
-fn on_command_movement_stop(
-    trigger: Trigger<CommandMovementStop>,
-    mut commands: Commands,
-    mut q_movement: Query<&mut MovementState>,
-    mut q_buffer: Query<&mut RequestBuffer<CommandMovementStart>>,
-    q_last_decision: Query<&LastDecision<CommandMovementStart>>,
-) {
-    let entity = trigger.target();
-
-    let Ok(mut movement_state) = q_movement.get_mut(entity) else {
-        return;
-    };
-
-    if let Ok(last_decision) = q_last_decision.get(entity) {
-        if last_decision.0.priority > trigger.priority {
-            return;
-        }
-    }
-
-    if let Ok(mut buffer) = q_buffer.get_mut(entity) {
-        buffer.0 = buffer
-            .0
-            .iter()
-            .filter(|req| req.priority > trigger.priority)
-            .cloned()
-            .collect::<Vec<_>>();
-    }
-
-    movement_state.clear_path();
-
-    // commands.trigger_targets(EventMovementEnd, entity);
 }
 
 fn reduce_movement_by_priority(
     mut commands: Commands,
     query: Query<(
         Entity,
-        &RequestBuffer<CommandMovementStart>,
-        Option<&LastDecision<CommandMovementStart>>,
+        &RequestBuffer<CommandMovement>,
+        Option<&LastDecision<CommandMovement>>,
     )>,
 ) {
     for (entity, buffer, last_decision) in query.iter() {
-        if let Some(best_request) = buffer.0.iter().max_by_key(|req| req.priority) {
-            if best_request.priority >= last_decision.map(|v| v.0.priority).unwrap_or(0) {
+        if buffer.0.is_empty() {
+            continue;
+        }
+
+        let mut final_decision = last_decision.map(|v| &v.0);
+        let mut found = false;
+
+        for command in buffer.0.iter() {
+            match (final_decision, &command.action) {
+                (None, _) => {
+                    final_decision = Some(command);
+                    found = true;
+                }
+
+                (Some(current), MovementAction::Start { .. }) => match &current.action {
+                    MovementAction::Stop => {
+                        final_decision = Some(command);
+                        found = true;
+                    }
+                    MovementAction::Start { .. } => {
+                        if command.priority >= current.priority {
+                            final_decision = Some(command);
+                            found = true;
+                        }
+                    }
+                },
+
+                (Some(current), MovementAction::Stop) => {
+                    if command.priority >= current.priority {
+                        final_decision = Some(command);
+                        found = true;
+                    }
+                }
+            }
+        }
+
+        if let Some(decision) = final_decision {
+            if found {
                 commands
                     .entity(entity)
-                    .insert(FinalDecision(best_request.clone()));
+                    .insert(FinalDecision(decision.clone()));
             }
         }
     }
@@ -283,33 +285,41 @@ fn apply_final_movement_decision(
     mut query: Query<(
         Entity,
         &Transform,
-        &FinalDecision<CommandMovementStart>,
+        &FinalDecision<CommandMovement>,
         &mut MovementState,
     )>,
     grid: Res<ConfigNavigationGrid>,
 ) {
     for (entity, transform, decision, mut movement_state) in query.iter_mut() {
-        match &decision.0.way {
-            MovementWay::Pathfind(target) => {
-                if let Some(path) = get_nav_path(&transform.translation.xz(), target, &grid) {
-                    movement_state.reset_path(&path);
+        match &decision.0.action {
+            MovementAction::Start { way, speed } => {
+                match way {
+                    MovementWay::Pathfind(target) => {
+                        if let Some(path) = get_nav_path(&transform.translation.xz(), target, &grid)
+                        {
+                            movement_state.reset_path(&path);
+                        }
+                    }
+                    MovementWay::Path(path) => {
+                        movement_state.reset_path(path);
+                    }
                 }
+
+                if let Some(speed) = speed {
+                    movement_state.with_speed(*speed);
+                }
+
+                commands.trigger_targets(EventMovementStart, entity);
             }
-            MovementWay::Path(path) => {
-                movement_state.reset_path(path);
+            MovementAction::Stop => {
+                movement_state.clear_path();
             }
         }
-
-        if let Some(speed) = decision.0.speed {
-            movement_state.with_speed(speed);
-        }
-
-        commands.trigger_targets(EventMovementStart, entity);
     }
 }
 
 fn on_event_movement_end(trigger: Trigger<EventMovementEnd>, mut commands: Commands) {
     commands
         .entity(trigger.target())
-        .remove::<LastDecision<CommandMovementStart>>();
+        .remove::<LastDecision<CommandMovement>>();
 }

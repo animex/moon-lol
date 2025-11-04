@@ -57,18 +57,15 @@ fn setup(
             &skin,
         );
 
-        commands
-            .entity(entity)
-            .insert((
-                team.clone(),
-                Controller::default(),
-                Focus,
-                Movement { speed: 325.0 },
-                Health {
-                    value: 600.0,
-                    max: 600.0,
-                },
-            ))
-            .log_components();
+        commands.entity(entity).insert((
+            team.clone(),
+            Controller::default(),
+            Focus,
+            Movement { speed: 325.0 },
+            Health {
+                value: 600.0,
+                max: 600.0,
+            },
+        ));
     }
 }

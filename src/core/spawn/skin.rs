@@ -5,8 +5,12 @@ use bevy::asset::uuid::Uuid;
 use bevy::prelude::*;
 use bevy::render::mesh::skinning::SkinnedMesh;
 
+use league_core::{
+    AnimationGraphDataMClipDataMap, AtomicClipData, ConditionBoolClipData, ConditionFloatClipData,
+    SelectorClipData, SequencerClipData,
+};
 use league_utils::hash_bin;
-use lol_config::{ConfigCharacterSkin, ConfigCharacterSkinAnimation};
+use lol_config::ConfigCharacterSkin;
 
 use crate::core::{Animation, AnimationNode, AnimationNodeF32, AnimationState};
 
@@ -20,7 +24,10 @@ pub fn spawn_skin_entity(
     let material_handle: Handle<StandardMaterial> = asset_server.load(skin.material_path.clone());
 
     let entity = commands
-        .spawn(transform.with_scale(transform.scale * skin.skin_scale.unwrap_or(1.0)))
+        .spawn((
+            transform.with_scale(transform.scale * skin.skin_scale.unwrap_or(1.0)),
+            Visibility::default(),
+        ))
         .id();
 
     let mut index_to_entity = vec![Entity::PLACEHOLDER; skin.joints.len()];
@@ -54,55 +61,111 @@ pub fn spawn_skin_entity(
 
     for (hash, clip) in &skin.animation_map {
         match clip {
-            ConfigCharacterSkinAnimation::AtomicClipData { clip_path } => {
-                let clip = asset_server.load(clip_path.clone());
+            AnimationGraphDataMClipDataMap::AtomicClipData(AtomicClipData {
+                m_animation_resource_data,
+                ..
+            }) => {
+                let clip =
+                    asset_server.load(m_animation_resource_data.m_animation_file_path.clone());
                 let node_index = animation_graph.add_clip(clip, 1.0, animation_graph.root);
                 hash_to_node.insert(*hash, AnimationNode::Clip { node_index });
             }
-            ConfigCharacterSkinAnimation::ConditionFloatClipData {
-                conditions,
-                component_name,
-                field_name,
-            } => {
+            AnimationGraphDataMClipDataMap::ConditionFloatClipData(ConditionFloatClipData {
+                m_condition_float_pair_data_list,
+                updater,
+                ..
+            }) => {
                 hash_to_node.insert(
                     *hash,
                     AnimationNode::ConditionFloat {
-                        component_name: component_name.clone(),
-                        field_name: field_name.clone(),
-                        conditions: conditions
+                        conditions: m_condition_float_pair_data_list
                             .iter()
+                            .map(|v| (v.m_clip_name, v.m_value.unwrap_or(0.0)))
                             .map(|(key, value)| AnimationNodeF32 {
-                                key: *key,
-                                value: *value,
+                                key: key,
+                                value: value,
                             })
                             .collect::<Vec<_>>(),
+                        updater: updater.clone(),
                     },
                 );
             }
-            ConfigCharacterSkinAnimation::SelectorClipData { probably_nodes } => {
+            AnimationGraphDataMClipDataMap::SelectorClipData(SelectorClipData {
+                m_selector_pair_data_list,
+                ..
+            }) => {
                 hash_to_node.insert(
                     *hash,
                     AnimationNode::Selector {
-                        probably_nodes: probably_nodes
+                        probably_nodes: m_selector_pair_data_list
                             .iter()
+                            .map(|v| (v.m_clip_name, v.m_probability.unwrap_or(0.0)))
                             .map(|(key, value)| AnimationNodeF32 {
-                                key: *key,
-                                value: *value,
+                                key: key,
+                                value: value,
                             })
                             .collect::<Vec<_>>(),
                         current_index: None,
                     },
                 );
             }
+            AnimationGraphDataMClipDataMap::SequencerClipData(SequencerClipData {
+                m_clip_name_list,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::Sequence {
+                        hashes: m_clip_name_list.clone(),
+                        current_index: None,
+                    },
+                );
+            }
+            AnimationGraphDataMClipDataMap::ConditionBoolClipData(ConditionBoolClipData {
+                updater,
+                m_true_condition_clip_name,
+                m_false_condition_clip_name,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::ConditionBool {
+                        updater: updater.clone(),
+                        true_node: *m_true_condition_clip_name,
+                        false_node: *m_false_condition_clip_name,
+                    },
+                );
+            }
+            _ => {}
         };
     }
+
+    hash_to_node.insert(
+        hash_bin("Attack"),
+        AnimationNode::Selector {
+            probably_nodes: vec![
+                AnimationNodeF32 {
+                    key: hash_bin("Attack1"),
+                    value: 1.0,
+                },
+                AnimationNodeF32 {
+                    key: hash_bin("Attack2"),
+                    value: 1.0,
+                },
+            ],
+            current_index: None,
+        },
+    );
 
     let graph_handle = res_animation_graph.add(animation_graph);
 
     commands.entity(entity).insert((
         AnimationPlayer::default(),
         AnimationGraphHandle(graph_handle),
-        Animation { hash_to_node },
+        Animation {
+            hash_to_node,
+            blend_data: skin.blend_data.clone(),
+        },
         AnimationState {
             last_hash: None,
             current_hash: hash_bin("Idle1"),
@@ -167,7 +230,6 @@ pub fn spawn_shadow_skin_entity<M: Material>(
     duplicate_joints_to_target(
         commands,
         target,
-        target,
         joints,
         &q_children,
         &q_animation_target,
@@ -202,7 +264,6 @@ pub fn spawn_shadow_skin_entity<M: Material>(
 
 pub fn duplicate_joints_to_target(
     commands: &mut Commands,
-    target: Entity,
     parent: Entity,
     joints: Vec<(Entity, &Transform, &AnimationTarget)>,
     q_children: &Query<&Children>,
@@ -229,7 +290,6 @@ pub fn duplicate_joints_to_target(
 
             duplicate_joints_to_target(
                 commands,
-                target,
                 new_joint_entity,
                 joints,
                 q_children,

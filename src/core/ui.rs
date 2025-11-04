@@ -2,7 +2,6 @@ use bevy::color::palettes::css::{BLUE, RED, WHITE};
 use bevy::{color::palettes, prelude::*};
 
 use crate::core::{Bounding, DamageType, EventDamageCreate, Health};
-use crate::{system_debug, system_info};
 
 #[derive(Default)]
 pub struct PluginUI;
@@ -50,19 +49,11 @@ fn init_health_bar(
 ) {
     let health_bar_count = q_health.iter().count();
     if health_bar_count > 0 {
-        system_info!(
-            "init_health_bar",
-            "Creating health bars for {} new entities",
-            health_bar_count
-        );
+        println!("Creating health bars for {} new entities", health_bar_count);
     }
 
     for entity in q_health.iter() {
-        system_debug!(
-            "init_health_bar",
-            "Creating health bar UI for entity {:?}",
-            entity
-        );
+        println!("Creating health bar UI for entity {:?}", entity);
 
         commands
             .spawn((
@@ -169,20 +160,14 @@ fn on_damage_create(
         return;
     }
 
-    system_debug!(
-        "on_damage_create",
+    println!(
         "Creating damage number for entity {:?}, damage: {:.1}",
-        target_entity,
-        damage_result.final_damage
+        target_entity, damage_result.final_damage
     );
 
     // 获取目标实体的位置
     let Ok(target_transform) = global_transform.get(target_entity) else {
-        system_debug!(
-            "on_damage_create",
-            "Failed to get transform for entity {:?}",
-            target_entity
-        );
+        println!("Failed to get transform for entity {:?}", target_entity);
         return;
     };
 
@@ -207,9 +192,9 @@ fn on_damage_create(
         DamageNumber {
             damage: damage_result.final_damage,
             lifetime: 0.0,
-            max_lifetime: 2.0, // 2秒生存时间
+            max_lifetime: 1.0, // 2秒生存时间
             start_position: world_position,
-            velocity_y: 100.0, // 初始向上速度
+            velocity_y: 250.0, // 初始向上速度
             gravity: -200.0,   // 重力加速度
             final_scale: 0.5,
         },

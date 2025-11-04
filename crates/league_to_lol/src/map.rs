@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use league_core::{
-    BarracksConfig, MapPlaceableContainer, SkinCharacterDataPropertiesPersistentEffectConditions,
-    Unk0x9d9f60d2,
+    BarracksConfig, MapPlaceableContainer, MissileSpecificationBehaviors, Unk0x9d9f60d2,
 };
 use league_loader::{LeagueLoader, LeagueWadMapLoader};
 use league_property::from_entry;
@@ -58,14 +57,10 @@ pub async fn save_config_map(
 
         for (hash, value) in map_placeable_container.items {
             match value {
-                SkinCharacterDataPropertiesPersistentEffectConditions::Unk0x3c2bf0c0(
-                    unk0x3c2bf0c0,
-                ) => {
-                    environment_objects.entry(hash).or_insert(unk0x3c2bf0c0);
+                MissileSpecificationBehaviors::Unk0xad65d8c4(unk0xad65d8c4) => {
+                    environment_objects.entry(hash).or_insert(unk0xad65d8c4);
                 }
-                SkinCharacterDataPropertiesPersistentEffectConditions::Unk0x3c995caf(
-                    unk0x3c995caf,
-                ) => {
+                MissileSpecificationBehaviors::Unk0x3c995caf(unk0x3c995caf) => {
                     let lane = match unk0x3c995caf.name.as_str() {
                         "MinionPath_Top" => Lane::Top,
                         "MinionPath_Mid" => Lane::Mid,
@@ -83,10 +78,8 @@ pub async fn save_config_map(
 
                     minion_paths.entry(lane).or_insert(path);
                 }
-                SkinCharacterDataPropertiesPersistentEffectConditions::Unk0xc71ee7fb(
-                    unk0xc71ee7fb,
-                ) => {
-                    barracks.entry(hash).or_insert(unk0xc71ee7fb);
+                MissileSpecificationBehaviors::Unk0xba138ae3(unk0xba138ae3) => {
+                    barracks.entry(hash).or_insert(unk0xba138ae3);
                 }
                 _ => {}
             }

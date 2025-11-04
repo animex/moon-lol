@@ -16,6 +16,7 @@ mod movement;
 mod navigation;
 mod particle;
 mod resource;
+mod rotate;
 mod run;
 mod skill;
 mod spawn;
@@ -40,6 +41,7 @@ pub use movement::*;
 pub use navigation::*;
 pub use particle::*;
 pub use resource::*;
+pub use rotate::*;
 pub use run::*;
 pub use skill::*;
 pub use spawn::*;
@@ -65,6 +67,7 @@ plugin_group! {
         :PluginNavigaton,
         :PluginParticle,
         :PluginResource,
+        :PluginRotate,
         :PluginRun,
         :PluginSkill,
         :PluginState,

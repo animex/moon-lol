@@ -35,8 +35,8 @@ pub fn on_action_particle_despawn(
     let entity = ctx.target_entity();
     let event = trigger.inner();
 
-    commands.entity(entity).trigger(CommandParticleDespawn {
-        particle: event.hash,
-    });
+    commands
+        .entity(entity)
+        .trigger(CommandParticleDespawn { hash: event.hash });
     commands.trigger(ctx.success());
 }

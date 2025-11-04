@@ -1,13 +1,14 @@
 use std::{collections::HashMap, time::Duration};
 
-use bevy::{prelude::*, reflect::ReflectRef};
+use bevy::prelude::*;
+use league_core::{AnimationGraphDataMBlendDataTable, ConditionBoolClipDataUpdater};
 use league_utils::hash_bin;
 use rand::{
     distr::{weighted::WeightedIndex, Distribution},
     rng,
 };
 
-use crate::core::{Attack, State};
+use crate::core::{Attack, Movement, State};
 
 #[derive(Default)]
 pub struct PluginAnimation;
@@ -27,6 +28,7 @@ impl Plugin for PluginAnimation {
 #[derive(Component, Clone)]
 pub struct Animation {
     pub hash_to_node: HashMap<u32, AnimationNode>,
+    pub blend_data: HashMap<(u32, u32), AnimationGraphDataMBlendDataTable>,
 }
 
 #[derive(Component, Clone, Debug)]
@@ -58,13 +60,21 @@ pub enum AnimationNode {
         node_index: AnimationNodeIndex,
     },
     ConditionFloat {
-        component_name: String,
-        field_name: String,
+        updater: ConditionBoolClipDataUpdater,
         conditions: Vec<AnimationNodeF32>,
     },
     Selector {
         probably_nodes: Vec<AnimationNodeF32>,
         current_index: Option<usize>,
+    },
+    Sequence {
+        hashes: Vec<u32>,
+        current_index: Option<usize>,
+    },
+    ConditionBool {
+        updater: ConditionBoolClipDataUpdater,
+        true_node: u32,
+        false_node: u32,
     },
 }
 
@@ -102,6 +112,21 @@ impl Animation {
                 *current_index = Some(index);
                 vec![probably_nodes[index].key]
             }
+            AnimationNode::Sequence {
+                hashes,
+                current_index,
+            } => {
+                *current_index = Some(0);
+
+                vec![hashes[0]]
+            }
+            AnimationNode::ConditionBool {
+                true_node,
+                false_node,
+                updater,
+            } => {
+                vec![*false_node]
+            }
         };
 
         keys.iter()
@@ -129,11 +154,64 @@ impl Animation {
                 Some(index) => self.get_current_node_indices(probably_nodes[*index].key),
                 None => vec![],
             },
+            AnimationNode::Sequence {
+                hashes,
+                current_index,
+            } => match current_index {
+                Some(index) => self.get_current_node_indices(hashes[*index]),
+                None => vec![],
+            },
+            AnimationNode::ConditionBool {
+                true_node,
+                false_node,
+                updater,
+            } => self.get_current_node_indices(*false_node),
         }
+    }
+
+    pub fn get_current_nodes(&self, key: u32) -> Vec<u32> {
+        let mut result = vec![key];
+
+        let Some(node) = self.hash_to_node.get(&key) else {
+            return Vec::new();
+        };
+
+        match node {
+            AnimationNode::Clip { .. } => {}
+            AnimationNode::ConditionFloat { conditions, .. } => {
+                result.extend(
+                    conditions
+                        .iter()
+                        .flat_map(|v| self.get_current_nodes(v.key)),
+                );
+            }
+            AnimationNode::Selector {
+                probably_nodes,
+                current_index,
+            } => match current_index {
+                Some(index) => {
+                    result.extend(self.get_current_nodes(probably_nodes[*index].key));
+                }
+                None => {}
+            },
+            AnimationNode::Sequence { hashes, .. } => {
+                result.extend(hashes.iter().flat_map(|v| self.get_current_nodes(*v)));
+            }
+            AnimationNode::ConditionBool {
+                true_node,
+                false_node,
+                updater,
+            } => {
+                result.extend(self.get_current_nodes(*false_node));
+            }
+        }
+
+        result
     }
 
     pub fn play(&mut self, player: &mut AnimationPlayer, key: u32, weight: f32) {
         let node_indices = self.get_node_indices(key);
+
         for node_index in node_indices {
             player.play(node_index).set_weight(weight);
         }
@@ -148,10 +226,18 @@ impl Animation {
         }
     }
 
-    pub fn stop(&self, player: &mut AnimationPlayer, key: u32) {
-        let node_indices = self.get_current_node_indices(key);
-        for node_index in node_indices {
-            player.stop(node_index);
+    pub fn stop(&mut self, player: &mut AnimationPlayer, key: u32) {
+        let nodes = self.get_current_nodes(key);
+        for node in nodes {
+            let node = self.hash_to_node.get_mut(&node).unwrap();
+
+            match node {
+                AnimationNode::Clip { node_index, .. } => {
+                    player.stop(*node_index);
+                }
+                AnimationNode::Selector { current_index, .. } => *current_index = None,
+                _ => {}
+            }
         }
     }
 
@@ -213,6 +299,7 @@ fn on_state_change(
         match state {
             State::Idle => {
                 animation_state.update(hash_bin("Idle1"));
+                // animation_state.update(hash_bin("IdleIn"));
             }
             State::Running => {
                 animation_state.update(hash_bin("Run"));
@@ -220,8 +307,9 @@ fn on_state_change(
             State::Attacking => {
                 let attack = q_attack.get(entity).unwrap();
                 animation_state
-                    .update(hash_bin("Attack1"))
-                    .with_duration(attack.total_duration_secs());
+                    .update(hash_bin("Attack"))
+                    .with_repeat(false)
+                    .with_duration(attack.animation_duration());
             }
             _ => {}
         }
@@ -274,7 +362,7 @@ fn on_animation_state_change(
                 commands.entity(entity).insert(AnimationTransitionOut {
                     hash: last_hash,
                     weight: 1.0,
-                    duration: Duration::from_millis(200),
+                    duration: Duration::from_millis(100),
                     start_time: time.elapsed_secs(),
                 });
             }
@@ -292,12 +380,12 @@ fn update_transition_out(
     mut query: Query<(
         Entity,
         &mut AnimationPlayer,
-        &Animation,
+        &mut Animation,
         &AnimationTransitionOut,
     )>,
     time: Res<Time>,
 ) {
-    for (entity, mut player, animation, transition_out) in query.iter_mut() {
+    for (entity, mut player, mut animation, transition_out) in query.iter_mut() {
         let now = time.elapsed_secs();
 
         let elapsed = now - transition_out.start_time;
@@ -316,12 +404,13 @@ fn update_transition_out(
     }
 }
 
-fn update_condition_animation(world: &mut World) {
-    let mut query = world.query::<(Entity, &Animation, &AnimationState)>();
-    let mut player_query = world.query::<(&mut AnimationPlayer, &Animation)>();
-
+fn update_condition_animation(
+    query: Query<(Entity, &Animation, &AnimationState)>,
+    mut q_animation: Query<(&mut AnimationPlayer, &Animation)>,
+    q_movement: Query<&Movement>,
+) {
     let play_list = query
-        .iter(world)
+        .iter()
         .filter_map(|(entity, animation, state)| {
             let Some(node) = animation
                 .hash_to_node
@@ -332,59 +421,53 @@ fn update_condition_animation(world: &mut World) {
             };
 
             let AnimationNode::ConditionFloat {
-                component_name,
-                field_name,
                 conditions,
+                updater,
                 ..
             } = node
             else {
                 return None;
             };
 
-            let Some(value) =
-                get_reflect_component_value(world, entity, &component_name, &field_name)
-            else {
-                return None;
+            let value = match updater {
+                ConditionBoolClipDataUpdater::MoveSpeedParametricUpdater => {
+                    q_movement.get(entity).unwrap().speed
+                }
+                _ => {
+                    return None;
+                }
             };
 
             if conditions.is_empty() {
                 return None;
             }
 
-            if value < conditions[0].value {
-                return Some((entity, vec![(conditions[0].key, 1.0)]));
-            }
+            let mut found = false;
 
-            if let Some(condition) = conditions.last() {
-                if value >= condition.value {
-                    return Some((entity, vec![(condition.key, 1.0)]));
-                }
-            }
-
-            let Some(window) = conditions
-                .windows(2)
-                .find(|w| value >= w[0].value && value < w[1].value)
-            else {
-                return None;
-            };
-
-            let lower = &window[0];
-            let upper = &window[1];
-
-            let range = upper.value - lower.value;
-
-            let weight = if range > f32::EPSILON {
-                ((value - lower.value) / range).clamp(0.0, 1.0)
-            } else {
-                0.0
-            };
-
-            return Some((entity, vec![(lower.key, 1.0 - weight), (upper.key, weight)]));
+            return Some((
+                entity,
+                conditions
+                    .iter()
+                    .rev()
+                    .map(|v| {
+                        if found {
+                            (v.key, 0.0)
+                        } else {
+                            if value >= v.value {
+                                found = true;
+                                (v.key, 1.0)
+                            } else {
+                                (v.key, 0.0)
+                            }
+                        }
+                    })
+                    .collect::<Vec<_>>(),
+            ));
         })
         .collect::<Vec<_>>();
 
     for (entity, nodes) in play_list {
-        let Ok((mut player, animation)) = player_query.get_mut(world, entity) else {
+        let Ok((mut player, animation)) = q_animation.get_mut(entity) else {
             continue;
         };
 
@@ -392,34 +475,6 @@ fn update_condition_animation(world: &mut World) {
             animation.set_weight(&mut player, key, weight);
         }
     }
-}
-
-fn get_reflect_component_value(
-    world: &World,
-    entity: Entity,
-    component_name: &str,
-    field_name: &str,
-) -> Option<f32> {
-    let registry = world.resource::<AppTypeRegistry>().read();
-    let Some(type_registration) = registry.get_with_short_type_path(component_name) else {
-        return None;
-    };
-    let Some(reflect_component) = type_registration.data::<ReflectComponent>() else {
-        return None;
-    };
-    let Ok(entity_ref) = world.get_entity(entity) else {
-        return None;
-    };
-    let Some(component) = reflect_component.reflect(entity_ref) else {
-        return None;
-    };
-    let ReflectRef::Struct(struct_ref) = component.reflect_ref() else {
-        return None;
-    };
-    let Some(value) = struct_ref.get_field::<f32>(field_name) else {
-        return None;
-    };
-    Some(*value)
 }
 
 fn apply_animation_speed(

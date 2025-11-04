@@ -1,5 +1,4 @@
 use crate::core::life::Health;
-use crate::{system_debug, system_info, system_warn};
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
@@ -281,8 +280,7 @@ pub fn on_command_damage_create(
         Option<&DamageReductions>,
     )>,
 ) {
-    system_debug!(
-        "damage_system",
+    println!(
         "Processing damage event: source={:?}, target={:?}, type={:?}, amount={:.1}",
         trigger.source,
         trigger.target(),
@@ -305,7 +303,7 @@ pub fn on_command_damage_create(
         // 应用最终伤害到生命值
         health.value -= result.final_damage;
 
-        system_info!("damage_system",
+        println!(
             "Damage applied: {:?} -> {:?}, Type: {:?}, Original: {:.1}, Final: {:.1}, Health: {:.1} -> {:.1}, Shields: W{:.1}/M{:.1}, Reduced: {:.1}",
             trigger.source,
             trigger.target(),
@@ -330,16 +328,14 @@ pub fn on_command_damage_create(
         );
 
         if health.value <= 0.0 {
-            system_warn!(
-                "damage_system",
+            println!(
                 "Entity {:?} health dropped to {:.1} (death threshold)",
                 trigger.target(),
                 health.value
             );
         }
     } else {
-        system_warn!(
-            "damage_system",
+        println!(
             "Failed to find target entity {:?} for damage event",
             trigger.target()
         );
@@ -350,11 +346,7 @@ pub fn on_command_damage_create(
 pub fn update_damage_reductions_system(mut query: Query<&mut DamageReductions>, time: Res<Time>) {
     let entity_count = query.iter().count();
     if entity_count > 0 {
-        system_debug!(
-            "update_damage_reductions_system",
-            "Updating {} entities with damage reductions",
-            entity_count
-        );
+        println!("Updating {} entities with damage reductions", entity_count);
     }
 
     for mut reductions in query.iter_mut() {
@@ -364,8 +356,7 @@ pub fn update_damage_reductions_system(mut query: Query<&mut DamageReductions>, 
         let expired_after = reductions.buffs.iter().filter(|r| r.is_expired()).count();
 
         if expired_before != expired_after {
-            system_debug!(
-                "update_damage_reductions_system",
+            println!(
                 "Removed {} expired damage reductions",
                 expired_before - expired_after
             );
@@ -383,11 +374,9 @@ pub fn cleanup_depleted_shields_system(
     let magic_shield_count = magic_shields.iter().count();
 
     if white_shield_count > 0 || magic_shield_count > 0 {
-        system_debug!(
-            "cleanup_depleted_shields_system",
+        println!(
             "Checking {} white shields and {} magic shields for depletion",
-            white_shield_count,
-            magic_shield_count
+            white_shield_count, magic_shield_count
         );
     }
 
@@ -397,11 +386,7 @@ pub fn cleanup_depleted_shields_system(
     // 移除耗尽的白色护盾
     for (entity, shield) in white_shields.iter() {
         if shield.is_depleted() {
-            system_debug!(
-                "cleanup_depleted_shields_system",
-                "Removing depleted white shield from entity {:?}",
-                entity
-            );
+            println!("Removing depleted white shield from entity {:?}", entity);
             commands.entity(entity).remove::<WhiteShield>();
             removed_white += 1;
         }
@@ -410,22 +395,16 @@ pub fn cleanup_depleted_shields_system(
     // 移除耗尽的魔法护盾
     for (entity, shield) in magic_shields.iter() {
         if shield.is_depleted() {
-            system_debug!(
-                "cleanup_depleted_shields_system",
-                "Removing depleted magic shield from entity {:?}",
-                entity
-            );
+            println!("Removing depleted magic shield from entity {:?}", entity);
             commands.entity(entity).remove::<MagicShield>();
             removed_magic += 1;
         }
     }
 
     if removed_white > 0 || removed_magic > 0 {
-        system_info!(
-            "cleanup_depleted_shields_system",
+        println!(
             "Removed {} white shields and {} magic shields",
-            removed_white,
-            removed_magic
+            removed_white, removed_magic
         );
     }
 }

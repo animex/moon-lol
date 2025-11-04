@@ -1,6 +1,9 @@
 use bevy::{
     animation::AnimationTarget,
-    math::bounding::{Aabb3d, IntersectsVolume},
+    math::{
+        bounding::{Aabb3d, IntersectsVolume},
+        VectorSpace,
+    },
     platform::collections::HashSet,
     prelude::*,
     render::mesh::skinning::SkinnedMesh,
@@ -8,7 +11,8 @@ use bevy::{
 
 use league_core::{
     Unk0xee39916f, VfxEmitterDefinitionDataPrimitive, VfxEmitterDefinitionDataSpawnShape,
-    VfxPrimitiveAttachedMesh, VfxPrimitiveMesh, VfxPrimitivePlanarProjection, VfxShapeLegacy,
+    VfxPrimitiveAttachedMesh, VfxPrimitiveMesh, VfxPrimitivePlanarProjection, VfxShapeBox,
+    VfxShapeCylinder, VfxShapeLegacy,
 };
 use league_utils::{neg_rotation_z, neg_vec_z};
 use lol_config::ConfigMap;
@@ -19,12 +23,14 @@ use crate::core::{
         ParticleMeshQuad, ParticleState, UniformsPixelQuadSlice, UniformsVertexQuad,
     },
     spawn_shadow_skin_entity, Lifetime, MapGeometry, ParticleId, ParticleMaterialMesh,
-    ParticleMaterialSkinnedMeshParticle, ParticleMaterialUnlitDecal, StochasticSampler,
-    UniformsPixelMesh, UniformsPixelSkinnedMeshParticle, UniformsPixelUnlitDecal,
-    UniformsVertexMesh, UniformsVertexSkinnedMeshParticle, UniformsVertexUnlitDecal,
+    ParticleMaterialSkinnedMeshParticle, ParticleMaterialUnlitDecal, ResourceCache,
+    StochasticSampler, UniformsPixelMesh, UniformsPixelSkinnedMeshParticle,
+    UniformsPixelUnlitDecal, UniformsVertexMesh, UniformsVertexSkinnedMeshParticle,
+    UniformsVertexUnlitDecal,
 };
 
 #[derive(Component)]
+#[require(Visibility)]
 pub struct ParticleEmitterState {
     pub birth_acceleration: StochasticSampler<Vec3>,
     pub birth_color: StochasticSampler<Vec4>,
@@ -33,21 +39,28 @@ pub struct ParticleEmitterState {
     pub birth_uv_offset: StochasticSampler<Vec2>,
     pub birth_uv_scroll_rate: StochasticSampler<Vec2>,
     pub birth_velocity: StochasticSampler<Vec3>,
+    pub bind_weight: StochasticSampler<f32>,
     pub color: StochasticSampler<Vec4>,
     pub scale0: StochasticSampler<Vec3>,
     pub emission_debt: f32,
     pub particle_lifetime: StochasticSampler<f32>,
     pub rate: StochasticSampler<f32>,
     pub emitter_position: StochasticSampler<Vec3>,
-    pub world_matrix: Mat4,
+    pub global_transform: Transform,
 }
 
+#[derive(Component, Debug)]
+#[relationship(relationship_target = Emitters)]
+pub struct EmitterOf(pub Entity);
+
+#[derive(Component, Debug)]
+#[relationship_target(relationship = EmitterOf)]
+pub struct Emitters(Vec<Entity>);
+
 pub fn update_emitter_position(
-    mut commands: Commands,
     mut query: Query<(
-        Entity,
         &mut Transform,
-        &ChildOf,
+        &EmitterOf,
         &Lifetime,
         &ParticleEmitterState,
         &ParticleId,
@@ -55,54 +68,37 @@ pub fn update_emitter_position(
     res_config_map: Res<ConfigMap>,
     q_global_transform: Query<&GlobalTransform>,
 ) {
-    for (emitter_entity, mut transform, child_of, lifetime, emitter, particle_id) in
-        query.iter_mut()
-    {
+    for (mut transform, emitter_of, lifetime, emitter, particle_id) in query.iter_mut() {
         let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
-
-        let parent = child_of.parent();
-
-        let progress = lifetime.progress();
-
-        let emitter_position = emitter.emitter_position.sample_clamped(progress);
-
-        let parent_global_transform = q_global_transform.get(parent).unwrap();
-
-        let parent_world = parent_global_transform.compute_matrix();
-
-        let translation = neg_vec_z(&emitter_position);
 
         let is_local_orientation = vfx_emitter_definition_data
             .is_local_orientation
             .unwrap_or(true);
 
-        if !is_local_orientation {
-            let parent_new_world = Mat4::from_scale_rotation_translation(
-                parent_global_transform.scale(),
-                Quat::default(),
-                parent_global_transform.translation(),
-            );
+        let progress = lifetime.progress();
 
-            let local =
-                Mat4::from_scale_rotation_translation(Vec3::ONE, Quat::default(), translation);
+        let emitter_position = emitter.emitter_position.sample_clamped(progress);
 
-            let new_world = parent_new_world * local;
+        let bind_weight = emitter.bind_weight.sample_clamped(progress);
 
-            let new_local = parent_world.inverse() * new_world;
+        if bind_weight == 0. {
+            continue;
+        }
 
-            *transform = Transform::from_matrix(new_local);
+        let mut character_global_transform = q_global_transform
+            .get(emitter_of.0)
+            .unwrap()
+            .compute_transform();
 
-            commands
-                .entity(emitter_entity)
-                .insert(GlobalTransform::from(new_world));
+        if is_local_orientation {
+            character_global_transform.translation += neg_vec_z(&emitter_position);
+            *transform = character_global_transform;
         } else {
-            transform.translation = translation;
-
-            commands
-                .entity(emitter_entity)
-                .insert(GlobalTransform::from(
-                    parent_world * transform.compute_matrix(),
-                ));
+            *transform = Transform::from_matrix(Mat4::from_scale_rotation_translation(
+                character_global_transform.scale,
+                Quat::default(),
+                character_global_transform.translation + neg_vec_z(&emitter_position),
+            ));
         }
     }
 }
@@ -112,28 +108,36 @@ pub fn update_emitter(
     mut res_mesh: ResMut<Assets<Mesh>>,
     res_config_map: Res<ConfigMap>,
     res_asset_server: Res<AssetServer>,
+    mut res_resource_cache: ResMut<ResourceCache>,
     mut res_image: ResMut<Assets<Image>>,
     mut res_quad_material: ResMut<Assets<ParticleMaterialQuad>>,
     mut res_quad_slice_material: ResMut<Assets<ParticleMaterialQuadSlice>>,
     mut res_unlit_decal_material: ResMut<Assets<ParticleMaterialUnlitDecal>>,
     mut res_particle_material_mesh: ResMut<Assets<ParticleMaterialMesh>>,
-    mut res_particle_material_skinned_mesh_particle: ResMut<
-        Assets<ParticleMaterialSkinnedMeshParticle>,
-    >,
     mut query: Query<(
         Entity,
-        &ChildOf,
+        &EmitterOf,
         &mut Lifetime,
         &mut ParticleEmitterState,
         &ParticleId,
     )>,
-    q_mesh3d: Query<&Mesh3d>,
-    q_skinned_mesh: Query<&SkinnedMesh>,
-    q_children: Query<&Children>,
-    q_animation_target: Query<(Entity, &Transform, &AnimationTarget)>,
     time: Res<Time>,
 ) {
-    for (emitter_entity, child_of, mut lifetime, mut emitter, particle_id) in query.iter_mut() {
+    for (emitter_entity, emitter_of, mut lifetime, mut emitter, particle_id) in query.iter_mut() {
+        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
+
+        let primitive = vfx_emitter_definition_data
+            .primitive
+            .clone()
+            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
+
+        if matches!(
+            primitive,
+            VfxEmitterDefinitionDataPrimitive::VfxPrimitiveAttachedMesh { .. }
+        ) {
+            continue;
+        }
+
         if lifetime.is_dead() {
             continue;
         }
@@ -141,10 +145,6 @@ pub fn update_emitter(
         let progress = lifetime.progress();
 
         let rate = emitter.rate.sample_clamped(progress);
-
-        let parent = child_of.parent();
-
-        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
 
         let is_single_particle = vfx_emitter_definition_data
             .is_single_particle
@@ -165,31 +165,31 @@ pub fn update_emitter(
             .is_uniform_scale
             .unwrap_or(false);
 
-        let primitive = vfx_emitter_definition_data
-            .primitive
-            .clone()
-            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
-
         let mut texture = vfx_emitter_definition_data
             .texture
             .as_ref()
-            .map(|v| res_asset_server.load(v));
+            .map(|v| res_resource_cache.get_image(&res_asset_server, v));
 
         let particle_color_texture = vfx_emitter_definition_data
             .particle_color_texture
             .as_ref()
-            .map(|v| res_asset_server.load(v));
+            .map(|v| res_resource_cache.get_image(&res_asset_server, v));
 
         let texture_mult = vfx_emitter_definition_data
             .texture_mult
             .as_ref()
             .and_then(|v| v.texture_mult.as_ref())
-            .map(|v| res_asset_server.load(v));
+            .map(|v| res_resource_cache.get_image(&res_asset_server, v));
 
         let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(4);
 
         for _ in 0..particles_to_spawn {
             let particle_lifetime = emitter.particle_lifetime.sample_clamped(progress);
+            let particle_lifetime = if particle_lifetime < 0. {
+                0.
+            } else {
+                particle_lifetime
+            };
 
             let birth_color = emitter.birth_color.sample_clamped(progress);
             let birth_velocity = emitter.birth_velocity.sample_clamped(progress);
@@ -219,6 +219,12 @@ pub fn update_emitter(
                         }) => emit_offset.and_then(|v| {
                             Some(StochasticSampler::<Vec3>::from(v).sample_clamped(progress))
                         }),
+                        VfxEmitterDefinitionDataSpawnShape::VfxShapeBox(VfxShapeBox { .. }) => {
+                            Some(Vec3::ZERO)
+                        }
+                        VfxEmitterDefinitionDataSpawnShape::VfxShapeCylinder(
+                            VfxShapeCylinder { .. },
+                        ) => Some(Vec3::ZERO),
                         _ => todo!(),
                     })
                     .unwrap_or(Vec3::ZERO),
@@ -360,7 +366,7 @@ pub fn update_emitter(
                         continue;
                     };
 
-                    let mesh = res_asset_server.load(mesh_name);
+                    let mesh = res_resource_cache.get_mesh(&res_asset_server, mesh_name);
                     let black_pixel_texture = res_image.add(create_black_pixel_texture());
 
                     commands.entity(particle_entity).insert((
@@ -378,6 +384,183 @@ pub fn update_emitter(
                         })),
                     ));
                 }
+                _ => {
+                    continue;
+                }
+            }
+        }
+    }
+}
+
+pub fn update_emitter_attached(
+    mut commands: Commands,
+    res_config_map: Res<ConfigMap>,
+    res_asset_server: Res<AssetServer>,
+    mut res_resource_image: ResMut<ResourceCache>,
+    mut res_image: ResMut<Assets<Image>>,
+    mut res_particle_material_skinned_mesh_particle: ResMut<
+        Assets<ParticleMaterialSkinnedMeshParticle>,
+    >,
+    mut query: Query<(
+        Entity,
+        &EmitterOf,
+        &mut Lifetime,
+        &mut ParticleEmitterState,
+        &ParticleId,
+    )>,
+    q_mesh3d: Query<&Mesh3d>,
+    q_skinned_mesh: Query<&SkinnedMesh>,
+    q_children: Query<&Children>,
+    q_animation_target: Query<(Entity, &Transform, &AnimationTarget)>,
+    time: Res<Time>,
+) {
+    for (emitter_entity, emitter_of, mut lifetime, mut emitter, particle_id) in query.iter_mut() {
+        let vfx_emitter_definition_data = particle_id.get_def(&res_config_map);
+
+        let primitive = vfx_emitter_definition_data
+            .primitive
+            .clone()
+            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
+
+        if !matches!(
+            primitive,
+            VfxEmitterDefinitionDataPrimitive::VfxPrimitiveAttachedMesh { .. }
+        ) {
+            continue;
+        }
+
+        if lifetime.is_dead() {
+            continue;
+        }
+
+        let progress = lifetime.progress();
+
+        let rate = emitter.rate.sample_clamped(progress);
+
+        let is_single_particle = vfx_emitter_definition_data
+            .is_single_particle
+            .unwrap_or(false);
+
+        let particles_to_spawn_f32 = rate * time.delta_secs() + emitter.emission_debt;
+
+        let particles_to_spawn = if is_single_particle {
+            lifetime.dead();
+            rate as u32
+        } else {
+            particles_to_spawn_f32.floor() as u32
+        };
+
+        emitter.emission_debt = particles_to_spawn_f32.fract();
+
+        let is_uniform_scale = vfx_emitter_definition_data
+            .is_uniform_scale
+            .unwrap_or(false);
+
+        let mut texture = vfx_emitter_definition_data
+            .texture
+            .as_ref()
+            .map(|v| res_resource_image.get_image(&res_asset_server, v));
+
+        let particle_color_texture = vfx_emitter_definition_data
+            .particle_color_texture
+            .as_ref()
+            .map(|v| res_resource_image.get_image(&res_asset_server, v));
+
+        let blend_mode = vfx_emitter_definition_data.blend_mode.unwrap_or(4);
+
+        for _ in 0..particles_to_spawn {
+            let particle_lifetime = emitter.particle_lifetime.sample_clamped(progress);
+            let particle_lifetime = if particle_lifetime < 0. {
+                0.
+            } else {
+                particle_lifetime
+            };
+
+            let birth_color = emitter.birth_color.sample_clamped(progress);
+            let birth_velocity = emitter.birth_velocity.sample_clamped(progress);
+            let birth_acceleration = emitter.birth_acceleration.sample_clamped(progress);
+            let birth_rotation0 = emitter.birth_rotation0.sample_clamped(progress);
+            let birth_scale0 = emitter.birth_scale0.sample_clamped(progress);
+            let birth_uv_offset = emitter.birth_uv_offset.sample_clamped(progress);
+            let birth_uv_scroll_rate = emitter.birth_uv_scroll_rate.sample_clamped(progress);
+
+            let mut birth_scale0 = if is_uniform_scale {
+                Vec3::splat(birth_scale0.x)
+            } else {
+                birth_scale0
+            };
+
+            let translation = neg_vec_z(
+                &vfx_emitter_definition_data
+                    .spawn_shape
+                    .clone()
+                    .and_then(|v| match v {
+                        VfxEmitterDefinitionDataSpawnShape::Unk0xee39916f(Unk0xee39916f {
+                            emit_offset,
+                        }) => emit_offset,
+                        VfxEmitterDefinitionDataSpawnShape::VfxShapeLegacy(VfxShapeLegacy {
+                            emit_offset,
+                            ..
+                        }) => emit_offset.and_then(|v| {
+                            Some(StochasticSampler::<Vec3>::from(v).sample_clamped(progress))
+                        }),
+                        _ => todo!(),
+                    })
+                    .unwrap_or(Vec3::ZERO),
+            );
+
+            let rotation_quat = Quat::from_euler(
+                EulerRot::XYZEx,
+                birth_rotation0.x.to_radians(),
+                (birth_rotation0.y - birth_rotation0.z).to_radians(),
+                0.,
+            );
+
+            let rotation_quat = neg_rotation_z(&rotation_quat);
+
+            if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
+                VfxPrimitivePlanarProjection { ref m_projection },
+            ) = primitive
+            {
+                birth_scale0.x = birth_scale0.x * 2.;
+                birth_scale0.y = m_projection.as_ref().unwrap().m_y_range.unwrap();
+                birth_scale0.z = -birth_scale0.z * 2.;
+            }
+
+            let transform = Transform::from_rotation(rotation_quat)
+                .with_translation(translation)
+                .with_scale(birth_scale0);
+
+            let num_frames = vfx_emitter_definition_data.num_frames.unwrap_or(0) as f32;
+            let frame = if vfx_emitter_definition_data
+                .is_random_start_frame
+                .unwrap_or(false)
+            {
+                (num_frames * rand::random::<f32>()).floor()
+            } else {
+                (num_frames * progress).floor()
+            };
+
+            let particle_entity = commands
+                .spawn((
+                    particle_id.clone(),
+                    ParticleState {
+                        birth_uv_offset,
+                        birth_uv_scroll_rate,
+                        birth_color,
+                        birth_scale0,
+                        velocity: neg_vec_z(&birth_velocity),
+                        acceleration: birth_acceleration,
+                        frame,
+                    },
+                    Lifetime::new_timer(particle_lifetime),
+                    transform,
+                    Pickable::IGNORE,
+                    ChildOf(emitter_entity),
+                ))
+                .id();
+
+            match primitive {
                 VfxEmitterDefinitionDataPrimitive::VfxPrimitiveAttachedMesh(
                     VfxPrimitiveAttachedMesh { .. },
                 ) => {
@@ -405,6 +588,8 @@ pub fn update_emitter(
                             blend_mode,
                         },
                     ));
+
+                    let parent = emitter_of.0;
 
                     spawn_shadow_skin_entity(
                         &mut commands,

@@ -86,11 +86,11 @@ impl AssetLoader for LeagueLoaderMaterial {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
         let material: LeagueMaterial = bincode::deserialize(&buf)?;
-        let image = load_context.load(material.texture_path);
+        let path = material.texture_path + "#srgb";
+        let image = load_context.load(path);
         Ok(StandardMaterial {
             base_color_texture: Some(image),
             unlit: true,
-
             alpha_mode: AlphaMode::Mask(0.3),
             ..default()
         })
@@ -166,7 +166,7 @@ impl AssetLoader for LeagueLoaderImage {
         &self,
         reader: &mut dyn bevy::asset::io::Reader,
         _settings: &Self::Settings,
-        _load_context: &mut LoadContext<'_>,
+        load_context: &mut LoadContext<'_>,
     ) -> Result<Self::Asset, Self::Error> {
         let mut buf = Vec::new();
         reader.read_to_end(&mut buf).await?;
@@ -192,15 +192,40 @@ impl AssetLoader for LeagueLoaderImage {
             view_formats: &[],
         };
 
-        let image_sampler = ImageSampler::linear();
-
         let image = Image {
             data: Some(texture.mipmaps[0].clone()),
             texture_descriptor,
-            sampler: image_sampler,
+            sampler: ImageSampler::linear(),
             texture_view_descriptor: None,
             asset_usage: RenderAssetUsages::default(),
         };
+
+        let srgb_image = Image {
+            data: Some(texture.mipmaps[0].clone()),
+            texture_descriptor: TextureDescriptor {
+                label: None,
+                size: Extent3d {
+                    width: texture.width as u32,
+                    height: texture.height as u32,
+                    depth_or_array_layers: 1,
+                },
+                mip_level_count: 1,
+                sample_count: 1,
+                dimension: TextureDimension::D2,
+                format: match texture.format {
+                    LeagueTextureFormat::Bc1 => TextureFormat::Bc1RgbaUnormSrgb,
+                    LeagueTextureFormat::Bc3 => TextureFormat::Bc3RgbaUnormSrgb,
+                    _ => panic!("not bc1 or bc3 is {:?}", texture.format),
+                },
+                usage: TextureUsages::TEXTURE_BINDING | TextureUsages::COPY_DST,
+                view_formats: &[],
+            },
+            sampler: ImageSampler::linear(),
+            texture_view_descriptor: None,
+            asset_usage: RenderAssetUsages::default(),
+        };
+
+        load_context.add_labeled_asset("srgb".to_string(), srgb_image);
 
         Ok(image)
     }

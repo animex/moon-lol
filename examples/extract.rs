@@ -3,14 +3,11 @@ use tokio::time::Instant;
 
 #[tokio::main]
 async fn main() {
-    #[cfg(unix)]
-    let root_dir = r"/mnt/c/Program Files (x86)/WeGameApps/英雄联盟/game";
-    #[cfg(windows)]
     let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";
 
     let start = Instant::now();
 
-    save_config_map(root_dir, "bloom", vec![("Fiora", "Skin0")])
+    save_config_map(root_dir, "bloom", vec![("Fiora", "Skin22")])
         .await
         .unwrap();
 

@@ -2,20 +2,20 @@ mod mesh;
 mod quad;
 mod quad_slice;
 
-use league_core::VfxEmitterDefinitionDataPrimitive;
-use lol_config::ConfigMap;
 pub use mesh::*;
 pub use quad::*;
 pub use quad_slice::*;
 
 use bevy::{
-    math::VectorSpace,
     prelude::*,
     render::mesh::{
         skinning::{SkinnedMesh, SkinnedMeshInverseBindposes},
         VertexAttributeValues,
     },
 };
+
+use league_core::VfxEmitterDefinitionDataPrimitive;
+use lol_config::ConfigMap;
 
 use crate::core::{
     particle::{ATTRIBUTE_LIFETIME, ATTRIBUTE_WORLD_POSITION},
@@ -24,6 +24,7 @@ use crate::core::{
 };
 
 #[derive(Component)]
+#[require(Visibility)]
 pub struct ParticleState {
     pub birth_uv_offset: Vec2,
     pub birth_uv_scroll_rate: Vec2,

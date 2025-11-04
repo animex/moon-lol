@@ -1,26 +1,24 @@
 use bevy::prelude::*;
 
-use crate::core::{Buffs, EventAttackEnd};
+use crate::core::{Buff, Buffs, EventAttackEnd};
 
 #[derive(Default)]
 pub struct PluginFioraE;
 
 impl Plugin for PluginFioraE {
     fn build(&self, app: &mut App) {
-        app.add_systems(FixedUpdate, update);
         app.add_observer(on_event_attack_end);
     }
 }
 
-#[derive(Component, Default)]
+#[derive(Component, Debug, Default)]
+#[require(Buff = Buff { name: "FioraE" })]
 pub struct BuffFioraE {
     pub left: i32,
 }
 
-fn update() {}
-
 fn on_event_attack_end(
-    mut trigger: Trigger<EventAttackEnd>,
+    trigger: Trigger<EventAttackEnd>,
     mut commands: Commands,
     q_buffs: Query<&Buffs>,
     mut q_buff_fiora_e: Query<&mut BuffFioraE>,

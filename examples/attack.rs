@@ -10,15 +10,13 @@ use lol_core::Team;
 use moon_lol::abilities::PluginAbilities;
 use moon_lol::core::{spawn_skin_entity, CameraState, Controller, Focus, Health};
 use moon_lol::entities::{spawn_fiora, PluginBarrack};
-use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
+use moon_lol::{core::PluginCore, entities::PluginEntities};
 
 fn main() {
     App::new()
         .add_plugins((
-            PluginLogging,
             DefaultPlugins
                 .build()
-                .disable::<bevy::log::LogPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),

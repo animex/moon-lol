@@ -4,6 +4,9 @@ mod particle;
 mod skinned_mesh;
 mod utils;
 
+use bevy::transform::systems::{
+    mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms,
+};
 pub use emitter::*;
 pub use environment::*;
 pub use particle::*;
@@ -59,9 +62,21 @@ impl Plugin for PluginParticle {
             PostUpdate,
             (
                 update_emitter_position,
-                update_emitter,
+                (
+                    mark_dirty_trees,
+                    propagate_parent_transforms,
+                    sync_simple_transforms,
+                )
+                    .chain(),
+                (update_emitter, update_emitter_attached),
                 update_decal_intersections,
                 update_particle_transform,
+                (
+                    mark_dirty_trees,
+                    propagate_parent_transforms,
+                    sync_simple_transforms,
+                )
+                    .chain(),
                 update_particle,
                 update_particle_skinned_mesh_particle,
             )
@@ -74,7 +89,7 @@ impl Plugin for PluginParticle {
 #[derive(Resource, Default)]
 pub struct ParticleMesh(HashMap<u64, Handle<Mesh>>);
 
-#[derive(Component, Clone)]
+#[derive(Component, Clone, Debug)]
 pub struct ParticleId {
     hash: u32,
     index: usize,
@@ -101,7 +116,7 @@ pub struct CommandParticleSpawn {
 
 #[derive(Event)]
 pub struct CommandParticleDespawn {
-    pub particle: u32,
+    pub hash: u32,
 }
 
 impl ParticleMesh {
@@ -114,11 +129,14 @@ fn on_command_particle_spawn(
     trigger: Trigger<CommandParticleSpawn>,
     mut commands: Commands,
     res_config_map: Res<ConfigMap>,
+    q_global_transform: Query<&GlobalTransform>,
 ) {
     let vfx_system_definition_data = res_config_map
         .vfx_system_definition_datas
         .get(&trigger.particle)
         .unwrap();
+
+    let entity = trigger.target();
 
     // if !vfx_system_definition_data
     //     .particle_name
@@ -140,6 +158,8 @@ fn on_command_particle_spawn(
     {
         vfx_emitter_definition_datas.extend(simple_emitter_definition_data);
     }
+
+    let global_transform = q_global_transform.get(entity).unwrap().compute_transform();
 
     for (i, vfx_emitter_definition_data) in vfx_emitter_definition_datas.into_iter().enumerate() {
         // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Fiora_Flash" {
@@ -225,8 +245,15 @@ fn on_command_particle_spawn(
                 dynamics: None,
                 constant_value: Some(Vec3::ZERO),
             });
+        let bind_weight = vfx_emitter_definition_data
+            .bind_weight
+            .clone()
+            .unwrap_or(ValueFloat {
+                dynamics: None,
+                constant_value: Some(0.0),
+            });
 
-        commands.entity(trigger.target()).with_child((
+        commands.entity(entity).with_related::<EmitterOf>((
             ParticleId {
                 hash: trigger.particle,
                 index: i,
@@ -239,19 +266,20 @@ fn on_command_particle_spawn(
                 birth_uv_offset: birth_uv_offset.into(),
                 birth_uv_scroll_rate: birth_uv_scroll_rate.into(),
                 birth_velocity: birth_velocity.into(),
+                bind_weight: bind_weight.into(),
                 color: color.into(),
                 scale0: scale0.into(),
                 emission_debt: 0.,
                 particle_lifetime: particle_lifetime.into(),
                 rate: rate.into(),
                 emitter_position: emitter_position.into(),
-                world_matrix: Mat4::default(),
+                global_transform,
             },
             Lifetime::new(
                 vfx_emitter_definition_data.lifetime.unwrap_or(1.0),
                 LifetimeMode::TimerAndNoChildren,
             ),
-            Transform::default(),
+            global_transform,
         ));
     }
 }
@@ -259,21 +287,20 @@ fn on_command_particle_spawn(
 fn on_command_particle_despawn(
     trigger: Trigger<CommandParticleDespawn>,
     mut commands: Commands,
-    q_children: Query<&Children>,
-    q_particle_emitter: Query<(Entity, &ParticleId)>,
+    q_emitters: Query<&Emitters>,
+    q_emitter: Query<&ParticleId>,
 ) {
-    let Ok(children) = q_children.get(trigger.target()) else {
+    let Ok(emitters) = q_emitters.get(trigger.target()) else {
         return;
     };
 
-    for child in children.iter() {
-        let Ok((emitter_or_particle_entity, particle)) = q_particle_emitter.get(child) else {
+    for emitter in emitters.iter() {
+        let Ok(particle) = q_emitter.get(emitter) else {
             continue;
         };
 
-        if particle.hash == trigger.particle {
-            commands.entity(emitter_or_particle_entity).despawn();
-            return;
+        if particle.hash == trigger.hash {
+            commands.entity(emitter).despawn();
         }
     }
 }

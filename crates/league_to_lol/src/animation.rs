@@ -9,12 +9,12 @@ use league_utils::{hash_joint, neg_mat_z};
 use std::collections::HashMap;
 
 use league_core::{
-    AnimationGraphData, AnimationGraphDataMClipDataMap, ParametricClipDataUpdater,
-    VfxSystemDefinitionData,
+    AnimationGraphData, AnimationGraphDataMBlendDataTable, AnimationGraphDataMClipDataMap,
+    AtomicClipData, VfxEmitterDefinitionDataPrimitive, VfxSystemDefinitionData,
 };
 use lol_config::{
-    ConfigAnimationClip, ConfigCharacterSkin, ConfigCharacterSkinAnimation, ConfigJoint,
-    ConfigSkinnedMeshInverseBindposes, LeagueMaterial,
+    ConfigAnimationClip, ConfigCharacterSkin, ConfigJoint, ConfigSkinnedMeshInverseBindposes,
+    LeagueMaterial,
 };
 
 use crate::{
@@ -35,6 +35,33 @@ pub async fn save_character(
                 continue;
             };
             let vfx_system_definition_data = from_entry::<VfxSystemDefinitionData>(entry_data);
+
+            if let Some(ref complex_emitter_definition_data) =
+                vfx_system_definition_data.complex_emitter_definition_data
+            {
+                for v in complex_emitter_definition_data {
+                    let Some(primitive) = &v.primitive else {
+                        continue;
+                    };
+
+                    let VfxEmitterDefinitionDataPrimitive::VfxPrimitiveMesh(vfx_primitive_mesh) =
+                        primitive
+                    else {
+                        continue;
+                    };
+
+                    let Some(m_mesh) = vfx_primitive_mesh.m_mesh.as_ref() else {
+                        continue;
+                    };
+
+                    let Some(simple_mesh_name) = m_mesh.m_simple_mesh_name.as_ref() else {
+                        continue;
+                    };
+
+                    save_wad_entry_to_file(loader, simple_mesh_name).await?;
+                }
+            };
+
             vfx_system_definition_datas.insert(hash, vfx_system_definition_data);
         }
     }
@@ -64,7 +91,7 @@ pub async fn save_character(
         .unwrap();
     let league_simple_mesh = LeagueSkinnedMesh::read(&mut reader).unwrap();
 
-    let animation_map = load_animation_map(
+    let (animation_map, blend_data) = load_animation_map(
         flat_map
             .get(
                 &skin_character_data_properties
@@ -77,7 +104,11 @@ pub async fn save_character(
     // 保存动画文件
     for (_, animation) in &animation_map {
         match animation {
-            ConfigCharacterSkinAnimation::AtomicClipData { clip_path, .. } => {
+            AnimationGraphDataMClipDataMap::AtomicClipData(AtomicClipData {
+                m_animation_resource_data,
+                ..
+            }) => {
+                let clip_path = &m_animation_resource_data.m_animation_file_path;
                 let mut animation_file = loader.get_wad_entry_reader_by_path(&clip_path)?;
                 let animation_file = AnimationFile::read(&mut animation_file)?;
                 let animation_data = load_animation_file(animation_file);
@@ -132,6 +163,7 @@ pub async fn save_character(
                 })
                 .collect(),
             animation_map,
+            blend_data,
         },
         vfx_system_definition_datas,
     ))
@@ -139,66 +171,28 @@ pub async fn save_character(
 
 pub fn load_animation_map(
     value: &EntryData,
-) -> Result<HashMap<u32, ConfigCharacterSkinAnimation>, Error> {
+) -> Result<
+    (
+        HashMap<u32, AnimationGraphDataMClipDataMap>,
+        HashMap<(u32, u32), AnimationGraphDataMBlendDataTable>,
+    ),
+    Error,
+> {
     let animation_graph_data = from_entry::<AnimationGraphData>(value);
 
-    let Some(nodes) = animation_graph_data.m_clip_data_map else {
-        return Ok(HashMap::new());
+    let (Some(nodes), Some(blend_data)) = (
+        animation_graph_data.m_clip_data_map,
+        animation_graph_data.m_blend_data_table,
+    ) else {
+        return Ok((HashMap::new(), HashMap::new()));
     };
 
-    let animation_graph_data = nodes
-        .iter()
-        .filter_map(|(k, v)| -> Option<(u32, ConfigCharacterSkinAnimation)> {
-            match v {
-                AnimationGraphDataMClipDataMap::AtomicClipData(atomic_clip_data) => Some((
-                    *k,
-                    ConfigCharacterSkinAnimation::AtomicClipData {
-                        clip_path: atomic_clip_data
-                            .m_animation_resource_data
-                            .m_animation_file_path
-                            .clone(),
-                    },
-                )),
-                AnimationGraphDataMClipDataMap::SelectorClipData(selector_clip_data) => Some((
-                    *k,
-                    ConfigCharacterSkinAnimation::SelectorClipData {
-                        probably_nodes: selector_clip_data
-                            .m_selector_pair_data_list
-                            .iter()
-                            .map(|v| (v.m_clip_name, v.m_probability.unwrap_or(0.0)))
-                            .collect(),
-                    },
-                )),
-                AnimationGraphDataMClipDataMap::ConditionFloatClipData(
-                    condition_float_clip_data,
-                ) => Some((
-                    *k,
-                    ConfigCharacterSkinAnimation::ConditionFloatClipData {
-                        conditions: condition_float_clip_data
-                            .m_condition_float_pair_data_list
-                            .iter()
-                            .map(|v| (v.m_clip_name, v.m_value.unwrap_or(0.0)))
-                            .collect(),
-                        component_name: match condition_float_clip_data.updater {
-                            ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
-                                "Movement".to_string()
-                            }
-                            _ => "".to_string(),
-                        },
-                        field_name: match condition_float_clip_data.updater {
-                            ParametricClipDataUpdater::MoveSpeedParametricUpdater => {
-                                "speed".to_string()
-                            }
-                            _ => "".to_string(),
-                        },
-                    },
-                )),
-                _ => None,
-            }
-        })
+    let blend_data = blend_data
+        .into_iter()
+        .map(|(k, v)| (((k >> 32) as u32, k as u32), v))
         .collect();
 
-    Ok(animation_graph_data)
+    Ok((nodes, blend_data))
 }
 
 pub fn load_animation_file(value: AnimationFile) -> ConfigAnimationClip {

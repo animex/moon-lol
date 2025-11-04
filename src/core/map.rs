@@ -43,7 +43,7 @@ fn setup(
 
     commands
         .entity(geo_entity)
-        .insert((Visibility::Visible, Map))
+        .insert(Map)
         .observe(on_click_map);
 
     let environment_entities = spawn_environment_objects_from_configs(
@@ -54,9 +54,7 @@ fn setup(
     );
 
     for entity in environment_entities {
-        commands
-            .entity(entity)
-            .insert((Visibility::Visible, Map, Pickable::IGNORE));
+        commands.entity(entity).insert(Pickable::IGNORE);
     }
 }
 
@@ -90,12 +88,14 @@ pub fn spawn_geometry_objects_from_configs(
     asset_server: &Res<AssetServer>,
     configs: &ConfigMap,
 ) -> Entity {
-    let geo_entity = commands.spawn(Transform::default()).id();
+    let geo_entity = commands
+        .spawn((Transform::default(), Visibility::default()))
+        .id();
 
     for config_geo_object in &configs.geometry_objects {
         let entity = spawn_geometry_object(commands, asset_server, config_geo_object);
 
-        commands.entity(entity).insert(ChildOf(geo_entity));
+        commands.entity(geo_entity).add_child(entity);
     }
 
     geo_entity

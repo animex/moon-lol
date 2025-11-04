@@ -4,8 +4,8 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Action, Attack, AttackState, Bounding, CommandAction, CommandMovementStart, DamageType,
-    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, MovementWay, State,
+    Action, Attack, AttackState, Bounding, CommandAction, CommandMovement, DamageType,
+    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, MovementAction, MovementWay, State,
 };
 
 #[derive(Default)]
@@ -143,10 +143,12 @@ pub fn action_continue_minion_path(
     };
 
     commands.trigger_targets(
-        CommandMovementStart {
+        CommandMovement {
             priority: 0,
-            way: MovementWay::Path(minion_path[closest_index..].to_vec()),
-            speed: None,
+            action: MovementAction::Start {
+                way: MovementWay::Path(minion_path[closest_index..].to_vec()),
+                speed: None,
+            },
         },
         trigger.target(),
     );

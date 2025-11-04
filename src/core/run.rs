@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::core::{CommandMovementStart, CommandMovementStop, EventMovementEnd, MovementWay};
+use crate::core::{CommandMovement, EventMovementEnd, MovementAction, MovementWay};
 
 #[derive(Default)]
 pub struct PluginRun;
@@ -59,25 +59,32 @@ fn on_command_run_stop(trigger: Trigger<CommandRunStop>, mut commands: Commands)
     commands
         .entity(entity)
         .remove::<Run>()
-        .trigger(CommandMovementStop { priority: 0 });
+        .trigger(CommandMovement { 
+            priority: 0, 
+            action: MovementAction::Stop 
+        });
 }
 
 fn fixed_update(mut commands: Commands, q: Query<(Entity, &Run)>, q_transform: Query<&Transform>) {
     for (entity, run) in q.iter() {
         match run.target {
             RunTarget::Position(position) => {
-                commands.entity(entity).trigger(CommandMovementStart {
+                commands.entity(entity).trigger(CommandMovement {
                     priority: 0,
-                    way: MovementWay::Pathfind(position),
-                    speed: None,
+                    action: MovementAction::Start {
+                        way: MovementWay::Pathfind(position),
+                        speed: None,
+                    },
                 });
             }
             RunTarget::Target(target) => {
                 let transform = q_transform.get(target).unwrap();
-                commands.entity(entity).trigger(CommandMovementStart {
+                commands.entity(entity).trigger(CommandMovement {
                     priority: 0,
-                    way: MovementWay::Pathfind(transform.translation.xz()),
-                    speed: None,
+                    action: MovementAction::Start {
+                        way: MovementWay::Pathfind(transform.translation.xz()),
+                        speed: None,
+                    },
                 });
             }
         }

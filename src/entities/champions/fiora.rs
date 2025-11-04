@@ -5,11 +5,11 @@ use bevy_behave::{behave, Behave};
 use league_utils::hash_bin;
 
 use crate::{
-    abilities::{AbilityFioraPassive, BuffFioraE},
+    abilities::{AbilityFioraPassive, BuffFioraE, BuffFioraR},
     core::{
-        ActionAnimationPlay, ActionAttackReset, ActionBuffSpawn, ActionDamage, ActionDash,
-        ActionParticleDespawn, ActionParticleSpawn, Attack, AttackBuff, Bounding, BuffOf, Health,
-        Movement, Skill, SkillOf,
+        ActionAnimationPlay, ActionAttackReset, ActionBuffSpawn, ActionCommand, ActionDamage,
+        ActionDash, ActionParticleDespawn, ActionParticleSpawn, Attack, AttackBuff, Bounding,
+        BuffOf, Health, Movement, Skill, SkillOf,
     },
     entities::champion::Champion,
 };
@@ -29,6 +29,7 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
     commands
         .entity(entity)
         .insert((
+            Name::new("Fiora"),
             Movement { speed: 325.0 },
             Health {
                 value: 600.0,
@@ -56,9 +57,8 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                     ),
                     Behave::IfThen => {
                         Behave::trigger(ActionDamage),
-                        Behave::trigger(
-                            ActionParticleSpawn { hash: hash_bin("Fiora_Q_Slash_Cas") },
-                        ),
+                        Behave::Sequence => {
+                        },
                     },
                 }
             }),
@@ -94,7 +94,7 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
                         bundle: Arc::new(|commands: &mut EntityCommands| {
                             commands.with_related::<BuffOf>((
                                 AttackBuff {
-                                    bonus_attack_speed: 10.,
+                                    bonus_attack_speed: 0.5,
                                 },
                                 BuffFioraE {
                                     left: 2
@@ -110,12 +110,19 @@ pub fn spawn_fiora(commands: &mut Commands, entity: Entity) {
             effect: Some(behave! {
                 Behave::Sequence => {
                     Behave::trigger(
-                        ActionAnimationPlay { hash: hash_bin("Spell2") }
+                        ActionParticleSpawn { hash: hash_bin("Fiora_R_Indicator_Ring") },
                     ),
-                    Behave::Wait(1.),
-                    Behave::trigger(ActionDamage),
+                    Behave::trigger(
+                        ActionParticleSpawn { hash: hash_bin("Fiora_R_ALL_Warning") },
+                    ),
+                    Behave::trigger(ActionCommand {
+                        bundle: Arc::new(|commands: &mut EntityCommands| {
+                            commands.with_related::<BuffOf>((
+                                BuffFioraR::default(),
+                            ));
+                        }),
+                    }),
                 }
             }),
-        },))
-        .log_components();
+        },));
 }

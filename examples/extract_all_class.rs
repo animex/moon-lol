@@ -8,26 +8,23 @@ use tokio::time::Instant;
 
 #[tokio::main]
 async fn main() {
-    #[cfg(unix)]
-    let loader = LeagueLoader::new(
-        r"/mnt/c/Program Files (x86)/WeGameApps/英雄联盟/game",
-        "bloom",
-    )
-    .unwrap();
-    #[cfg(windows)]
-    let loader =
-        LeagueLoader::new(r"C:\Program Files (x86)\WeGameApps\英雄联盟\game", "bloom").unwrap();
+    let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";
+
+    let loader = LeagueLoader::full(root_dir, "bloom").unwrap();
 
     let start = Instant::now();
 
     let hash_paths = vec![
-        "assets/hashes.binentries.txt",
-        "assets/hashes.binfields.txt",
-        "assets/hashes.binhashes.txt",
-        "assets/hashes.bintypes.txt",
+        "assets/hashes/hashes.binentries.txt",
+        "assets/hashes/hashes.binfields.txt",
+        "assets/hashes/hashes.binhashes.txt",
+        "assets/hashes/hashes.bintypes.txt",
     ];
 
-    let file_paths = vec!["assets/hashes.game.txt.0", "assets/hashes.game.txt.1"];
+    let file_paths = vec![
+        "assets/hashes/hashes.game.txt.0",
+        "assets/hashes/hashes.game.txt.1",
+    ];
 
     let hashes = get_hashes_u64(&file_paths);
 
@@ -45,6 +42,8 @@ async fn main() {
         for (i, file_path) in file_paths.iter().enumerate() {
             println!("{:?}/{:?}", i, file_paths.len());
             let Ok(bin) = loader.get_prop_bin_by_path(file_path) else {
+                println!("{:?} get prop error", file_path);
+
                 continue;
             };
             let bin_class_map = extract_all_class(&bin).await.unwrap();

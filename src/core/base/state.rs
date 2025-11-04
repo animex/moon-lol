@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 
-use crate::core::{EventAttackStart, EventRunEnd};
+use crate::core::{EventAttackStart, EventRunEnd, EventRunStart};
 
 #[derive(Default)]
 pub struct PluginState;
 
 impl Plugin for PluginState {
     fn build(&self, app: &mut App) {
+        app.add_observer(on_run_start);
         app.add_observer(on_run_end);
         app.add_observer(on_command_attack_start);
     }
@@ -18,6 +19,16 @@ pub enum State {
     Idle,
     Running,
     Attacking,
+}
+
+fn on_run_start(trigger: Trigger<EventRunStart>, mut query: Query<&mut State>) {
+    let entity = trigger.target();
+
+    let Ok(mut state) = query.get_mut(entity) else {
+        return;
+    };
+
+    *state = State::Running;
 }
 
 fn on_run_end(trigger: Trigger<EventRunEnd>, mut query: Query<&mut State>) {

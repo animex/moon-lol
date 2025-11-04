@@ -126,6 +126,11 @@ impl LeagueWadLoader {
         Ok(LeagueTexture::read(&mut reader)?)
     }
 
+    pub fn get_prop_bin_by_hash(&self, hash: u64) -> Result<PropFile, Error> {
+        let mut reader = self.get_wad_entry_no_seek_reader_by_hash(hash)?;
+        Ok(PropFile::read(&mut reader)?)
+    }
+
     pub fn get_prop_bin_by_path(&self, path: &str) -> Result<PropFile, Error> {
         let mut reader = self.get_wad_entry_no_seek_reader_by_path(path)?;
         Ok(PropFile::read(&mut reader)?)
@@ -186,6 +191,7 @@ impl LeagueWadLoader {
             .iter()
             .map(|v| self.get_prop_bin_by_path(&v.text).unwrap())
             .flat_map(|v| v.entries)
+            .chain(skin_bin.entries.into_iter())
             .map(|v| (v.hash, v))
             .collect();
 

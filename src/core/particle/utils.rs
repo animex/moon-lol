@@ -52,16 +52,23 @@ macro_rules! impl_sampler_traits {
         impl From<$Value> for $Sampler {
             fn from(value: $Value) -> Self {
                 if let Some(dynamics) = value.dynamics {
-                    match dynamics.times.len() {
-                        0 => Self::Constant(value.constant_value.unwrap_or_default()),
-                        1 => Self::Constant(dynamics.values.into_iter().next().unwrap()),
-                        _ => {
-                            let samples = dynamics.times.into_iter().zip(dynamics.values);
-                            match UnevenSampleAutoCurve::new(samples) {
-                                Ok(curve) => Self::Curve(curve),
-                                Err(_) => Self::Constant(value.constant_value.unwrap_or_default()),
+                    match dynamics.times {
+                        Some(times) => match times.len() {
+                            0 => Self::Constant(value.constant_value.unwrap_or_default()),
+                            1 => {
+                                Self::Constant(dynamics.values.unwrap().into_iter().next().unwrap())
                             }
-                        }
+                            _ => {
+                                let samples = times.into_iter().zip(dynamics.values.unwrap());
+                                match UnevenSampleAutoCurve::new(samples) {
+                                    Ok(curve) => Self::Curve(curve),
+                                    Err(_) => {
+                                        Self::Constant(value.constant_value.unwrap_or_default())
+                                    }
+                                }
+                            }
+                        },
+                        None => Self::Constant(value.constant_value.unwrap_or_default()),
                     }
                 } else {
                     Self::Constant(value.constant_value.unwrap_or_default())

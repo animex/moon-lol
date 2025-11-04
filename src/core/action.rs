@@ -1,6 +1,7 @@
 mod animation;
 mod attack_reset;
 mod buff;
+mod command;
 mod damage;
 mod dash;
 mod particle;
@@ -8,17 +9,16 @@ mod particle;
 pub use animation::*;
 pub use attack_reset::*;
 pub use buff::*;
+pub use command::*;
 pub use damage::*;
 pub use dash::*;
 pub use particle::*;
 
 use bevy::prelude::*;
 
-use league_utils::hash_bin;
-
 use crate::core::{
-    Attack, CommandAnimationPlay, CommandAttackAutoStart, CommandAttackAutoStop,
-    CommandMovementStop, CommandRunStart, CommandSkillStart, RunTarget,
+    Attack, CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement, CommandRunStart,
+    CommandSkillStart, MovementAction, RunTarget,
 };
 
 #[derive(Default)]
@@ -35,6 +35,7 @@ impl Plugin for PluginAction {
         app.add_observer(on_action_dash);
         app.add_observer(on_action_particle_despawn);
         app.add_observer(on_action_particle_spawn);
+        app.add_observer(on_action_command);
         app.add_observer(on_attack_damage);
 
         app.add_observer(on_command_action);
@@ -73,18 +74,24 @@ fn on_command_action(
             commands.entity(entity).trigger(CommandRunStart {
                 target: RunTarget::Position(target),
             });
-            commands.entity(entity).trigger(CommandAnimationPlay {
-                hash: hash_bin("Run"),
-                repeat: true,
-                ..default()
-            });
+            // commands.entity(entity).trigger(CommandAnimationPlay {
+            //     hash: hash_bin("Run"),
+            //     repeat: true,
+            //     ..default()
+            // });
         }
         Action::Skill { index, point } => {
             commands.trigger_targets(CommandSkillStart { index, point }, trigger.target());
         }
         Action::Stop => {
             commands.trigger_targets(CommandAttackAutoStop, trigger.target());
-            commands.trigger_targets(CommandMovementStop { priority: 0 }, trigger.target());
+            commands.trigger_targets(
+                CommandMovement {
+                    priority: 0,
+                    action: MovementAction::Stop,
+                },
+                trigger.target(),
+            );
         }
     }
 }
