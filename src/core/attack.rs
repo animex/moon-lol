@@ -1,4 +1,5 @@
 use bevy::{prelude::*, transform};
+use serde::{Deserialize, Serialize};
 
 use crate::core::{rotate_to_direction, Buffs, CommandDamageCreate, CommandRotate, DamageType};
 
@@ -54,7 +55,7 @@ pub enum WindupConfig {
 }
 
 /// 攻击状态机
-#[derive(Component)]
+#[derive(Component, Clone, Serialize, Deserialize)]
 pub struct AttackState {
     pub status: AttackStatus,
     /// 攻击目标
@@ -67,7 +68,7 @@ pub struct AttackBuff {
 }
 
 /// 攻击状态 - 更详细的状态表示
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AttackStatus {
     /// 前摇阶段 - 举起武器准备攻击
     Windup { target: Entity, end_time: f32 },

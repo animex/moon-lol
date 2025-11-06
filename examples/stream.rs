@@ -39,7 +39,7 @@ use rocket_cors::{AllowedOrigins, CorsOptions};
 
 use moon_lol::{
     abilities::{PluginAbilities, Vital},
-    core::{Action, CameraInit, CommandAction, Controller, Health, PluginCore},
+    core::{Action, AttackState, CameraInit, CommandAction, Controller, Health, PluginCore},
     entities::{PluginBarrack, PluginEntities},
     server::{AttackTarget, PluginGymEnv},
 };
@@ -229,7 +229,7 @@ impl render_graph::Node for ImageCopyDriver {
                 },
                 src_image.size,
             );
-            println!("[bevy app] copy 结束");
+            info!("copy 结束");
 
             let render_queue = world.get_resource::<RenderQueue>().unwrap();
             render_queue.submit(std::iter::once(encoder.finish()));
@@ -274,7 +274,7 @@ struct BevyAppState {
 #[derive(Clone, Serialize, Deserialize)]
 struct Observe {
     time: f32,
-    position: Vec2,
+    myself: ObserveMyself,
     minions: ObserveMinion,
 }
 
@@ -286,26 +286,27 @@ struct ObserveMinion {
     vital: Vital,
 }
 
+#[derive(Clone, Serialize, Deserialize)]
+struct ObserveMyself {
+    position: Vec2,
+    attack_state: Option<AttackState>,
+}
+
 enum AppMsg {
-    Step(Action),
+    Step(Option<Action>),
 }
 
 #[post("/step", data = "<action_json>")]
-fn step(state: &State<BevyAppState>, action_json: Json<Action>) -> Status {
-    println!("[STEP] 请求 POST /step");
-
-    // 清除上一张图像
-    *state.image.lock().unwrap() = None;
-
-    let action: Action = action_json.into_inner();
+fn step(state: &State<BevyAppState>, action_json: Option<Json<Action>>) -> Status {
+    let action = action_json.map(|v| v.into_inner());
 
     match state.sender.send(AppMsg::Step(action)) {
         Ok(_) => {
-            println!("[STEP] Action 已成功发送到 Bevy App。");
+            info!("Action 已成功发送到 Bevy App。");
             Status::Accepted
         }
         Err(e) => {
-            eprintln!("[STEP] 发送 Action 到 Bevy App 失败: {}", e);
+            info!("发送 Action 到 Bevy App 失败: {}", e);
             Status::InternalServerError
         }
     }
@@ -313,36 +314,27 @@ fn step(state: &State<BevyAppState>, action_json: Json<Action>) -> Status {
 
 #[get("/render")]
 fn render(state: &State<BevyAppState>) -> Result<(ContentType, Vec<u8>), Status> {
-    println!("[STEP] /render 请求已收到");
-
     let image_option = state.image.lock().unwrap().clone();
 
-    // 使用 if let 优雅地处理 Option
     if let Some(image_data) = image_option {
-        println!(
-            "[STEP] 找到图像 ({} 字节)，正在作为 JPEG 返回。",
-            image_data.len()
-        );
-        // Ok(T) 会返回 200 OK
+        info!("找到图像 ({} 字节)，正在作为 JPEG 返回。", image_data.len());
+
         Ok((ContentType::JPEG, image_data))
     } else {
-        println!("[STEP] 图像尚未准备好 (返回 404)。");
-        // Err(Status) 会返回对应的 HTTP 错误状态
+        info!("图像尚未准备好 (返回 404)。");
+
         Err(Status::NotFound)
     }
 }
 
 #[get("/observe")]
 fn observe(state: &State<BevyAppState>) -> Result<Json<Observe>, Status> {
-    println!("[OBSERVE] 请求 POST /observe");
-
     let observe_option = state.observe.lock().unwrap().clone();
 
     if let Some(observe_data) = observe_option {
-        // Ok(Json(T)) 会序列化 T 并返回 200 OK
         Ok(Json(observe_data))
     } else {
-        println!("[OBSERVE] Observe 数据尚未准备好 (返回 404)。");
+        info!("[OBSERVE] Observe 数据尚未准备好 (返回 404)。");
         Err(Status::NotFound)
     }
 }
@@ -351,7 +343,6 @@ fn observe(state: &State<BevyAppState>) -> Result<Json<Observe>, Status> {
 fn rocket() -> _ {
     let (tx, rx) = crossbeam_channel::bounded::<AppMsg>(1);
 
-    // 2. 创建共享的 image 数据
     let shared_image = Arc::new(Mutex::new(None));
     let shared_observe = Arc::new(Mutex::new(None));
 
@@ -389,56 +380,56 @@ fn rocket() -> _ {
         app.cleanup();
 
         app.update();
-        receive_img(app.world_mut());
+        receive_and_encode_image_async(app.world_mut(), shared_image.clone());
         app.update();
-        receive_img(app.world_mut());
+        receive_and_encode_image_async(app.world_mut(), shared_image.clone());
         app.update();
-        receive_img(app.world_mut());
+        receive_and_encode_image_async(app.world_mut(), shared_image.clone());
+
+        if let Some(observe) = get_observe(app.world_mut()) {
+            *shared_observe.lock().unwrap() = Some(observe);
+        };
 
         loop {
-            match rx.recv() {
-                Ok(msg) => match msg {
-                    AppMsg::Step(action) => {
-                        let world = app.world_mut();
-                        if let Ok((entity, _)) =
-                            world.query::<(Entity, &Controller)>().single(world)
-                        {
-                            world
-                                .commands()
-                                .entity(entity)
-                                .trigger(CommandAction { action });
-                        }
+            let Ok(msg) = rx.recv() else {
+                continue;
+            };
 
-                        app.update();
-                        println!("[bevy app] update 结束");
-                        // 假设这是在你的循环或函数内部
-                        let world = app.world_mut();
+            let AppMsg::Step(action) = msg;
 
-                        if let Some(image) = receive_img(world) {
-                            *shared_image.lock().unwrap() = Some(image);
-                        };
-
-                        if let Some(observe) = get_observe(world) {
-                            *shared_observe.lock().unwrap() = Some(observe);
-                        };
-                    }
-                },
-                Err(_) => {}
+            if let Some(action) = action {
+                let world = app.world_mut();
+                if let Ok((entity, _)) = world.query::<(Entity, &Controller)>().single(world) {
+                    world
+                        .commands()
+                        .entity(entity)
+                        .trigger(CommandAction { action });
+                }
             }
+
+            app.update();
+            info!("update 结束");
+
+            let world = app.world_mut();
+
+            receive_and_encode_image_async(world, shared_image.clone());
+
+            if let Some(observe) = get_observe(world) {
+                *shared_observe.lock().unwrap() = Some(observe);
+            };
         }
     });
 
     let cors = CorsOptions::default()
-        .allowed_origins(AllowedOrigins::all()) // 允许所有来源
+        .allowed_origins(AllowedOrigins::all())
         .allowed_methods(
-            // 允许 GET, POST, 和 OPTIONS (OPTIONS 是预检请求必需的)
             vec![Method::Get, Method::Post, Method::Options]
                 .into_iter()
                 .map(From::from)
                 .collect(),
         )
-        .allowed_headers(rocket_cors::AllowedHeaders::all()) // 允许所有请求头
-        .allow_credentials(true); // 允许凭证 (cookies, auth headers)
+        .allowed_headers(rocket_cors::AllowedHeaders::all())
+        .allow_credentials(true);
 
     rocket::build()
         .attach(cors.to_cors().expect("CORS fairing 创建失败"))
@@ -446,81 +437,80 @@ fn rocket() -> _ {
         .mount("/", routes![step, render, observe])
 }
 
-fn receive_img(world: &mut World) -> Option<Vec<u8>> {
+fn receive_and_encode_image_async(world: &mut World, shared_image: Arc<Mutex<Option<Vec<u8>>>>) {
     let receiver = world.resource::<MainWorldReceiver>();
-    info!("[Rocket Loop] 尝试从 RenderWorld 接收图像...");
+    info!("尝试从 RenderWorld 接收图像...");
 
-    let Some(image_data) = receiver.recv().ok() else {
-        info!("[Rocket Loop] 未收到图像数据。");
-        return None;
+    let Ok(image_data) = receiver.try_recv() else {
+        info!("本帧未收到图像数据。");
+        return;
     };
 
     if image_data.is_empty() {
-        info!("[Rocket Loop] 收到空的图像数据。");
-        return None;
+        info!("收到空的图像数据。");
+        return;
     }
 
     info!(
-        "[Rocket Loop] 收到 {} 字节的原始图像数据。正在处理...",
+        "收到 {} 字节的原始图像数据。正在派发到后台线程处理...",
         image_data.len()
     );
 
-    let mut images_to_save_query = world.query::<&ImageToSave>();
-    let Some(image_id) = images_to_save_query.iter(world).next().map(|img| img.id()) else {
-        info!("[Rocket Loop] 收到图像数据，但未找到 ImageToSave 实体。");
-        return None;
-    };
+    let scene_controller = world.resource::<SceneController>();
+    let width = scene_controller.width;
+    let height = scene_controller.height;
+    let format = TextureFormat::bevy_default();
 
-    let mut images = world.resource_mut::<Assets<Image>>();
+    thread::spawn(move || {
+        info!("[后台线程] 开始处理图像...");
 
-    let Some(img_bytes) = images.get_mut(image_id) else {
-        warn!("[Rocket Loop] 找不到 ImageToSave ID 对应的 Asset。");
-        return None;
-    };
+        let row_bytes = width as usize * format.pixel_size();
+        let aligned_row_bytes = RenderDevice::align_copy_bytes_per_row(row_bytes);
 
-    let row_bytes = img_bytes.width() as usize * img_bytes.texture_descriptor.format.pixel_size();
-    let aligned_row_bytes = RenderDevice::align_copy_bytes_per_row(row_bytes);
-
-    if row_bytes == aligned_row_bytes {
-        img_bytes.data = Some(image_data);
-    } else {
-        img_bytes.data = Some(
+        let final_image_data = if row_bytes == aligned_row_bytes {
+            image_data
+        } else {
+            info!("[后台线程] 正在去除图像行填充...");
             image_data
                 .chunks(aligned_row_bytes)
-                .take(img_bytes.height() as usize)
+                .take(height as usize)
                 .flat_map(|row| &row[..row_bytes.min(row.len())])
                 .cloned()
-                .collect(),
-        );
-    }
+                .collect()
+        };
 
-    let Ok(dyn_img) = img_bytes.clone().try_into_dynamic() else {
-        warn!("[Rocket Loop] 转换图像失败");
-        return None;
-    };
-    let img = dyn_img.to_rgba8();
+        let Some(img) = image::RgbaImage::from_raw(width, height, final_image_data) else {
+            warn!("[后台线程] 无法从原始数据创建 RgbaImage。");
+            return;
+        };
 
-    let mut jpeg_bytes = Vec::new();
-    let mut encoder = JpegEncoder::new_with_quality(&mut jpeg_bytes, 80);
+        let mut jpeg_bytes = Vec::new();
+        let mut encoder = JpegEncoder::new_with_quality(&mut jpeg_bytes, 80);
 
-    info!("[Rocket Loop] 正在将图像编码为 JPEG...");
+        info!("[后台线程] 正在将图像编码为 JPEG...");
+        if encoder.encode_image(&img).is_err() {
+            warn!("[后台线程] JPEG 编码失败");
+            return;
+        }
+        info!("[后台线程] 编码结束。正在更新 Mutex...");
 
-    if encoder.encode_image(&img).is_err() {
-        warn!("[Rocket Loop] JPEG 编码失败");
-    }
-
-    Some(jpeg_bytes)
+        *shared_image.lock().unwrap() = Some(jpeg_bytes);
+        info!("[后台线程] 写入最新游戏图像。");
+    });
 }
 
 fn get_observe(world: &mut World) -> Option<Observe> {
-    let Ok((entity, transform, _)) = world
-        .query::<(Entity, &Transform, &Controller)>()
+    let Ok((entity, transform, attack_state, controller)) = world
+        .query::<(Entity, &Transform, Option<&AttackState>, &Controller)>()
         .single(world)
     else {
         return None;
     };
 
-    let position = transform.translation.xz();
+    let myself = ObserveMyself {
+        position: transform.translation.xz(),
+        attack_state: attack_state.cloned(),
+    };
 
     let Ok((target_entity, target_transform, health, vital, _)) = world
         .query::<(Entity, &Transform, &Health, &Vital, &AttackTarget)>()
@@ -540,7 +530,7 @@ fn get_observe(world: &mut World) -> Option<Observe> {
 
     Some(Observe {
         time,
-        position,
+        myself,
         minions,
     })
 }
