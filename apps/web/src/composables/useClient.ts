@@ -118,13 +118,32 @@ export const useClientStore = defineStore(
 
 游戏坐标：[x, y] 描述的是游戏物体在水平上的坐标。
 
-地图方向：x 越小越靠地图左方，因为地图是上下颠倒的，所以 y 越小越靠地图上方。
+你的攻击范围是 100
 
 你的被动技能：
 - 当你在敌人的破绽方向对敌人造成伤害时，敌人会受到额外的 5% 的真实伤害。
-- 当破绽方向为上时，你需要处于敌人的上方才能打掉破绽。
-- 以敌人为原点，你的相对坐标在 -y 轴的左右 45 度之内时，你处于敌人上方。
-- 破绽只在激活状态有效，也就是 active_timer finish true 时，才能打破破绽。
+- 破绽只在激活状态有效，也就是 active_timer 的 finish 为 true 时，才能打破破绽。
+说明：
+- 要判断是否处于破绽内，不能只根据 x 判断左右或者只根据 y 判断上下，而是参考下面这段代码：
+pub fn is_in_direction(source: Vec2, target: Vec2, direction: &Direction) -> bool {
+    let delta_x = source.x - target.x;
+    let delta_y = source.y - target.y;
+
+    let abs_delta_x = delta_x.abs();
+    let abs_delta_y = delta_y.abs();
+
+    match direction {
+        Direction::Up => delta_y > 0.0 && abs_delta_y > abs_delta_x,
+
+        Direction::Down => delta_y < 0.0 && abs_delta_y > abs_delta_x,
+
+        Direction::Right => delta_x > 0.0 && abs_delta_x > abs_delta_y,
+
+        Direction::Left => delta_x < 0.0 && abs_delta_x > abs_delta_y,
+    }
+}
+- 当你处于攻击前摇时，最好不要采取行动，否则普通攻击可能会被取消。
+- 尽量移动到敌人的破绽方向的地方，并且是刚好能够攻击到敌人的地方再攻击敌人。
 
 请你尽快击杀目标。`,
     );
@@ -188,7 +207,21 @@ export const useClientStore = defineStore(
       playing.value = false;
     }
 
-    return { action, img, prompt, message, observation, frame, thinkFrame, updateImg, step, observe, play, stop };
+    return {
+      action,
+      img,
+      prompt,
+      message,
+      observation,
+      frame,
+      thinkFrame,
+      playing,
+      updateImg,
+      step,
+      observe,
+      play,
+      stop,
+    };
   },
   {
     persist: {
