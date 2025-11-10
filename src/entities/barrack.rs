@@ -11,7 +11,7 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{spawn_skin_entity, Armor, Bounding, Damage, Health, Movement},
+    core::{spawn_skin_entity, Armor, Bounding, Damage, Health, Movement, ResourceCache},
     entities::Minion,
 };
 
@@ -104,6 +104,7 @@ fn barracks_spawning_system(
     mut query: Query<(&GlobalTransform, &mut Barrack, &Team, &Lane)>,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     res_game_config: Res<ConfigMap>,
+    res_resource_cache: Res<ResourceCache>,
     time: Res<Time>,
 ) {
     for (transform, mut barrack_state, team, lane) in query.iter_mut() {
@@ -198,7 +199,7 @@ fn barracks_spawning_system(
 
         let character = res_game_config.characters.get(&link).unwrap();
 
-        let config_character_skin = res_game_config.skins.get(&character.skin).unwrap();
+        let config_character_skin = res_resource_cache.skins.get(&character.skin).unwrap();
 
         let character_record = res_game_config
             .character_records
@@ -238,11 +239,13 @@ fn barracks_spawning_system(
             height: character_record.health_bar_height.unwrap_or(0.0),
         };
 
-        let entity = spawn_skin_entity(
+        let entity = commands.spawn(transform.compute_transform()).id();
+
+        spawn_skin_entity(
             &mut commands,
             &mut res_animation_graph,
             &asset_server,
-            transform.compute_transform(),
+            entity,
             &config_character_skin,
         );
 

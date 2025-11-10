@@ -6,6 +6,8 @@ pub struct PluginLife;
 
 impl Plugin for PluginLife {
     fn build(&self, app: &mut App) {
+        app.register_type::<Health>();
+
         app.add_event::<EventDead>();
         app.add_event::<EventSpawn>();
         app.add_systems(FixedUpdate, (detect_death, spawn_event));
@@ -13,7 +15,8 @@ impl Plugin for PluginLife {
     }
 }
 
-#[derive(Component, Serialize, Deserialize, Clone)]
+#[derive(Component, Reflect, Serialize, Deserialize, Clone)]
+#[reflect(Component)]
 pub struct Health {
     pub value: f32,
     pub max: f32,

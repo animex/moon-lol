@@ -31,7 +31,6 @@ pub async fn save_config_map(
     let mut characters = HashMap::new();
     let mut barrack_configs = HashMap::new();
     let mut environment_objects = HashMap::new();
-    let mut skins = HashMap::new();
     let mut character_records = HashMap::new();
     let mut vfx_system_definition_datas = HashMap::new();
 
@@ -100,10 +99,9 @@ pub async fn save_config_map(
     }
 
     for skin_path in skin_paths {
-        let (skin, skin_vfx_system_definition_datas) =
+        let skin_vfx_system_definition_datas =
             save_character(&map_loader.wad_loader, &skin_path).await?;
 
-        skins.entry(skin_path).or_insert(skin);
         vfx_system_definition_datas.extend(skin_vfx_system_definition_datas);
     }
 
@@ -128,7 +126,6 @@ pub async fn save_config_map(
         characters,
         barrack_configs,
         environment_objects,
-        skins,
         character_records,
         vfx_system_definition_datas,
     };

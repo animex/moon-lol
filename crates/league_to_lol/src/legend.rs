@@ -1,15 +1,11 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
+
 use league_core::VfxSystemDefinitionData;
 use league_loader::LeagueWadLoader;
-use lol_config::ConfigGame;
-use lol_core::Team;
 
-use crate::{
-    get_bin_path, save_character, save_struct_to_file, save_wad_entry_to_file, Error,
-    CONFIG_PATH_GAME,
-};
+use crate::{save_character, save_wad_entry_to_file, Error};
 
 pub async fn save_legends(
     root_dir: &str,
@@ -26,7 +22,7 @@ pub async fn save_legends(
 
     // let character_record = wad_loader.load_character_record(&character_record_path);
 
-    let (skin, vfx_system_definition_datas) = save_character(&loader, &skin_path).await?;
+    let vfx_system_definition_datas = save_character(&loader, &skin_path).await?;
 
     for (_, vfx_system_definition_data) in vfx_system_definition_datas.iter() {
         let Some(ref complex_emitter_definition_data) =
@@ -55,13 +51,6 @@ pub async fn save_legends(
             }
         }
     }
-
-    let config_game = ConfigGame {
-        legends: vec![(Transform::default(), Team::Order, skin)],
-    };
-
-    let config_path = get_bin_path(CONFIG_PATH_GAME);
-    save_struct_to_file(&config_path, &config_game).await?;
 
     Ok(vfx_system_definition_datas)
 }

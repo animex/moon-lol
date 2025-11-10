@@ -1,12 +1,13 @@
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
-#[derive(Component, Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[derive(Component, Reflect, Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+#[reflect(Component)]
 pub enum Team {
     #[default]
-    Order = 100,
-    Chaos = 200,
-    Neutral = 300,
+    Order,
+    Chaos,
+    Neutral,
 }
 
 impl From<u32> for Team {

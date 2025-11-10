@@ -10,11 +10,14 @@ pub struct PluginController;
 
 impl Plugin for PluginController {
     fn build(&self, app: &mut App) {
+        app.register_type::<Controller>();
+
         app.add_systems(PreUpdate, on_key_pressed);
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component, Default)]
 pub struct Controller {
     attack_key: KeyCode,
     stop_key: KeyCode,

@@ -56,6 +56,7 @@ plugin_group! {
         :PluginAnimation,
         :PluginAttack,
         :PluginAttackAuto,
+        :PluginBase,
         :PluginCamera,
         :PluginController,
         :PluginDamage,

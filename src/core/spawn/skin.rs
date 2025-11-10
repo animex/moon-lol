@@ -18,17 +18,12 @@ pub fn spawn_skin_entity(
     commands: &mut Commands,
     res_animation_graph: &mut ResMut<Assets<AnimationGraph>>,
     asset_server: &Res<AssetServer>,
-    transform: Transform,
+    entity: Entity,
     skin: &ConfigCharacterSkin,
 ) -> Entity {
     let material_handle: Handle<StandardMaterial> = asset_server.load(skin.material_path.clone());
 
-    let entity = commands
-        .spawn((
-            transform.with_scale(transform.scale * skin.skin_scale.unwrap_or(1.0)),
-            Visibility::default(),
-        ))
-        .id();
+    commands.entity(entity).insert(Visibility::default());
 
     let mut index_to_entity = vec![Entity::PLACEHOLDER; skin.joints.len()];
 

@@ -24,7 +24,7 @@ use crate::{
 pub async fn save_character(
     loader: &LeagueWadLoader,
     skin: &str,
-) -> Result<(ConfigCharacterSkin, HashMap<u32, VfxSystemDefinitionData>), Error> {
+) -> Result<HashMap<u32, VfxSystemDefinitionData>, Error> {
     let (skin_character_data_properties, resource_resolver, flat_map) =
         loader.load_character_skin(&skin);
 
@@ -145,28 +145,29 @@ pub async fn save_character(
     )
     .await?;
 
-    Ok((
-        ConfigCharacterSkin {
-            skin_scale: skin_mesh_properties.skin_scale,
-            material_path,
-            submesh_paths,
-            joint_influences_indices: league_skeleton.modern_data.influences,
-            inverse_bind_pose_path,
-            joints: league_skeleton
-                .modern_data
-                .joints
-                .iter()
-                .map(|joint| ConfigJoint {
-                    hash: hash_joint(&joint.name),
-                    transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
-                    parent_index: joint.parent_index,
-                })
-                .collect(),
-            animation_map,
-            blend_data,
-        },
-        vfx_system_definition_datas,
-    ))
+    let path = get_bin_path(&format!("ASSETS/{}/config_character_skin", skin));
+    let config_character_skin = ConfigCharacterSkin {
+        skin_scale: skin_mesh_properties.skin_scale,
+        material_path,
+        submesh_paths,
+        joint_influences_indices: league_skeleton.modern_data.influences,
+        inverse_bind_pose_path,
+        joints: league_skeleton
+            .modern_data
+            .joints
+            .iter()
+            .map(|joint| ConfigJoint {
+                hash: hash_joint(&joint.name),
+                transform: Transform::from_matrix(neg_mat_z(&joint.local_transform)),
+                parent_index: joint.parent_index,
+            })
+            .collect(),
+        animation_map,
+        blend_data,
+    };
+    save_struct_to_file(&path, &config_character_skin).await?;
+
+    Ok(vfx_system_definition_datas)
 }
 
 pub fn load_animation_map(

@@ -29,6 +29,8 @@ pub struct PluginCamera;
 
 impl Plugin for PluginCamera {
     fn build(&self, app: &mut App) {
+        app.register_type::<Focus>();
+
         app.add_systems(Startup, setup.in_set(CameraInit));
         app.add_systems(Update, update);
         app.add_systems(Update, update_focus);
@@ -37,7 +39,8 @@ impl Plugin for PluginCamera {
     }
 }
 
-#[derive(Component)]
+#[derive(Component, Reflect)]
+#[reflect(Component)]
 pub struct Focus;
 
 #[derive(Component)]

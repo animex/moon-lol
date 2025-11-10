@@ -10,8 +10,6 @@ use league_core::{
 };
 use lol_core::Lane;
 
-use crate::ConfigCharacterSkin;
-
 #[derive(Resource, Default, Serialize, Deserialize)]
 pub struct ConfigMap {
     pub geometry_objects: Vec<ConfigGeometryObject>,
@@ -20,7 +18,6 @@ pub struct ConfigMap {
     pub characters: HashMap<u32, Unk0x9d9f60d2>,
     pub barrack_configs: HashMap<u32, BarracksConfig>,
     pub environment_objects: HashMap<u32, Unk0xad65d8c4>,
-    pub skins: HashMap<String, ConfigCharacterSkin>,
     pub character_records: HashMap<String, CharacterRecord>,
     pub vfx_system_definition_datas: HashMap<u32, VfxSystemDefinitionData>,
 }

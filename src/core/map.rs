@@ -6,7 +6,9 @@ use league_file::LeagueMapGeoMesh;
 use league_utils::neg_mat_z;
 use lol_config::ConfigMap;
 
-use crate::core::{spawn_geometry_object, spawn_skin_entity, Action, CommandAction, Controller};
+use crate::core::{
+    spawn_geometry_object, spawn_skin_entity, Action, CommandAction, Controller, ResourceCache,
+};
 
 pub const MAP_WIDTH: f32 = 14400.0;
 pub const MAP_HEIGHT: f32 = 14765.0;
@@ -38,6 +40,7 @@ fn setup(
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     asset_server: Res<AssetServer>,
     configs: Res<ConfigMap>,
+    res_resource_cache: Res<ResourceCache>,
 ) {
     let geo_entity = spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
 
@@ -51,6 +54,7 @@ fn setup(
         &mut res_animation_graph,
         &asset_server,
         &configs,
+        &res_resource_cache,
     );
 
     for entity in environment_entities {
@@ -63,20 +67,21 @@ pub fn spawn_environment_objects_from_configs(
     res_animation_graph: &mut ResMut<Assets<AnimationGraph>>,
     asset_server: &Res<AssetServer>,
     configs: &ConfigMap,
+    resource_cache: &ResourceCache,
 ) -> Vec<Entity> {
     let mut entities = Vec::new();
 
     for (_, environment_object) in &configs.environment_objects {
-        let entity = spawn_skin_entity(
-            commands,
-            res_animation_graph,
-            asset_server,
-            Transform::from_matrix(neg_mat_z(&environment_object.transform)),
-            configs
-                .skins
-                .get(&environment_object.definition.skin)
-                .unwrap(),
-        );
+        let entity = commands
+            .spawn(Transform::from_matrix(neg_mat_z(
+                &environment_object.transform,
+            )))
+            .id();
+        let skin = resource_cache
+            .skins
+            .get(&environment_object.definition.skin)
+            .unwrap();
+        spawn_skin_entity(commands, res_animation_graph, asset_server, entity, skin);
         entities.push(entity);
     }
 

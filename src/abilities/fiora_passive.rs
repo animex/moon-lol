@@ -91,6 +91,10 @@ fn update_add_vital(
         let (transform, team) = q_transform_team.get(entity).unwrap();
 
         for (target_entity, target_transform, target_team) in q_target_without_vital.iter() {
+            if target_entity == entity {
+                continue;
+            }
+
             if target_team == team {
                 continue;
             }

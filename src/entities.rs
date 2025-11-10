@@ -21,6 +21,7 @@ use bevy::app::plugin_group;
 plugin_group! {
     pub struct PluginEntities {
         :PluginBarrack,
+        :PluginChampion,
         :PluginDebugSphere,
         :PluginFiora,
         :PluginMinion,

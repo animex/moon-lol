@@ -5,6 +5,7 @@ node_modules
 
 assets/*
 !assets/shaders
+!assets/attack.ron
 
 .vs
 
