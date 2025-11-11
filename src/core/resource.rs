@@ -49,6 +49,13 @@ impl Plugin for PluginResource {
             );
         }
 
+        for (_, v) in config_map.characters.iter() {
+            resource_cache.skins.insert(
+                v.skin.clone(),
+                get_struct_from_file(&format!("ASSETS/{}/config_character_skin", &v.skin)).unwrap(),
+            );
+        }
+
         let mut file = File::open(format!("assets/{}", &self.game_config_path)).unwrap();
         let mut data = Vec::new();
         file.read_to_end(&mut data).unwrap();
@@ -63,7 +70,7 @@ impl Plugin for PluginResource {
         let world = app.world_mut();
 
         let type_registry = world.resource::<AppTypeRegistry>();
-        println!("{:?}", type_registry.0);
+        // println!("{:?}", type_registry.0);
 
         let binding = type_registry.internal.clone();
         let type_registry = binding.read().unwrap();

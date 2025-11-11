@@ -2,10 +2,10 @@ use std::collections::HashMap;
 
 use bevy::{ecs::relationship::Relationship, prelude::*};
 use rand::random;
+use serde::{Deserialize, Serialize};
 
 use league_utils::hash_bin;
 use lol_core::Team;
-use serde::{Deserialize, Serialize};
 
 use crate::{
     abilities::BuffFioraR,

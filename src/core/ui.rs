@@ -48,13 +48,8 @@ fn init_health_bar(
     q_bounding: Query<&Bounding>,
 ) {
     let health_bar_count = q_health.iter().count();
-    if health_bar_count > 0 {
-        println!("Creating health bars for {} new entities", health_bar_count);
-    }
 
     for entity in q_health.iter() {
-        println!("Creating health bar UI for entity {:?}", entity);
-
         commands
             .spawn((
                 Node {
@@ -160,14 +155,8 @@ fn on_damage_create(
         return;
     }
 
-    println!(
-        "Creating damage number for entity {:?}, damage: {:.1}",
-        target_entity, damage_result.final_damage
-    );
-
     // 获取目标实体的位置
     let Ok(target_transform) = global_transform.get(target_entity) else {
-        println!("Failed to get transform for entity {:?}", target_entity);
         return;
     };
 

@@ -3,20 +3,20 @@ use bevy::render::{
     settings::{Backends, RenderCreation, WgpuSettings},
     RenderPlugin,
 };
+use moon_lol::abilities::PluginAbilities;
+use moon_lol::core::PluginResource;
 use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
 
 fn main() {
     App::new()
         .add_plugins((
-            PluginLogging,
             DefaultPlugins
                 .build()
-                .disable::<bevy::log::LogPlugin>()
                 .set(WindowPlugin {
                     primary_window: Some(Window {
                         title: "classic 1v1 fiora".to_string(),
-                        // resolution: (300.0, 300.0).into(),
-                        // position: WindowPosition::At((0, 1920).into()),
+                        resolution: (300.0, 300.0).into(),
+                        position: WindowPosition::At((0, 1000).into()),
                         ..default()
                     }),
                     ..default()
@@ -29,8 +29,11 @@ fn main() {
                     }),
                     ..default()
                 }),
-            PluginCore,
             PluginEntities,
+            PluginAbilities,
+            PluginCore.build().set(PluginResource {
+                game_config_path: "games/classic_fiora.ron".to_owned(),
+            }),
         ))
         .run();
 }

@@ -18,7 +18,7 @@ use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Attack, CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement, CommandRunStart,
+    CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement, CommandRunStart,
     CommandSkillStart, MovementAction, RunTarget,
 };
 

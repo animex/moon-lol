@@ -4,8 +4,8 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Action, Attack, AttackState, Bounding, CommandAction, CommandMovement, DamageType,
-    EventDamageCreate, EventDead, EventMovementEnd, EventSpawn, MovementAction, MovementWay, State,
+    Action, AttackState, CommandAction, CommandMovement, DamageType, EventDamageCreate, EventDead,
+    EventSpawn, MovementAction, MovementWay, State,
 };
 
 #[derive(Default)]
@@ -78,7 +78,7 @@ pub fn minion_aggro(
     q_minion: Query<(Entity, &Team, &Transform, &AggroInfo), With<Minion>>,
     q_attackable: Query<(Entity, &Team, &Transform)>,
 ) {
-    for (minion_entity, minion_team, minion_transform, aggro_info) in q_minion.iter() {
+    for (entity, minion_team, minion_transform, aggro_info) in q_minion.iter() {
         let mut best_aggro = 0.0;
         let mut closest_distance = f32::MAX;
         let mut target_entity = Entity::PLACEHOLDER;
@@ -115,30 +115,32 @@ pub fn minion_aggro(
 
         // 如果找到有效目标则触发
         if target_entity != Entity::PLACEHOLDER {
-            commands.trigger_targets(
-                EventMinionFoundTarget {
-                    target: target_entity,
-                },
-                minion_entity,
-            );
+            commands.entity(entity).trigger(EventMinionFoundTarget {
+                target: target_entity,
+            });
         }
     }
 }
 
 pub fn action_continue_minion_path(
     trigger: Trigger<CommandMinionContinuePath>,
-    query: Query<(&Transform, &Lane)>,
+    query: Query<(&Transform, &Lane, &Team)>,
     res_config: Res<ConfigMap>,
     mut commands: Commands,
 ) {
-    let Ok((transform, lane)) = query.get(trigger.target()) else {
+    let Ok((transform, lane, team)) = query.get(trigger.target()) else {
         return;
     };
 
     let minion_path = res_config.minion_paths.get(lane).unwrap();
 
-    let Some(closest_index) = find_closest_point_index(&minion_path, transform.translation.xz())
-    else {
+    let mut path = minion_path.clone();
+
+    if matches!(team, Team::Chaos) {
+        path.reverse();
+    }
+
+    let Some(closest_index) = find_closest_point_index(&path, transform.translation.xz()) else {
         return;
     };
 
@@ -146,7 +148,7 @@ pub fn action_continue_minion_path(
         CommandMovement {
             priority: 0,
             action: MovementAction::Start {
-                way: MovementWay::Path(minion_path[closest_index..].to_vec()),
+                way: MovementWay::Path(path[closest_index..].to_vec()),
                 speed: None,
             },
         },
@@ -154,64 +156,20 @@ pub fn action_continue_minion_path(
     );
 }
 
-fn get_is_in_attack_range_in_found_aggro_target(
-    trigger: &Trigger<EventMinionFoundTarget>,
-    q_attack: &Query<&Attack>,
-    q_transform: &Query<&Transform>,
-    q_bounding: &Query<&Bounding>,
-) -> bool {
-    let Ok(attack) = q_attack.get(trigger.target()) else {
-        return false;
-    };
-    let Ok(transform) = q_transform.get(trigger.target()) else {
-        return false;
-    };
-    let Ok(target_transform) = q_transform.get(trigger.target) else {
-        return false;
-    };
-    let Ok(bounding) = q_bounding.get(trigger.target) else {
-        return false;
-    };
-    transform.translation.distance(target_transform.translation) <= attack.range + bounding.radius
-}
-
 fn on_found_aggro_target(
     trigger: Trigger<EventMinionFoundTarget>,
     mut commands: Commands,
     mut q_minion_state: Query<&mut MinionState>,
-
-    q_attack: Query<&Attack>,
-    q_transform: Query<&Transform>,
-    q_bounding: Query<&Bounding>,
 ) {
     let entity = trigger.target();
-    let event = trigger.event();
-
-    let is_in_attack_range = get_is_in_attack_range_in_found_aggro_target(
-        &trigger,
-        &q_attack,
-        &q_transform,
-        &q_bounding,
-    );
-
-    if is_in_attack_range {
-        commands.trigger_targets(EventMovementEnd, trigger.target());
-    } else {
-        commands.entity(trigger.target()).trigger(CommandAction {
-            action: Action::Attack(event.target),
-        });
-    }
 
     if let Ok(mut minion_state) = q_minion_state.get_mut(entity) {
         match *minion_state {
             MinionState::MovingOnPath => {
                 *minion_state = MinionState::AttackingTarget;
-                commands.trigger_targets(
-                    CommandAction {
-                        action: Action::Attack(event.target),
-                    },
-                    trigger.target(),
-                );
+                commands.entity(entity).trigger(CommandAction {
+                    action: Action::Attack(trigger.target),
+                });
             }
             _ => (),
         }

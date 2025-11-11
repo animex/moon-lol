@@ -38,7 +38,7 @@ fn main() {
             PluginEntities.build().disable::<PluginBarrack>(),
             PluginAbilities,
             PluginCore.build().set(PluginResource {
-                game_config_path: "attack.ron".to_owned(),
+                game_config_path: "games/attack.ron".to_owned(),
             }),
         ))
         .insert_resource(WinitSettings {

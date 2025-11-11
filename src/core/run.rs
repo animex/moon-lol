@@ -59,9 +59,9 @@ fn on_command_run_stop(trigger: Trigger<CommandRunStop>, mut commands: Commands)
     commands
         .entity(entity)
         .remove::<Run>()
-        .trigger(CommandMovement { 
-            priority: 0, 
-            action: MovementAction::Stop 
+        .trigger(CommandMovement {
+            priority: 0,
+            action: MovementAction::Stop,
         });
 }
 
@@ -78,7 +78,9 @@ fn fixed_update(mut commands: Commands, q: Query<(Entity, &Run)>, q_transform: Q
                 });
             }
             RunTarget::Target(target) => {
-                let transform = q_transform.get(target).unwrap();
+                let Ok(transform) = q_transform.get(target) else {
+                    return;
+                };
                 commands.entity(entity).trigger(CommandMovement {
                     priority: 0,
                     action: MovementAction::Start {
@@ -102,7 +104,9 @@ fn on_event_movement_end(
         let target_position = match run.target {
             RunTarget::Position(target) => target,
             RunTarget::Target(target) => {
-                let transform = q_transform.get(target).unwrap();
+                let Ok(transform) = q_transform.get(target) else {
+                    return;
+                };
                 transform.translation.xz()
             }
         };

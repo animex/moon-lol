@@ -1,0 +1,34 @@
+[
+    (
+        skin_path: "Characters/Fiora/Skins/Skin22",
+    ),
+    {
+        "bevy_transform::components::transform::Transform": (
+            translation: (1000.0, 0.0, 1000.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            scale: (1.0, 1.0, 1.0),
+        ),
+        "moon_lol::core::movement::Movement": ( speed: 425.0 ),
+        "lol_core::team::Team": Order,
+        "moon_lol::entities::champions::fiora::Fiora": (),
+        "moon_lol::core::controller::Controller": (),
+        "moon_lol::core::camera::Focus": (),
+    },
+    (
+        skin_path: "Characters/Fiora/Skins/Skin22",
+    ),
+    {
+        "bevy_transform::components::transform::Transform": (
+            translation: (14000.0, 0.0, 14000.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            scale: (1.0, 1.0, 1.0),
+        ),
+        "moon_lol::core::movement::Movement": ( speed: 425.0 ),
+        "lol_core::team::Team": Chaos,
+        "moon_lol::entities::champion::Champion": (),
+        "moon_lol::core::life::Health": (
+            value: 6000.0,
+            max: 6000.0,
+        ),
+    },
+]

@@ -11,7 +11,7 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    core::{spawn_skin_entity, Armor, Bounding, Damage, Health, Movement, ResourceCache},
+    core::{spawn_skin_entity, Armor, Attack, Bounding, Damage, Health, Movement, ResourceCache},
     entities::Minion,
 };
 
@@ -49,7 +49,7 @@ impl Plugin for PluginBarrack {
     fn build(&self, app: &mut App) {
         app.init_resource::<InhibitorState>();
         app.add_systems(Startup, setup);
-        app.add_systems(Update, barracks_spawning_system);
+        app.add_systems(FixedUpdate, barracks_spawning_system);
     }
 }
 
@@ -62,6 +62,7 @@ fn setup(mut commands: Commands, res_game_config: Res<ConfigMap>) {
 
         // let initial_delay = barrack_config.initial_spawn_time_secs;
         let initial_delay = 0.0;
+        println!("生成兵营 {:?}", hash);
 
         commands.spawn((
             Transform::from_matrix(neg_mat_z(&barrack.transform)),
@@ -171,13 +172,13 @@ fn barracks_spawning_system(
 
         // --- 4. 处理生成队列，逐个生成小兵 ---
         if barrack_state.spawn_queue.is_empty() {
-            return;
+            continue;
         }
 
         barrack_state.intra_spawn_timer.tick(time.delta());
 
         if !barrack_state.intra_spawn_timer.just_finished() {
-            return;
+            continue;
         }
 
         let upgrade_count = barrack_state.upgrade_count;
@@ -185,7 +186,7 @@ fn barracks_spawning_system(
 
         // 获取队列头部的待生成小兵信息
         let Some(current_spawn) = barrack_state.spawn_queue.front_mut() else {
-            return;
+            continue;
         };
 
         let config_index = current_spawn.0;
@@ -264,6 +265,7 @@ fn barracks_spawning_system(
             damage,
             armor,
             bounding,
+            Attack::from_character_record(character_record),
         ));
 
         // 更新队列

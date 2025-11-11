@@ -1,13 +1,12 @@
 use core::f32;
-use std::time::Instant;
 
 use bevy::prelude::*;
 use lol_config::ConfigNavigationGrid;
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    get_nav_path, rotate_to_direction, ArbitrationPipelinePlugin, CommandRotate, FinalDecision,
-    LastDecision, PipelineStages, RequestBuffer,
+    get_nav_path, ArbitrationPipelinePlugin, CommandRotate, FinalDecision, LastDecision,
+    PipelineStages, RequestBuffer,
 };
 
 #[derive(Default)]

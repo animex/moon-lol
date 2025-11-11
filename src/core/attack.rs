@@ -1,7 +1,8 @@
-use bevy::{prelude::*, transform};
+use bevy::prelude::*;
+use league_core::CharacterRecord;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{rotate_to_direction, Buffs, CommandDamageCreate, CommandRotate, DamageType};
+use crate::core::{Buffs, CommandDamageCreate, CommandRotate, DamageType};
 
 #[derive(Default)]
 pub struct PluginAttack;
@@ -129,6 +130,24 @@ impl Attack {
         }
     }
 
+    pub fn from_character_record(character_record: &CharacterRecord) -> Self {
+        Self::new(
+            character_record.attack_range.unwrap(),
+            character_record
+                .basic_attack
+                .clone()
+                .unwrap()
+                .m_attack_cast_time
+                .unwrap(),
+            character_record
+                .basic_attack
+                .clone()
+                .unwrap()
+                .m_attack_total_time
+                .unwrap(),
+        )
+    }
+
     pub fn with_bonus_attack_speed(mut self, bonus_attack_speed: f32) -> Self {
         self.bonus_attack_speed = bonus_attack_speed;
         self
@@ -233,7 +252,9 @@ fn on_command_attack_start(
             update_attack_state(&mut attack, vec![]);
         }
 
-        let target_position = q_transform.get(target).unwrap().translation.xz();
+        let Ok(target_position) = q_transform.get(target).map(|v| v.translation.xz()) else {
+            return;
+        };
 
         let transform = q_transform.get_mut(entity).unwrap();
 

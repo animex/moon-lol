@@ -1,6 +1,7 @@
-use crate::core::life::Health;
 use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
+
+use crate::core::life::Health;
 
 /// 伤害系统插件
 #[derive(Default)]
