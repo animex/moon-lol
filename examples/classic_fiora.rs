@@ -1,34 +1,21 @@
 use bevy::prelude::*;
-use bevy::render::{
-    settings::{Backends, RenderCreation, WgpuSettings},
-    RenderPlugin,
-};
+
 use moon_lol::abilities::PluginAbilities;
 use moon_lol::core::PluginResource;
-use moon_lol::{core::PluginCore, entities::PluginEntities, logging::PluginLogging};
+use moon_lol::{core::PluginCore, entities::PluginEntities};
 
 fn main() {
     App::new()
         .add_plugins((
-            DefaultPlugins
-                .build()
-                .set(WindowPlugin {
-                    primary_window: Some(Window {
-                        title: "classic 1v1 fiora".to_string(),
-                        resolution: (300.0, 300.0).into(),
-                        position: WindowPosition::At((0, 1000).into()),
-                        ..default()
-                    }),
-                    ..default()
-                })
-                .set(RenderPlugin {
-                    render_creation: RenderCreation::Automatic(WgpuSettings {
-                        backends: Some(Backends::VULKAN),
-                        // limits: WgpuLimits::downlevel_webgl2_defaults(),
-                        ..default()
-                    }),
+            DefaultPlugins.build().set(WindowPlugin {
+                primary_window: Some(Window {
+                    title: "classic 1v1 fiora".to_string(),
+                    resolution: (300.0, 300.0).into(),
+                    position: WindowPosition::At((0, 1000).into()),
                     ..default()
                 }),
+                ..default()
+            }),
             PluginEntities,
             PluginAbilities,
             PluginCore.build().set(PluginResource {

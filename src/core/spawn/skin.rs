@@ -14,6 +14,21 @@ use lol_config::ConfigCharacterSkin;
 
 use crate::core::{Animation, AnimationNode, AnimationNodeF32, AnimationState, ResourceCache};
 
+// 皮肤系统插件
+#[derive(Default)]
+pub struct PluginSkin;
+
+// 皮肤缩放组件
+#[derive(Component, Default, Debug, Clone, Copy)]
+pub struct SkinScale(pub f32);
+
+impl Plugin for PluginSkin {
+    fn build(&self, app: &mut App) {
+        app.add_observer(on_command_skin_spawn);
+        app.add_systems(Update, update_skin_scale);
+    }
+}
+
 // 皮肤系统事件定义
 #[derive(Event)]
 pub struct EventSkinSpawn;
@@ -24,20 +39,6 @@ pub struct EventSkinSpawnComplete;
 #[derive(Event)]
 pub struct CommandSkinSpawn {
     pub skin_path: String,
-}
-
-// 皮肤系统插件
-#[derive(Default)]
-pub struct PluginSkin;
-
-impl Plugin for PluginSkin {
-    fn build(&self, app: &mut App) {
-        app.add_event::<CommandSkinSpawn>();
-        app.add_event::<EventSkinSpawn>();
-        app.add_event::<EventSkinSpawnComplete>();
-
-        app.add_observer(on_command_skin_spawn);
-    }
 }
 
 // 皮肤生成命令处理器
@@ -58,6 +59,10 @@ fn on_command_skin_spawn(
         .get(&trigger.skin_path)
         .unwrap_or_else(|| panic!("Skin not found: {}", trigger.skin_path));
 
+    // 设置初始的 SkinScale 组件
+    let skin_scale = SkinScale(skin.skin_scale.unwrap_or(1.0));
+    commands.entity(entity).insert(skin_scale);
+
     spawn_skin_entity(
         &mut commands,
         &mut res_animation_graph,
@@ -66,7 +71,14 @@ fn on_command_skin_spawn(
         skin,
     );
 
-    commands.trigger_targets(EventSkinSpawnComplete, entity);
+    commands.entity(entity).trigger(EventSkinSpawnComplete);
+}
+
+/// 更新皮肤缩放系统
+fn update_skin_scale(mut query: Query<(&SkinScale, &mut Transform), Changed<SkinScale>>) {
+    for (skin_scale, mut transform) in query.iter_mut() {
+        transform.scale = Vec3::splat(skin_scale.0);
+    }
 }
 
 fn spawn_skin_entity(
@@ -237,7 +249,6 @@ fn spawn_skin_entity(
 
     for submesh_path in &skin.submesh_paths {
         let mesh_handle = asset_server.load(submesh_path.clone());
-
         commands.entity(entity).with_child((
             Transform::default(),
             Mesh3d(mesh_handle),

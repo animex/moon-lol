@@ -1,4 +1,6 @@
 // use bevy::window::CursorGrabMode;
+use bevy::math::{Mat4, Vec3A, Vec4};
+use bevy::render::camera::{CameraProjection, Projection, SubCameraView};
 use bevy::{input::mouse::MouseWheel, prelude::*};
 use league_utils::neg_vec_z;
 
@@ -33,7 +35,7 @@ impl Plugin for PluginCamera {
 
         app.add_systems(Startup, setup.in_set(CameraInit));
         app.add_systems(Update, update);
-        app.add_systems(Update, update_focus);
+        app.add_systems(FixedUpdate, update_focus);
         app.add_systems(Update, on_wheel);
         app.add_systems(Update, on_mouse_scroll);
     }
@@ -72,6 +74,7 @@ fn setup(
             scale: 1.0,
             position: vec3(CAMERA_MIN_X, 0.0, CAMERA_MAX_Y),
         },
+        Projection::custom(CustomFlipXProjection::default()),
     ));
 
     // if let Ok(mut window) = window.single_mut() {
@@ -162,4 +165,108 @@ fn on_mouse_scroll(window: Query<&Window>, mut camera: Query<&mut CameraState, W
             );
 
     camera_state.set_position(new_position);
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct CustomFlipXProjection {
+    pub fov: f32,
+    pub near: f32,
+    pub far: f32,
+    pub aspect_ratio: f32,
+}
+
+impl CameraProjection for CustomFlipXProjection {
+    fn get_clip_from_view(&self) -> Mat4 {
+        let base = Mat4::perspective_infinite_reverse_rh(self.fov, self.aspect_ratio, self.near);
+        let flip = Mat4::from_cols(
+            Vec4::new(-1.0, 0.0, 0.0, 0.0),
+            Vec4::new(0.0, 1.0, 0.0, 0.0),
+            Vec4::new(0.0, 0.0, 1.0, 0.0),
+            Vec4::new(0.0, 0.0, 0.0, 1.0),
+        );
+        flip * base
+    }
+
+    fn get_clip_from_view_for_sub(&self, sub_view: &SubCameraView) -> Mat4 {
+        let full_width = sub_view.full_size.x as f32;
+        let full_height = sub_view.full_size.y as f32;
+        let sub_width = sub_view.size.x as f32;
+        let sub_height = sub_view.size.y as f32;
+        let offset_x = sub_view.offset.x as f32;
+        let offset_y = full_height - ((sub_view.offset.y as f32) + sub_height);
+
+        let full_aspect = full_width / full_height;
+
+        let top = self.near * (0.5 * self.fov).tan();
+        let bottom = -top;
+        let right = top * full_aspect;
+        let left = -right;
+
+        let width = right - left;
+        let height = top - bottom;
+
+        let left_prime = left + (width * offset_x) / full_width;
+        let right_prime = left + (width * (offset_x + sub_width)) / full_width;
+        let bottom_prime = bottom + (height * offset_y) / full_height;
+        let top_prime = bottom + (height * (offset_y + sub_height)) / full_height;
+
+        let x = (2.0 * self.near) / (right_prime - left_prime);
+        let y = (2.0 * self.near) / (top_prime - bottom_prime);
+        let a = (right_prime + left_prime) / (right_prime - left_prime);
+        let b = (top_prime + bottom_prime) / (top_prime - bottom_prime);
+
+        let proj = Mat4::from_cols(
+            Vec4::new(x, 0.0, 0.0, 0.0),
+            Vec4::new(0.0, y, 0.0, 0.0),
+            Vec4::new(a, b, 0.0, -1.0),
+            Vec4::new(0.0, 0.0, self.near, 0.0),
+        );
+
+        let flip = Mat4::from_cols(
+            Vec4::new(-1.0, 0.0, 0.0, 0.0),
+            Vec4::new(0.0, 1.0, 0.0, 0.0),
+            Vec4::new(0.0, 0.0, 1.0, 0.0),
+            Vec4::new(0.0, 0.0, 0.0, 1.0),
+        );
+
+        flip * proj
+    }
+
+    fn update(&mut self, width: f32, height: f32) {
+        if width > 0.0 && height > 0.0 {
+            self.aspect_ratio = width / height;
+        }
+    }
+
+    fn far(&self) -> f32 {
+        self.far
+    }
+
+    fn get_frustum_corners(&self, z_near: f32, z_far: f32) -> [Vec3A; 8] {
+        let tan_half_fov = (self.fov / 2.0).tan();
+        let a = z_near.abs() * tan_half_fov;
+        let b = z_far.abs() * tan_half_fov;
+        let aspect_ratio = self.aspect_ratio;
+        [
+            Vec3A::new(a * aspect_ratio, -a, z_near),
+            Vec3A::new(a * aspect_ratio, a, z_near),
+            Vec3A::new(-a * aspect_ratio, a, z_near),
+            Vec3A::new(-a * aspect_ratio, -a, z_near),
+            Vec3A::new(b * aspect_ratio, -b, z_far),
+            Vec3A::new(b * aspect_ratio, b, z_far),
+            Vec3A::new(-b * aspect_ratio, b, z_far),
+            Vec3A::new(-b * aspect_ratio, -b, z_far),
+        ]
+    }
+}
+
+impl Default for CustomFlipXProjection {
+    fn default() -> Self {
+        CustomFlipXProjection {
+            fov: core::f32::consts::PI / 4.0,
+            near: 0.1,
+            far: 1000.0,
+            aspect_ratio: 1.0,
+        }
+    }
 }

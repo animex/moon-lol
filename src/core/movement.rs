@@ -16,11 +16,6 @@ impl Plugin for PluginMovement {
     fn build(&self, app: &mut App) {
         app.register_type::<Movement>();
 
-        app.add_event::<CommandMovement>();
-
-        app.add_event::<EventMovementStart>();
-        app.add_event::<EventMovementEnd>();
-
         app.add_observer(on_event_movement_end);
 
         app.add_plugins(ArbitrationPipelinePlugin::<CommandMovement, MovementPipeline>::default());

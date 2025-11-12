@@ -33,7 +33,7 @@ mod tests {
         });
 
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_millis(
-            100,
+            16,
         )));
 
         app.run();

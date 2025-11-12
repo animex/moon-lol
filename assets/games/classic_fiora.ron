@@ -10,6 +10,7 @@
         ),
         "moon_lol::core::movement::Movement": ( speed: 425.0 ),
         "lol_core::team::Team": Order,
+        "moon_lol::core::damage::Damage": (100.0),
         "moon_lol::entities::champions::fiora::Fiora": (),
         "moon_lol::core::controller::Controller": (),
         "moon_lol::core::camera::Focus": (),

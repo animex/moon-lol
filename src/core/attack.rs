@@ -2,7 +2,7 @@ use bevy::prelude::*;
 use league_core::CharacterRecord;
 use serde::{Deserialize, Serialize};
 
-use crate::core::{Buffs, CommandDamageCreate, CommandRotate, DamageType};
+use crate::core::{Buffs, CommandDamageCreate, CommandRotate, Damage, DamageType};
 
 #[derive(Default)]
 pub struct PluginAttack;
@@ -227,7 +227,7 @@ fn on_command_attack_start(
     mut commands: Commands,
     mut q_attack_state: Query<&mut AttackState>,
     mut q_attack: Query<&mut Attack>,
-    mut q_transform: Query<&mut Transform>,
+    q_transform: Query<&Transform>,
     q_attack_buff: Query<&AttackBuff>,
     q_buffs: Query<&Buffs>,
     time: Res<Time<Fixed>>,
@@ -256,7 +256,7 @@ fn on_command_attack_start(
             return;
         };
 
-        let transform = q_transform.get_mut(entity).unwrap();
+        let transform = q_transform.get(entity).unwrap();
 
         let direction = (target_position - transform.translation.xz()).normalize();
 
@@ -348,14 +348,14 @@ fn on_command_attack_stop(
 
 // 系统函数
 fn fixed_update(
-    mut query: Query<(Entity, &mut AttackState, &Attack)>,
+    mut query: Query<(Entity, &mut AttackState, &Attack, &Damage)>,
     mut commands: Commands,
     time: Res<Time<Fixed>>,
     q_entity: Query<Entity>,
 ) {
     let now = time.elapsed_secs();
 
-    for (entity, mut attack_state, attack) in query.iter_mut() {
+    for (entity, mut attack_state, attack, damage) in query.iter_mut() {
         match &attack_state.status.clone() {
             AttackStatus::Windup { target, end_time } => {
                 // 检查前摇是否完成
@@ -365,15 +365,16 @@ fn fixed_update(
                     };
 
                     if q_entity.contains(*target) {
-                        commands.entity(*target).trigger(CommandDamageCreate {
-                            source: entity,
-                            damage_type: DamageType::Physical,
-                            amount: 100.0,
+                        commands.get_entity(*target).iter_mut().for_each(|v| {
+                            v.trigger(CommandDamageCreate {
+                                source: entity,
+                                damage_type: DamageType::Physical,
+                                amount: damage.0,
+                            });
                         });
-
-                        commands
-                            .entity(entity)
-                            .trigger(EventAttackEnd { target: *target });
+                        commands.get_entity(entity).iter_mut().for_each(|v| {
+                            v.trigger(EventAttackEnd { target: *target });
+                        });
                     } else {
                         commands.entity(entity).remove::<AttackState>();
                     }

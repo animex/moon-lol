@@ -4,8 +4,8 @@ use lol_core::{Lane, Team};
 use serde::{Deserialize, Serialize};
 
 use crate::core::{
-    Action, AttackState, CommandAction, CommandMovement, DamageType, EventDamageCreate, EventDead,
-    EventSpawn, MovementAction, MovementWay, State,
+    Action, AttackAuto, AttackState, CommandAction, CommandMovement, DamageType, EventDamageCreate,
+    EventDead, EventSpawn, MovementAction, MovementWay, State,
 };
 
 #[derive(Default)]
@@ -13,13 +13,11 @@ pub struct PluginMinion;
 
 impl Plugin for PluginMinion {
     fn build(&self, app: &mut bevy::prelude::App) {
-        app.add_event::<EventMinionFoundTarget>();
-        app.add_event::<EventMinionChasingTimeout>();
-        app.add_event::<ChasingTooMuch>();
         app.add_systems(FixedPostUpdate, minion_aggro);
+
         app.add_observer(on_spawn);
-        app.add_observer(action_continue_minion_path);
-        app.add_observer(on_found_aggro_target);
+        app.add_observer(on_command_continue_minion_path);
+        app.add_observer(on_event_minion_found_target);
         app.add_observer(on_target_dead);
     }
 }
@@ -122,7 +120,7 @@ pub fn minion_aggro(
     }
 }
 
-pub fn action_continue_minion_path(
+pub fn on_command_continue_minion_path(
     trigger: Trigger<CommandMinionContinuePath>,
     query: Query<(&Transform, &Lane, &Team)>,
     res_config: Res<ConfigMap>,
@@ -156,7 +154,7 @@ pub fn action_continue_minion_path(
     );
 }
 
-fn on_found_aggro_target(
+fn on_event_minion_found_target(
     trigger: Trigger<EventMinionFoundTarget>,
     mut commands: Commands,
     mut q_minion_state: Query<&mut MinionState>,
@@ -219,14 +217,12 @@ pub fn on_team_get_damage(
 fn on_target_dead(
     trigger: Trigger<EventDead>,
     mut commands: Commands,
-    mut q_minion_state: Query<(&mut MinionState, &AttackState)>,
+    mut q_minion_state: Query<(Entity, &mut MinionState, &AttackAuto)>,
 ) {
     let dead_entity = trigger.target();
 
-    for (mut minion_state, attack_state) in q_minion_state.iter_mut() {
-        let Some(target) = attack_state.target else {
-            continue;
-        };
+    for (entity, mut minion_state, attack_state) in q_minion_state.iter_mut() {
+        let target = attack_state.target;
 
         if target != dead_entity {
             continue;
@@ -235,7 +231,7 @@ fn on_target_dead(
         match *minion_state {
             MinionState::AttackingTarget => {
                 *minion_state = MinionState::MovingOnPath;
-                commands.trigger_targets(CommandMinionContinuePath, trigger.target());
+                commands.entity(entity).trigger(CommandMinionContinuePath);
             }
             _ => (),
         }

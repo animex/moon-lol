@@ -14,7 +14,7 @@ use bevy::{
         alpha::AlphaMode,
         mesh::skinning::SkinnedMeshInverseBindposes,
         render_resource::{
-            Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+            Extent3d, Face, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
         },
     },
 };
@@ -91,6 +91,7 @@ impl AssetLoader for LeagueLoaderMaterial {
         Ok(StandardMaterial {
             base_color_texture: Some(image),
             unlit: true,
+            cull_mode: Some(Face::Front),
             alpha_mode: AlphaMode::Mask(0.3),
             ..default()
         })

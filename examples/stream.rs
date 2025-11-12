@@ -116,11 +116,9 @@ fn setup(
     ));
     commands.spawn(ImageToSave(cpu_image_handle));
 
-    let render_target = RenderTarget::Image(render_target_image_handle.into());
-
     let mut camera = q_camera.single_mut().unwrap();
 
-    camera.target = render_target;
+    camera.target = RenderTarget::Image(render_target_image_handle.into());
 }
 
 pub struct PluginImageCopy;

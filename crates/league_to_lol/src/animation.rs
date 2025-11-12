@@ -1,17 +1,18 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 use binrw::BinRead;
+
+use league_core::{
+    AnimationGraphData, AnimationGraphDataMBlendDataTable, AnimationGraphDataMClipDataMap,
+    AtomicClipData, VfxEmitterDefinitionDataPrimitive, VfxSystemDefinitionData,
+};
 use league_file::{
     AnimationFile, CompressedTransformType, LeagueSkeleton, LeagueSkinnedMesh, UncompressedData,
 };
 use league_loader::LeagueWadLoader;
 use league_property::{from_entry, EntryData};
 use league_utils::{hash_joint, neg_mat_z};
-use std::collections::HashMap;
-
-use league_core::{
-    AnimationGraphData, AnimationGraphDataMBlendDataTable, AnimationGraphDataMClipDataMap,
-    AtomicClipData, VfxEmitterDefinitionDataPrimitive, VfxSystemDefinitionData,
-};
 use lol_config::{
     ConfigAnimationClip, ConfigCharacterSkin, ConfigJoint, ConfigSkinnedMeshInverseBindposes,
     LeagueMaterial,

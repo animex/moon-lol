@@ -37,11 +37,11 @@ impl Health {
 pub fn spawn_event(mut commands: Commands, q_alive: Query<Entity, Added<Health>>) {
     let spawn_count = q_alive.iter().count();
     if spawn_count > 0 {
-        println!("Spawning {} new entities with health", spawn_count);
+        // println!("Spawning {} new entities with health", spawn_count);
     }
 
     for entity in q_alive.iter() {
-        println!("Triggering spawn event for entity {:?}", entity);
+        // println!("Triggering spawn event for entity {:?}", entity);
         commands.trigger_targets(EventSpawn, entity);
     }
 }
@@ -51,19 +51,19 @@ pub fn detect_death(mut commands: Commands, q_health: Query<(Entity, &Health)>) 
 
     for (entity, health) in q_health.iter() {
         if health.value <= 0.0 {
-            println!("Entity {:?} has died (health={:.1})", entity, health.value);
+            // println!("Entity {:?} has died (health={:.1})", entity, health.value);
             commands.trigger_targets(EventDead, entity);
             death_count += 1;
         }
     }
 
     if death_count > 0 {
-        println!("Detected {} deaths this frame", death_count);
+        // println!("Detected {} deaths this frame", death_count);
     }
 }
 
 fn on_dead(trigger: Trigger<EventDead>, mut commands: Commands) {
     let entity = trigger.target();
-    println!("Despawning dead entity {:?}", entity);
+    // println!("Despawning dead entity {:?}", entity);
     commands.entity(entity).despawn();
 }
