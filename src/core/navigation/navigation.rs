@@ -1,10 +1,10 @@
 use bevy::prelude::*;
+use std::collections::HashSet;
 use std::time::Instant;
 
 use lol_config::ConfigNavigationGrid;
 
-use crate::{find_grid_path, Movement};
-use crate::system_debug;
+use crate::{find_grid_path, system_debug, Bounding, Movement};
 
 #[derive(Default)]
 pub struct PluginNavigaton;
@@ -25,6 +25,7 @@ pub fn get_nav_path(
     start_pos: &Vec2,
     end_pos: &Vec2,
     grid: &ConfigNavigationGrid,
+    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<Vec<Vec2>> {
     let start = Instant::now();
 
@@ -32,7 +33,10 @@ pub fn get_nav_path(
     let start_grid_pos = (start_pos - grid.min_position) / grid.cell_size;
     let end_grid_pos = (end_pos - grid.min_position) / grid.cell_size;
 
-    let is_walkable_fn = |x, y| grid.get_cell_by_xy((x, y)).is_walkable();
+    let is_walkable_fn = |x, y| {
+        let cell_pos = (x, y);
+        grid.get_cell_by_xy(cell_pos).is_walkable() && !occupied_cells.contains(&cell_pos)
+    };
 
     if has_line_of_sight(start_grid_pos, end_grid_pos, &is_walkable_fn) {
         system_debug!(
@@ -44,7 +48,7 @@ pub fn get_nav_path(
     }
 
     // 如果不可直达，则使用A*算法规划路径
-    let result = find_path(&grid, start_pos, end_pos);
+    let result = find_path(&grid, start_pos, end_pos, occupied_cells);
 
     system_debug!(
         "command_movement_move_to",
@@ -56,11 +60,22 @@ pub fn get_nav_path(
 }
 
 /// 主要的寻路函数，结合A*和漏斗算法
-pub fn find_path(grid: &ConfigNavigationGrid, start: &Vec2, end: &Vec2) -> Option<Vec<Vec2>> {
+pub fn find_path(
+    grid: &ConfigNavigationGrid,
+    start: &Vec2,
+    end: &Vec2,
+    occupied_cells: &HashSet<(usize, usize)>,
+) -> Option<Vec<Vec2>> {
     // 首先使用A*找到网格路径
-    let grid_path = find_grid_path(grid, start, end)?;
+    let grid_path = find_grid_path(grid, start, end, occupied_cells)?;
 
-    return Some(post_process_path(grid, &grid_path, &start, &end));
+    return Some(post_process_path(
+        grid,
+        &grid_path,
+        &start,
+        &end,
+        occupied_cells,
+    ));
 }
 
 pub fn post_process_path(
@@ -68,6 +83,7 @@ pub fn post_process_path(
     path: &Vec<(usize, usize)>,
     start: &Vec2,
     end: &Vec2,
+    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Vec<Vec2> {
     if path.is_empty() {
         return Vec::new();
@@ -84,7 +100,10 @@ pub fn post_process_path(
     path.pop();
     path.push((end - grid.min_position) / grid.cell_size);
 
-    let path = optimize_path(&path, &|x, y| grid.get_cell_by_xy((x, y)).is_walkable());
+    let path = optimize_path(&path, &|x, y| {
+        let cell_pos = (x, y);
+        grid.get_cell_by_xy(cell_pos).is_walkable() && !occupied_cells.contains(&cell_pos)
+    });
 
     let path = path
         .into_iter()
@@ -202,4 +221,60 @@ pub fn has_line_of_sight(
     }
 
     true
+}
+
+/// 将世界坐标转换为网格坐标的辅助函数
+pub fn world_pos_to_grid_xy(grid: &ConfigNavigationGrid, world_pos: Vec2) -> (usize, usize) {
+    let x = ((world_pos.x - grid.min_position.x) / grid.cell_size).floor() as usize;
+    let y = ((world_pos.y - grid.min_position.y) / grid.cell_size).floor() as usize;
+    (x, y)
+}
+
+/// 根据所有带Bounding组件的实体，计算被占据的网格格子
+///
+/// # 参数
+/// - `grid`: 导航网格
+/// - `entities_with_bounding`: 查询所有带Transform和Bounding组件的实体
+/// - `exclude_entities`: 要排除的实体ID列表（不将其作为障碍物），例如当前移动的实体自身
+pub fn calculate_occupied_grid_cells(
+    grid: &ConfigNavigationGrid,
+    entities_with_bounding: &Query<(Entity, &GlobalTransform, &Bounding)>,
+    exclude_entities: &[Entity],
+) -> HashSet<(usize, usize)> {
+    let mut occupied_cells = HashSet::new();
+    let exclude_set: std::collections::HashSet<Entity> = exclude_entities.iter().copied().collect();
+
+    // 遍历所有带Bounding和Transform组件的实体
+    for (entity, transform, bounding) in entities_with_bounding.iter() {
+        // 排除指定的实体（如当前移动的实体自身）
+        if exclude_set.contains(&entity) {
+            continue;
+        }
+
+        // 将实体的世界坐标转换为网格坐标
+        let entity_pos = transform.translation().xz();
+        let entity_grid_pos = world_pos_to_grid_xy(grid, entity_pos);
+
+        // 计算实体半径占据的格子数（向上取整）
+        let radius_in_cells = (bounding.radius / grid.cell_size).ceil() as i32;
+
+        // 标记实体周围所有被占据的格子
+        for dx in -radius_in_cells..=radius_in_cells {
+            for dy in -radius_in_cells..=radius_in_cells {
+                let new_x = entity_grid_pos.0 as i32 + dx;
+                let new_y = entity_grid_pos.1 as i32 + dy;
+
+                if new_x >= 0 && new_y >= 0 {
+                    let new_pos = (new_x as usize, new_y as usize);
+
+                    // 检查格子是否在有效范围内
+                    if new_pos.0 < grid.x_len && new_pos.1 < grid.y_len {
+                        occupied_cells.insert(new_pos);
+                    }
+                }
+            }
+        }
+    }
+
+    occupied_cells
 }

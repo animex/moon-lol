@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use std::cmp::Ordering;
-use std::collections::{BinaryHeap, HashMap};
+use std::collections::{BinaryHeap, HashMap, HashSet};
 
 use lol_config::ConfigNavigationGrid;
 
@@ -53,8 +53,9 @@ pub fn find_grid_path(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
     end: &Vec2,
+    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<Vec<(usize, usize)>> {
-    find_grid_path_with_result(grid, start, end).map(|result| result.path)
+    find_grid_path_with_result(grid, start, end, occupied_cells).map(|result| result.path)
 }
 
 /// 使用A*算法找到网格路径，返回详细结果
@@ -62,16 +63,17 @@ pub fn find_grid_path_with_result(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
     end: &Vec2,
+    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<AStarResult> {
-    let start_pos = world_to_grid(grid, start);
-    let end_pos = world_to_grid(grid, end);
+    let start_pos = grid.get_cell_xy_by_position(start);
+    let end_pos = grid.get_cell_xy_by_position(end);
 
     debug!(
         "A* pathfinding: start=({}, {}) end=({}, {})",
         start_pos.0, start_pos.1, end_pos.0, end_pos.1
     );
 
-    if !is_valid_pos(grid, start_pos) || !is_valid_pos(grid, end_pos) {
+    if !grid.is_walkable_by_xy(start_pos) || !grid.is_walkable_by_xy(end_pos) {
         warn!("A* pathfinding: Invalid start or end position");
         return None;
     }
@@ -85,7 +87,7 @@ pub fn find_grid_path_with_result(
     let start_node = AStarNode {
         pos: start_pos,
         g_cost: 0.0,
-        h_cost: heuristic_cost(grid, start_pos, end_pos),
+        h_cost: heuristic_cost(grid.cell_size, start_pos, end_pos),
     };
 
     open_set.push(start_node);
@@ -126,12 +128,13 @@ pub fn find_grid_path_with_result(
 
         closed_set.insert(current.pos, current.g_cost);
 
-        for neighbor_pos in get_neighbors(grid, current.pos) {
+        for neighbor_pos in get_neighbors(grid, current.pos, occupied_cells) {
             if closed_set.contains_key(&neighbor_pos) {
                 continue;
             }
 
-            let tentative_g_cost = current.g_cost + distance_cost(grid, current.pos, neighbor_pos);
+            let tentative_g_cost =
+                current.g_cost + distance_cost(grid.cell_size, current.pos, neighbor_pos);
 
             if let Some(&existing_g_cost) = g_scores.get(&neighbor_pos) {
                 if tentative_g_cost >= existing_g_cost {
@@ -142,7 +145,7 @@ pub fn find_grid_path_with_result(
             let neighbor_node = AStarNode {
                 pos: neighbor_pos,
                 g_cost: tentative_g_cost,
-                h_cost: heuristic_cost(grid, neighbor_pos, end_pos),
+                h_cost: heuristic_cost(grid.cell_size, neighbor_pos, end_pos),
             };
 
             came_from.insert(neighbor_pos, current.pos);
@@ -162,28 +165,11 @@ pub fn find_grid_path_with_result(
     })
 }
 
-fn world_to_grid(grid: &ConfigNavigationGrid, world_pos: &Vec2) -> (usize, usize) {
-    let (x, y) = grid.get_cell_xy_by_position(world_pos);
-
-    (x, y)
-}
-
-fn is_valid_pos(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> bool {
-    pos.0 < grid.x_len && pos.1 < grid.y_len
-}
-
-fn heuristic_cost(grid: &ConfigNavigationGrid, from: (usize, usize), to: (usize, usize)) -> f32 {
-    let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
-    let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
-    let euclidean_distance = (dx * dx + dy * dy).sqrt() * grid.cell_size;
-
-    // 引入一个非常小的权重来打破平局，p 应该很小
-    // 例如 1.0 / (地图最大距离)
-    const P: f32 = 1.0 / (300.0 * 300.0);
-    return euclidean_distance * (1.0 + P);
-}
-
-fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize, usize)> {
+fn get_neighbors(
+    grid: &ConfigNavigationGrid,
+    pos: (usize, usize),
+    occupied_cells: &HashSet<(usize, usize)>,
+) -> Vec<(usize, usize)> {
     let mut neighbors = Vec::new();
 
     let directions = [
@@ -207,11 +193,12 @@ fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize
 
         let new_pos = (new_x as usize, new_y as usize);
 
-        if !is_valid_pos(grid, new_pos) {
+        if !grid.is_walkable_by_xy(new_pos) {
             continue;
         }
 
-        if grid.get_cell_by_xy(new_pos).is_wall() {
+        // 被实体占据的格子，也不能通过
+        if occupied_cells.contains(&new_pos) {
             continue;
         }
 
@@ -221,14 +208,25 @@ fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize
     neighbors
 }
 
-fn distance_cost(grid: &ConfigNavigationGrid, from: (usize, usize), to: (usize, usize)) -> f32 {
+fn distance_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f32 {
     let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
     let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
 
     // 对角线移动成本更高
     if dx == 1.0 && dy == 1.0 {
-        1.414 * grid.cell_size
+        1.414 * cell_size
     } else {
-        grid.cell_size
+        cell_size
     }
+}
+
+fn heuristic_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f32 {
+    let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
+    let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
+    let euclidean_distance = (dx * dx + dy * dy).sqrt() * cell_size;
+
+    // 引入一个非常小的权重来打破平局，p 应该很小
+    // 例如 1.0 / (地图最大距离)
+    const P: f32 = 1.0 / (300.0 * 300.0);
+    return euclidean_distance * (1.0 + P);
 }

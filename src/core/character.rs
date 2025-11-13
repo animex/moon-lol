@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-use league_core::CharacterRecord;
 
 use crate::{Armor, Attack, Bounding, CommandSkinSpawn, Damage, Health, Movement, ResourceCache};
 

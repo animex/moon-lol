@@ -93,6 +93,10 @@ impl ConfigNavigationGrid {
     pub fn get_map_center_position(&self) -> Vec3 {
         self.get_world_position_by_position(&vec2(self.get_width() / 2.0, self.get_height() / 2.0))
     }
+
+    pub fn is_walkable_by_xy(&self, (x, y): (usize, usize)) -> bool {
+        x < self.x_len && y < self.y_len && self.get_cell_by_xy((x, y)).is_walkable()
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]

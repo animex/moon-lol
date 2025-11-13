@@ -3,10 +3,10 @@ use league_utils::hash_bin;
 use lol_core::Team;
 
 use crate::{
-    abilities::get_particle_hash, // 依赖 fiora_passive.rs 中的 get_particle_hash
+    abilities::get_particle_hash,
     core::{
-        is_in_direction, Buff, BuffOf, CommandDamageCreate, CommandParticleDespawn,
-        CommandParticleSpawn, DamageType, Direction, EventDamageCreate, Health,
+        is_in_direction, Buff, BuffOf, CommandParticleDespawn, CommandParticleSpawn, Direction,
+        EventDamageCreate, Health,
     },
 };
 
