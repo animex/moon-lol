@@ -7,6 +7,7 @@ use league_core::{
     UnknownSRXFlags, VisionPathingFlags,
 };
 use serde::{Deserialize, Serialize};
+use std::collections::HashSet;
 
 #[derive(Resource, Clone, Default, Serialize, Deserialize)]
 pub struct ConfigNavigationGrid {
@@ -18,6 +19,8 @@ pub struct ConfigNavigationGrid {
     pub height_x_len: usize,
     pub height_y_len: usize,
     pub height_samples: Vec<Vec<f32>>,
+    #[serde(skip)]
+    pub occupied_cells: HashSet<(usize, usize)>,
 }
 
 impl ConfigNavigationGrid {
@@ -95,7 +98,10 @@ impl ConfigNavigationGrid {
     }
 
     pub fn is_walkable_by_xy(&self, (x, y): (usize, usize)) -> bool {
-        x < self.x_len && y < self.y_len && self.get_cell_by_xy((x, y)).is_walkable()
+        x < self.x_len
+            && y < self.y_len
+            && self.get_cell_by_xy((x, y)).is_walkable()
+            && !self.occupied_cells.contains(&(x, y))
     }
 }
 

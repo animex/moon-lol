@@ -282,7 +282,7 @@ fn apply_final_movement_decision(
         &FinalDecision<CommandMovement>,
         &mut MovementState,
     )>,
-    grid: Res<ConfigNavigationGrid>,
+    mut grid: ResMut<ConfigNavigationGrid>,
     entities_with_bounding: Query<(Entity, &GlobalTransform, &Bounding)>,
 ) {
     for (entity, transform, decision, mut movement_state) in query.iter_mut() {
@@ -290,7 +290,7 @@ fn apply_final_movement_decision(
             MovementAction::Start { way, speed } => {
                 match way {
                     MovementWay::Pathfind(target) => {
-                        // 计算被Bounding实体占据的网格格子，并在寻路时避开它们
+                        // 清空并重新计算被Bounding实体占据的网格格子，并在寻路时避开它们
                         // 排除当前移动的实体自身（避免把自己当作障碍物）
                         let exclude_entities = &[entity];
                         let occupied_cells = calculate_occupied_grid_cells(
@@ -298,11 +298,12 @@ fn apply_final_movement_decision(
                             &entities_with_bounding,
                             exclude_entities,
                         );
+                        grid.occupied_cells.clear();
+                        grid.occupied_cells.extend(occupied_cells);
                         if let Some(path) = get_nav_path(
                             &transform.translation.xz(),
                             target,
                             &grid,
-                            &occupied_cells,
                         ) {
                             movement_state.reset_path(&path);
                         }

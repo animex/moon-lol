@@ -25,7 +25,6 @@ pub fn get_nav_path(
     start_pos: &Vec2,
     end_pos: &Vec2,
     grid: &ConfigNavigationGrid,
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<Vec<Vec2>> {
     let start = Instant::now();
 
@@ -33,12 +32,7 @@ pub fn get_nav_path(
     let start_grid_pos = (start_pos - grid.min_position) / grid.cell_size;
     let end_grid_pos = (end_pos - grid.min_position) / grid.cell_size;
 
-    let is_walkable_fn = |x, y| {
-        let cell_pos = (x, y);
-        grid.get_cell_by_xy(cell_pos).is_walkable() && !occupied_cells.contains(&cell_pos)
-    };
-
-    if has_line_of_sight(start_grid_pos, end_grid_pos, &is_walkable_fn) {
+    if has_line_of_sight(&grid, start_grid_pos, end_grid_pos) {
         system_debug!(
             "command_movement_move_to",
             "Direct path found in {:.6}ms",
@@ -48,7 +42,7 @@ pub fn get_nav_path(
     }
 
     // 如果不可直达，则使用A*算法规划路径
-    let result = find_path(&grid, start_pos, end_pos, occupied_cells);
+    let result = find_path(&grid, start_pos, end_pos);
 
     system_debug!(
         "command_movement_move_to",
@@ -64,18 +58,11 @@ pub fn find_path(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
     end: &Vec2,
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<Vec<Vec2>> {
     // 首先使用A*找到网格路径
-    let grid_path = find_grid_path(grid, start, end, occupied_cells)?;
+    let grid_path = find_grid_path(grid, start, end)?;
 
-    return Some(post_process_path(
-        grid,
-        &grid_path,
-        &start,
-        &end,
-        occupied_cells,
-    ));
+    return Some(post_process_path(grid, &grid_path, start, end));
 }
 
 pub fn post_process_path(
@@ -83,7 +70,6 @@ pub fn post_process_path(
     path: &Vec<(usize, usize)>,
     start: &Vec2,
     end: &Vec2,
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Vec<Vec2> {
     if path.is_empty() {
         return Vec::new();
@@ -100,10 +86,7 @@ pub fn post_process_path(
     path.pop();
     path.push((end - grid.min_position) / grid.cell_size);
 
-    let path = optimize_path(&path, &|x, y| {
-        let cell_pos = (x, y);
-        grid.get_cell_by_xy(cell_pos).is_walkable() && !occupied_cells.contains(&cell_pos)
-    });
+    let path = optimize_path(&grid, &path);
 
     let path = path
         .into_iter()
@@ -113,7 +96,7 @@ pub fn post_process_path(
     return path;
 }
 
-fn optimize_path(path: &Vec<Vec2>, is_walkable: &impl Fn(usize, usize) -> bool) -> Vec<Vec2> {
+fn optimize_path(grid: &ConfigNavigationGrid, path: &Vec<Vec2>) -> Vec<Vec2> {
     if path.len() <= 2 {
         return path.clone();
     }
@@ -129,8 +112,8 @@ fn optimize_path(path: &Vec<Vec2>, is_walkable: &impl Fn(usize, usize) -> bool) 
             let start_pos = path[current_index];
             let end_pos = path[lookahead_index];
 
-            // 只要找到一个可见的，那它一定是从后往前看的“最远”的点
-            if has_line_of_sight(start_pos, end_pos, is_walkable) {
+            // 只要找到一个可见的，那它一定是从后往前看的"最远"的点
+            if has_line_of_sight(grid, start_pos, end_pos) {
                 furthest_visible_index = lookahead_index;
                 break;
             }
@@ -144,9 +127,9 @@ fn optimize_path(path: &Vec<Vec2>, is_walkable: &impl Fn(usize, usize) -> bool) 
 }
 
 pub fn has_line_of_sight(
+    grid: &ConfigNavigationGrid,
     start: Vec2,
     end: Vec2,
-    is_walkable: &impl Fn(usize, usize) -> bool,
 ) -> bool {
     const CORNER_EPSILON: f32 = 1e-6;
 
@@ -210,7 +193,7 @@ pub fn has_line_of_sight(
         }
 
         // 检查新位置是否可行走
-        if !is_walkable(current_grid_x as usize, current_grid_y as usize) {
+        if !grid.is_walkable_by_xy((current_grid_x as usize, current_grid_y as usize)) {
             return false;
         }
 

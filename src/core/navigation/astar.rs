@@ -53,9 +53,8 @@ pub fn find_grid_path(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
     end: &Vec2,
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<Vec<(usize, usize)>> {
-    find_grid_path_with_result(grid, start, end, occupied_cells).map(|result| result.path)
+    find_grid_path_with_result(grid, start, end).map(|result| result.path)
 }
 
 /// 使用A*算法找到网格路径，返回详细结果
@@ -63,7 +62,6 @@ pub fn find_grid_path_with_result(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
     end: &Vec2,
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Option<AStarResult> {
     let start_pos = grid.get_cell_xy_by_position(start);
     let end_pos = grid.get_cell_xy_by_position(end);
@@ -128,7 +126,7 @@ pub fn find_grid_path_with_result(
 
         closed_set.insert(current.pos, current.g_cost);
 
-        for neighbor_pos in get_neighbors(grid, current.pos, occupied_cells) {
+        for neighbor_pos in get_neighbors(grid, current.pos) {
             if closed_set.contains_key(&neighbor_pos) {
                 continue;
             }
@@ -168,7 +166,6 @@ pub fn find_grid_path_with_result(
 fn get_neighbors(
     grid: &ConfigNavigationGrid,
     pos: (usize, usize),
-    occupied_cells: &HashSet<(usize, usize)>,
 ) -> Vec<(usize, usize)> {
     let mut neighbors = Vec::new();
 
@@ -194,11 +191,6 @@ fn get_neighbors(
         let new_pos = (new_x as usize, new_y as usize);
 
         if !grid.is_walkable_by_xy(new_pos) {
-            continue;
-        }
-
-        // 被实体占据的格子，也不能通过
-        if occupied_cells.contains(&new_pos) {
             continue;
         }
 
