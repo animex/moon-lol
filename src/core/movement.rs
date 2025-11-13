@@ -1,4 +1,5 @@
 use core::f32;
+use std::time::Instant;
 
 use bevy::prelude::*;
 use lol_config::ConfigNavigationGrid;
@@ -6,7 +7,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     calculate_occupied_grid_cells, get_nav_path, ArbitrationPipelinePlugin, Bounding,
-    CommandRotate, FinalDecision, LastDecision, PipelineStages, RequestBuffer,
+    CommandRotate, FinalDecision, LastDecision, NavigationStats, PipelineStages, RequestBuffer,
 };
 
 #[derive(Default)]
@@ -283,6 +284,7 @@ fn apply_final_movement_decision(
         &mut MovementState,
     )>,
     mut grid: ResMut<ConfigNavigationGrid>,
+    mut stats: ResMut<NavigationStats>,
     entities_with_bounding: Query<(Entity, &GlobalTransform, &Bounding)>,
 ) {
     for (entity, transform, decision, mut movement_state) in query.iter_mut() {
@@ -292,18 +294,23 @@ fn apply_final_movement_decision(
                     MovementWay::Pathfind(target) => {
                         // 清空并重新计算被Bounding实体占据的网格格子，并在寻路时避开它们
                         // 排除当前移动的实体自身（避免把自己当作障碍物）
+                        let start = Instant::now();
                         let exclude_entities = &[entity];
                         let occupied_cells = calculate_occupied_grid_cells(
                             &grid,
                             &entities_with_bounding,
                             exclude_entities,
                         );
+                        stats.calculate_occupied_grid_cells_time += start.elapsed();
+                        stats.calculate_occupied_grid_cells_count += 1;
+
                         grid.occupied_cells.clear();
                         grid.occupied_cells.extend(occupied_cells);
                         if let Some(path) = get_nav_path(
                             &transform.translation.xz(),
                             target,
                             &grid,
+                            Some(&mut stats),
                         ) {
                             movement_state.reset_path(&path);
                         }

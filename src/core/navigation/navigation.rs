@@ -1,6 +1,6 @@
 use bevy::prelude::*;
-use std::collections::HashSet;
-use std::time::Instant;
+use std::collections::{HashSet, VecDeque};
+use std::time::{Duration, Instant};
 
 use lol_config::ConfigNavigationGrid;
 
@@ -11,8 +11,29 @@ pub struct PluginNavigaton;
 
 impl Plugin for PluginNavigaton {
     fn build(&self, app: &mut App) {
+        app.init_resource::<NavigationStats>();
+
+        app.add_systems(First, |mut res_stats: ResMut<NavigationStats>| {
+            *res_stats = Default::default();
+        });
+        app.add_systems(Last, |res_stats: Res<NavigationStats>| {
+            print!("\x1B[2J\x1B[1;1H"); // 清屏
+            println!("NavigationStats: {:#?}", res_stats);
+        });
         app.add_systems(Update, update);
     }
+}
+
+#[derive(Resource, Default, Debug)]
+pub struct NavigationStats {
+    pub find_nearest_walkable_cell_count: u32,
+    pub find_nearest_walkable_cell_time: Duration,
+
+    pub get_nav_path_count: u32,
+    pub get_nav_path_time: Duration,
+
+    pub calculate_occupied_grid_cells_count: u32,
+    pub calculate_occupied_grid_cells_time: Duration,
 }
 
 fn update(grid: Res<ConfigNavigationGrid>, mut q_movement: Query<&mut Transform, With<Movement>>) {
@@ -25,24 +46,46 @@ pub fn get_nav_path(
     start_pos: &Vec2,
     end_pos: &Vec2,
     grid: &ConfigNavigationGrid,
+    stats: Option<&mut NavigationStats>,
 ) -> Option<Vec<Vec2>> {
     let start = Instant::now();
 
+    // 检查终点是否可行走，如果不可行，找到最近的可达格子
+    let end_grid_pos = grid.get_cell_xy_by_position(end_pos);
+    let adjusted_end_pos = if !grid.is_walkable_by_xy(end_grid_pos) {
+        if let Some(new_end_grid_pos) = find_nearest_walkable_cell(grid, end_grid_pos) {
+            debug!(
+                "get_nav_path: End position ({}, {}) is not walkable, using nearest walkable cell ({}, {})",
+                end_grid_pos.0, end_grid_pos.1, new_end_grid_pos.0, new_end_grid_pos.1
+            );
+            grid.get_cell_center_position_by_xy(new_end_grid_pos).xz()
+        } else {
+            warn!("get_nav_path: No walkable cell found near end position");
+            return None;
+        }
+    } else {
+        *end_pos
+    };
+
     // 检查起点和终点是否可直达
     let start_grid_pos = (start_pos - grid.min_position) / grid.cell_size;
-    let end_grid_pos = (end_pos - grid.min_position) / grid.cell_size;
+    let adjusted_end_grid_pos = (adjusted_end_pos - grid.min_position) / grid.cell_size;
 
-    if has_line_of_sight(&grid, start_grid_pos, end_grid_pos) {
+    if has_line_of_sight(&grid, start_grid_pos, adjusted_end_grid_pos) {
         system_debug!(
             "command_movement_move_to",
             "Direct path found in {:.6}ms",
             start.elapsed().as_millis()
         );
-        return Some(vec![start_pos.clone(), end_pos.clone()]);
+        if let Some(s) = stats {
+            s.get_nav_path_count += 1;
+            s.get_nav_path_time += start.elapsed();
+        }
+        return Some(vec![start_pos.clone(), adjusted_end_pos]);
     }
 
     // 如果不可直达，则使用A*算法规划路径
-    let result = find_path(&grid, start_pos, end_pos);
+    let result = find_path(&grid, start_pos, &adjusted_end_pos);
 
     system_debug!(
         "command_movement_move_to",
@@ -50,15 +93,16 @@ pub fn get_nav_path(
         start.elapsed().as_millis()
     );
 
+    if let Some(s) = stats {
+        s.get_nav_path_count += 1;
+        s.get_nav_path_time += start.elapsed();
+    }
+
     return result;
 }
 
 /// 主要的寻路函数，结合A*和漏斗算法
-pub fn find_path(
-    grid: &ConfigNavigationGrid,
-    start: &Vec2,
-    end: &Vec2,
-) -> Option<Vec<Vec2>> {
+pub fn find_path(grid: &ConfigNavigationGrid, start: &Vec2, end: &Vec2) -> Option<Vec<Vec2>> {
     // 首先使用A*找到网格路径
     let grid_path = find_grid_path(grid, start, end)?;
 
@@ -126,11 +170,7 @@ fn optimize_path(grid: &ConfigNavigationGrid, path: &Vec<Vec2>) -> Vec<Vec2> {
     optimized_path
 }
 
-pub fn has_line_of_sight(
-    grid: &ConfigNavigationGrid,
-    start: Vec2,
-    end: Vec2,
-) -> bool {
+pub fn has_line_of_sight(grid: &ConfigNavigationGrid, start: Vec2, end: Vec2) -> bool {
     const CORNER_EPSILON: f32 = 1e-6;
 
     let start_grid_x = start.x.floor() as isize;
@@ -211,6 +251,63 @@ pub fn world_pos_to_grid_xy(grid: &ConfigNavigationGrid, world_pos: Vec2) -> (us
     let x = ((world_pos.x - grid.min_position.x) / grid.cell_size).floor() as usize;
     let y = ((world_pos.y - grid.min_position.y) / grid.cell_size).floor() as usize;
     (x, y)
+}
+
+/// 找到最近的可达格子
+pub fn find_nearest_walkable_cell(
+    grid: &ConfigNavigationGrid,
+    start: (usize, usize),
+) -> Option<(usize, usize)> {
+    if grid.is_walkable_by_xy(start) {
+        return Some(start);
+    }
+
+    let mut visited = HashSet::new();
+    let mut queue = VecDeque::new();
+
+    visited.insert(start);
+    queue.push_back(start);
+
+    let directions = [
+        (-1, 0),
+        (0, -1),
+        (0, 1),
+        (1, 0),
+        (-1, -1),
+        (-1, 1),
+        (1, -1),
+        (1, 1),
+    ];
+
+    while let Some((x, y)) = queue.pop_front() {
+        for (dx, dy) in directions {
+            let new_x = x as i32 + dx;
+            let new_y = y as i32 + dy;
+
+            if new_x < 0 || new_y < 0 {
+                continue;
+            }
+
+            let new_pos = (new_x as usize, new_y as usize);
+
+            if new_pos.0 >= grid.x_len || new_pos.1 >= grid.y_len {
+                continue;
+            }
+
+            if visited.contains(&new_pos) {
+                continue;
+            }
+
+            if grid.is_walkable_by_xy(new_pos) {
+                return Some(new_pos);
+            }
+
+            visited.insert(new_pos);
+            queue.push_back(new_pos);
+        }
+    }
+
+    None
 }
 
 /// 根据所有带Bounding组件的实体，计算被占据的网格格子

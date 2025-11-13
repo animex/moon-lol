@@ -71,8 +71,8 @@ pub fn find_grid_path_with_result(
         start_pos.0, start_pos.1, end_pos.0, end_pos.1
     );
 
-    if !grid.is_walkable_by_xy(start_pos) || !grid.is_walkable_by_xy(end_pos) {
-        warn!("A* pathfinding: Invalid start or end position");
+    if !grid.is_walkable_by_xy(start_pos) {
+        warn!("A* pathfinding: Invalid start position");
         return None;
     }
 

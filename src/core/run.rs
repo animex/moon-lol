@@ -107,8 +107,8 @@ fn on_event_movement_end(
             }
         };
 
-        if target_position.distance(transform.translation.xz()) < 10. {
-            commands.entity(entity).remove::<Run>().trigger(EventRunEnd);
-        }
+        commands.entity(entity).remove::<Run>().trigger(EventRunEnd);
+        // if target_position.distance(transform.translation.xz()) < 10. {
+        // }
     }
 }
