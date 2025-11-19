@@ -5,7 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Action, AttackAuto, CommandAction, CommandMovement, DamageType, EventDamageCreate, EventDead,
-    EventSpawn, MovementAction, MovementWay, State,
+    EventSpawn, HealthBar, HealthBarType, MovementAction, MovementWay, State,
 };
 
 #[derive(Default)]
@@ -13,17 +13,17 @@ pub struct PluginMinion;
 
 impl Plugin for PluginMinion {
     fn build(&self, app: &mut bevy::prelude::App) {
+        app.add_systems(FixedUpdate, fixed_update);
         app.add_systems(FixedPostUpdate, minion_aggro);
 
         app.add_observer(on_spawn);
-        app.add_observer(on_command_continue_minion_path);
         app.add_observer(on_event_minion_found_target);
         app.add_observer(on_target_dead);
     }
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[require(MinionState, AggroInfo, State)]
+#[require(MinionState, AggroInfo, State, HealthBar = HealthBar { bar_type: HealthBarType::Minion })]
 pub enum Minion {
     Siege,
     Melee,
@@ -76,6 +76,43 @@ pub struct ChasingTooMuch;
 
 pub const AGGRO_RANGE: f32 = 500.0;
 
+pub fn fixed_update(
+    mut commands: Commands,
+    res_config: Res<ConfigMap>,
+    q_minion: Query<(Entity, &Transform, &Team, &Lane, &MinionState), With<Minion>>,
+) {
+    for (entity, transform, team, lane, minion_state) in q_minion.iter() {
+        if *minion_state == MinionState::AttackingTarget {
+            continue;
+        }
+
+        let minion_path = res_config.minion_paths.get(lane).unwrap();
+
+        let mut path = minion_path.clone();
+
+        if matches!(team, Team::Chaos) {
+            path.reverse();
+        }
+
+        let Some(closest_index) = find_closest_point_index(&path, transform.translation.xz())
+        else {
+            return;
+        };
+
+        commands.trigger(CommandMovement {
+            entity,
+            priority: 0,
+            action: MovementAction::Start {
+                way: MovementWay::Pathfind(
+                    *path.get(closest_index + 1).unwrap_or(&path[closest_index]),
+                ),
+                speed: None,
+                source: "Minion".to_string(),
+            },
+        });
+    }
+}
+
 pub fn minion_aggro(
     mut commands: Commands,
     q_minion: Query<(Entity, &Team, &Transform, &AggroInfo), With<Minion>>,
@@ -124,40 +161,6 @@ pub fn minion_aggro(
             });
         }
     }
-}
-
-pub fn on_command_continue_minion_path(
-    trigger: On<CommandMinionContinuePath>,
-    query: Query<(&Transform, &Lane, &Team)>,
-    res_config: Res<ConfigMap>,
-    mut commands: Commands,
-) {
-    let Ok((transform, lane, team)) = query.get(trigger.event_target()) else {
-        return;
-    };
-
-    let minion_path = res_config.minion_paths.get(lane).unwrap();
-
-    let mut path = minion_path.clone();
-
-    if matches!(team, Team::Chaos) {
-        path.reverse();
-    }
-
-    let Some(closest_index) = find_closest_point_index(&path, transform.translation.xz()) else {
-        return;
-    };
-
-    let entity = trigger.event_target();
-    commands.trigger(CommandMovement {
-        entity,
-        priority: 0,
-        action: MovementAction::Start {
-            way: MovementWay::Path(path[closest_index..].to_vec()),
-            speed: None,
-            source: "Minion".to_string(),
-        },
-    });
 }
 
 fn on_event_minion_found_target(

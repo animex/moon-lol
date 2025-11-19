@@ -9,7 +9,7 @@ async fn main() {
 
     save_config_map(
         root_dir,
-        "bloom",
+        "base_srx",
         vec![("Fiora", "Skin22"), ("Hwei", "Skin0")],
     )
     .await

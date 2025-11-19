@@ -19,8 +19,8 @@ impl Plugin for PluginNavigaton {
         app.add_systems(Last, |res_stats: Res<NavigationStats>| {
             // print!("\x1B[2J\x1B[1;1H"); // 清屏
             // println!("NavigationStats: {:#?}", res_stats);
-            if res_stats.get_nav_path_time > Duration::from_millis(1) {
-                info!("{:#?}", res_stats);
+            if res_stats.get_nav_path_time > Duration::from_millis(10) {
+                info!("1{:#?}", res_stats);
             }
             // if res_stats.occupied_grid_cells_num > 0 {
             //     info!("{:#?}", res_stats.occupied_grid_cells_num);

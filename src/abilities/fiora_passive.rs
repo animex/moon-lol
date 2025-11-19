@@ -239,7 +239,9 @@ fn on_damage_create(
     mut last_direction: ResMut<FioraVitalLastDirection>,
 ) {
     let target_entity = trigger.event_target();
-    let (transform, team) = q_transform.get(trigger.source).unwrap();
+    let Ok((transform, team)) = q_transform.get(trigger.source) else {
+        return;
+    };
 
     let Ok((target_transform, target_team, hp, vital)) = q_target_with_vital.get(target_entity)
     else {

@@ -129,7 +129,9 @@ fn on_damage_create(
     mut q_buff_fiora_r: Query<(Entity, &BuffOf, &mut BuffFioraR)>,
 ) {
     let target_entity = trigger.event_target();
-    let (transform, team) = q_transform.get(trigger.source).unwrap();
+    let Ok((transform, team)) = q_transform.get(trigger.source) else {
+        return;
+    };
 
     let Some((buff_entity, mut buff_fiora_r)) =
         q_buff_fiora_r

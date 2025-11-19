@@ -25,19 +25,10 @@ pub struct SkinScale(pub f32);
 impl Plugin for PluginSkin {
     fn build(&self, app: &mut App) {
         app.add_observer(on_command_skin_spawn);
+        app.add_observer(on_command_spawn_mesh);
+        app.add_observer(on_command_spawn_animation);
         app.add_systems(Update, update_skin_scale);
     }
-}
-
-// 皮肤系统事件定义
-#[derive(EntityEvent)]
-pub struct EventSkinSpawn {
-    entity: Entity,
-}
-
-#[derive(EntityEvent)]
-pub struct EventSkinSpawnComplete {
-    entity: Entity,
 }
 
 #[derive(EntityEvent)]
@@ -46,17 +37,32 @@ pub struct CommandSkinSpawn {
     pub skin_path: String,
 }
 
+#[derive(EntityEvent)]
+pub struct CommandSpawnMesh {
+    pub entity: Entity,
+    pub skin_path: String,
+}
+
+#[derive(EntityEvent)]
+pub struct CommandSpawnAnimation {
+    pub entity: Entity,
+    pub skin_path: String,
+}
+
+/// 更新皮肤缩放系统
+fn update_skin_scale(mut query: Query<(&SkinScale, &mut Transform)>) {
+    for (skin_scale, mut transform) in query.iter_mut() {
+        transform.scale = Vec3::splat(skin_scale.0);
+    }
+}
+
 // 皮肤生成命令处理器
 fn on_command_skin_spawn(
     trigger: On<CommandSkinSpawn>,
     mut commands: Commands,
-    mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
-    asset_server: Res<AssetServer>,
     res_resource_cache: Res<ResourceCache>,
 ) {
     let entity = trigger.event_target();
-
-    commands.trigger(EventSkinSpawn { entity });
 
     // 从 skin_path 获取 ConfigCharacterSkin
     let skin = res_resource_cache
@@ -64,26 +70,217 @@ fn on_command_skin_spawn(
         .get(&trigger.skin_path)
         .unwrap_or_else(|| panic!("Skin not found: {}", trigger.skin_path));
 
-    // 设置初始的 SkinScale 组件
-    let skin_scale = SkinScale(skin.skin_scale.unwrap_or(1.0));
-    commands.entity(entity).insert(skin_scale);
+    commands.entity(entity).insert((
+        Visibility::default(),
+        SkinScale(skin.skin_scale.unwrap_or(1.0)),
+    ));
 
-    spawn_skin_entity(
-        &mut commands,
-        &mut res_animation_graph,
-        &asset_server,
+    commands.trigger(CommandSpawnMesh {
         entity,
-        skin,
-    );
-
-    commands.trigger(EventSkinSpawnComplete { entity });
+        skin_path: trigger.skin_path.clone(),
+    });
 }
 
-/// 更新皮肤缩放系统
-fn update_skin_scale(mut query: Query<(&SkinScale, &mut Transform), Changed<SkinScale>>) {
-    for (skin_scale, mut transform) in query.iter_mut() {
-        transform.scale = Vec3::splat(skin_scale.0);
+fn on_command_spawn_mesh(
+    trigger: On<CommandSpawnMesh>,
+    mut commands: Commands,
+    asset_server: Res<AssetServer>,
+    res_resource_cache: Res<ResourceCache>,
+) {
+    let entity = trigger.event_target();
+    let skin_path = &trigger.skin_path;
+    let skin = res_resource_cache.skins.get(skin_path).unwrap();
+
+    let material_handle: Handle<StandardMaterial> = asset_server.load(skin.material_path.clone());
+
+    let mut index_to_entity = vec![Entity::PLACEHOLDER; skin.joints.len()];
+
+    for (i, joint) in skin.joints.iter().enumerate() {
+        let ent = commands
+            .spawn((
+                joint.transform,
+                AnimationTarget {
+                    id: AnimationTargetId(Uuid::from_u128(joint.hash as u128)),
+                    player: entity,
+                },
+            ))
+            .id();
+        index_to_entity[i] = ent;
     }
+
+    for (i, joint) in skin.joints.iter().enumerate() {
+        if joint.parent_index >= 0 {
+            let parent_entity_joint = index_to_entity[joint.parent_index as usize];
+            commands
+                .entity(parent_entity_joint)
+                .add_child(index_to_entity[i]);
+        } else {
+            commands.entity(entity).add_child(index_to_entity[i]);
+        }
+    }
+
+    let inverse_bindposes = asset_server.load(&skin.inverse_bind_pose_path);
+    let joints = skin
+        .joint_influences_indices
+        .iter()
+        .map(|&v| index_to_entity[v as usize])
+        .collect::<Vec<_>>();
+    let skinned_mesh = SkinnedMesh {
+        inverse_bindposes,
+        joints,
+    };
+
+    for submesh_path in &skin.submesh_paths {
+        let mesh_handle: Handle<Mesh> = asset_server.load(submesh_path.clone());
+        commands.entity(entity).with_child((
+            Transform::default(),
+            Mesh3d(mesh_handle),
+            MeshMaterial3d(material_handle.clone()),
+            skinned_mesh.clone(),
+        ));
+    }
+
+    commands.entity(entity).insert(skinned_mesh.clone());
+
+    commands.trigger(CommandSpawnAnimation {
+        entity,
+        skin_path: skin_path.clone(),
+    });
+}
+
+fn on_command_spawn_animation(
+    trigger: On<CommandSpawnAnimation>,
+    mut commands: Commands,
+    mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
+    asset_server: Res<AssetServer>,
+    res_resource_cache: Res<ResourceCache>,
+) {
+    let entity = trigger.event_target();
+    let skin_path = &trigger.skin_path;
+    let skin = res_resource_cache.skins.get(skin_path).unwrap();
+
+    let mut animation_graph = AnimationGraph::new();
+
+    let hash_to_node = build_animation_nodes(skin, &asset_server, &mut animation_graph);
+
+    let graph_handle = res_animation_graph.add(animation_graph);
+
+    commands.entity(entity).insert((
+        AnimationPlayer::default(),
+        AnimationGraphHandle(graph_handle),
+        Animation {
+            hash_to_node,
+            blend_data: skin.blend_data.clone(),
+        },
+        AnimationState {
+            last_hash: None,
+            current_hash: hash_bin("Idle1"),
+            current_duration: None,
+            repeat: true,
+        },
+    ));
+}
+
+fn build_animation_nodes(
+    skin: &ConfigCharacterSkin,
+    asset_server: &Res<AssetServer>,
+    animation_graph: &mut AnimationGraph,
+) -> HashMap<u32, AnimationNode> {
+    let mut hash_to_node = HashMap::new();
+
+    for (hash, clip) in &skin.animation_map {
+        match clip {
+            AnimationGraphDataMClipDataMap::AtomicClipData(AtomicClipData {
+                m_animation_resource_data,
+                ..
+            }) => {
+                let clip =
+                    asset_server.load(m_animation_resource_data.m_animation_file_path.clone());
+                let node_index = animation_graph.add_clip(clip, 1.0, animation_graph.root);
+                hash_to_node.insert(*hash, AnimationNode::Clip { node_index });
+            }
+            AnimationGraphDataMClipDataMap::ConditionFloatClipData(ConditionFloatClipData {
+                m_condition_float_pair_data_list,
+                updater,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::ConditionFloat {
+                        conditions: m_condition_float_pair_data_list
+                            .iter()
+                            .map(|v| (v.m_clip_name, v.m_value.unwrap_or(0.0)))
+                            .map(|(key, value)| AnimationNodeF32 { key, value })
+                            .collect::<Vec<_>>(),
+                        updater: updater.clone(),
+                    },
+                );
+            }
+            AnimationGraphDataMClipDataMap::SelectorClipData(SelectorClipData {
+                m_selector_pair_data_list,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::Selector {
+                        probably_nodes: m_selector_pair_data_list
+                            .iter()
+                            .map(|v| (v.m_clip_name, v.m_probability.unwrap_or(0.0)))
+                            .map(|(key, value)| AnimationNodeF32 { key, value })
+                            .collect::<Vec<_>>(),
+                        current_index: None,
+                    },
+                );
+            }
+            AnimationGraphDataMClipDataMap::SequencerClipData(SequencerClipData {
+                m_clip_name_list,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::Sequence {
+                        hashes: m_clip_name_list.clone(),
+                        current_index: None,
+                    },
+                );
+            }
+            AnimationGraphDataMClipDataMap::ConditionBoolClipData(ConditionBoolClipData {
+                updater,
+                m_true_condition_clip_name,
+                m_false_condition_clip_name,
+                ..
+            }) => {
+                hash_to_node.insert(
+                    *hash,
+                    AnimationNode::ConditionBool {
+                        updater: updater.clone(),
+                        true_node: *m_true_condition_clip_name,
+                        false_node: *m_false_condition_clip_name,
+                    },
+                );
+            }
+            _ => {}
+        };
+    }
+
+    hash_to_node.insert(
+        hash_bin("Attack"),
+        AnimationNode::Selector {
+            probably_nodes: vec![
+                AnimationNodeF32 {
+                    key: hash_bin("Attack1"),
+                    value: 1.0,
+                },
+                AnimationNodeF32 {
+                    key: hash_bin("Attack2"),
+                    value: 1.0,
+                },
+            ],
+            current_index: None,
+        },
+    );
+
+    hash_to_node
 }
 
 fn spawn_skin_entity(
@@ -253,7 +450,7 @@ fn spawn_skin_entity(
     };
 
     for submesh_path in &skin.submesh_paths {
-        let mesh_handle = asset_server.load(submesh_path.clone());
+        let mesh_handle: Handle<Mesh> = asset_server.load(submesh_path.clone());
         commands.entity(entity).with_child((
             Transform::default(),
             Mesh3d(mesh_handle),

@@ -3,6 +3,7 @@ use std::time::Duration;
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
 
+// use moon_lol::CameraState;
 use moon_lol::{PluginBarrack, PluginCore, PluginResource};
 
 fn main() {
@@ -16,10 +17,7 @@ fn main() {
                     ..default()
                 }),
                 ..default()
-            }), // .set(LogPlugin {
-            //     filter: "moon_lol=debug".to_string(),
-            //     ..default()
-            // })
+            }),
             PluginCore
                 .build()
                 .set(PluginResource {
@@ -41,13 +39,10 @@ fn main() {
                 react_to_window_events: false,
             },
         })
-        // .add_systems(
-        //     Update,
-        //     |mut q_camera_state: Query<&mut CameraState, Added<CameraState>>| {
-        //         for mut state in q_camera_state.iter_mut() {
-        //             state.scale = 0.1;
-        //         }
-        //     },
-        // )
+        // .add_systems(Update, |mut q_camera_state: Query<&mut CameraState>| {
+        //     for mut state in q_camera_state.iter_mut() {
+        //         state.scale = 3.5;
+        //     }
+        // })
         .run();
 }

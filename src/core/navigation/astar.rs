@@ -34,7 +34,6 @@ impl PartialOrd for AStarNode {
 
 impl Ord for AStarNode {
     fn cmp(&self, other: &Self) -> Ordering {
-        // 反转比较，因为BinaryHeap是最大堆，我们需要最小堆
         other
             .f_cost()
             .partial_cmp(&self.f_cost())
@@ -42,14 +41,12 @@ impl Ord for AStarNode {
     }
 }
 
-/// A* 搜索结果
 #[derive(Debug, Clone)]
 pub struct AStarResult {
     pub path: Vec<(usize, usize)>,
     pub visited_cells: Vec<(usize, usize)>,
 }
 
-/// 使用A*算法找到网格路径
 pub fn find_grid_path(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
@@ -58,7 +55,6 @@ pub fn find_grid_path(
     find_grid_path_with_result(grid, start, end).map(|result| result.path)
 }
 
-/// 使用A*算法找到网格路径，返回详细结果
 pub fn find_grid_path_with_result(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
@@ -67,106 +63,187 @@ pub fn find_grid_path_with_result(
     let start_pos = grid.get_cell_xy_by_position(start);
     let end_pos = grid.get_cell_xy_by_position(end);
 
-    debug!(
-        "A* pathfinding: start=({}, {}) end=({}, {})",
-        start_pos.0, start_pos.1, end_pos.0, end_pos.1
-    );
-
-    if !grid.is_walkable_by_xy(start_pos) {
-        warn!("A* pathfinding: Invalid start position");
+    if !grid.is_walkable_by_xy(start_pos) || !grid.is_walkable_by_xy(end_pos) {
+        warn!("Bidirectional A*: Invalid start or end position");
         return None;
     }
 
-    let mut open_set = BinaryHeap::new();
-    let mut closed_set = HashMap::new();
-    let mut came_from = HashMap::new();
-    let mut g_scores = HashMap::new();
-    let mut visited_cells = Vec::new(); // 跟踪访问过的单元格
+    if start_pos == end_pos {
+        return Some(AStarResult {
+            path: vec![start_pos],
+            visited_cells: vec![start_pos],
+        });
+    }
 
-    let start_node = AStarNode {
+    let mut open_fwd = BinaryHeap::new();
+    let mut open_bwd = BinaryHeap::new();
+
+    let mut g_fwd = HashMap::new();
+    let mut g_bwd = HashMap::new();
+
+    let mut came_from_fwd = HashMap::new();
+    let mut came_from_bwd = HashMap::new();
+
+    let mut visited_cells = Vec::new();
+
+    // 初始化正向搜索
+    g_fwd.insert(start_pos, 0.0);
+    open_fwd.push(AStarNode {
         pos: start_pos,
         g_cost: 0.0,
         h_cost: heuristic_cost(grid.cell_size, start_pos, end_pos),
-    };
+    });
 
-    open_set.push(start_node);
-    g_scores.insert(start_pos, 0.0);
+    // 初始化反向搜索
+    g_bwd.insert(end_pos, 0.0);
+    open_bwd.push(AStarNode {
+        pos: end_pos,
+        g_cost: 0.0,
+        h_cost: heuristic_cost(grid.cell_size, end_pos, start_pos),
+    });
 
+    let mut best_path_cost = f32::MAX;
+    let mut best_connection = None;
     let mut iterations = 0;
 
-    while let Some(current) = open_set.pop() {
+    while !open_fwd.is_empty() && !open_bwd.is_empty() {
         iterations += 1;
-
-        // 记录访问过的单元格
-        visited_cells.push(current.pos);
-
-        if current.pos == end_pos {
-            debug!("A* pathfinding: Found path in {} iterations", iterations);
-            // 重建网格路径
-            let mut path = Vec::new();
-            let mut current_pos = end_pos;
-
-            while let Some(&parent_pos) = came_from.get(&current_pos) {
-                path.push(current_pos);
-                current_pos = parent_pos;
-            }
-            path.push(start_pos);
-            path.reverse();
-
-            return Some(AStarResult {
-                path,
-                visited_cells,
-            });
+        if iterations > 10000 {
+            warn!("Bidirectional A*: Exceeded iterations limit");
+            return None;
         }
 
-        if let Some(&existing_g_cost) = closed_set.get(&current.pos) {
-            if current.g_cost > existing_g_cost {
+        // 优化验证：如果两端最小的 f_cost 之和已经超过了已知的最佳路径，则不可能找到更优解
+        if let (Some(f), Some(b)) = (open_fwd.peek(), open_bwd.peek()) {
+            if f.f_cost() + b.f_cost() >= best_path_cost && best_connection.is_some() {
+                break;
+            }
+        }
+
+        // 平衡扩展：选择节点较少的一端进行扩展
+        let expand_forward = open_fwd.len() <= open_bwd.len();
+
+        let current_node = if expand_forward {
+            open_fwd.pop().unwrap()
+        } else {
+            open_bwd.pop().unwrap()
+        };
+
+        visited_cells.push(current_node.pos);
+
+        let (current_g_map, other_g_map, current_came_from, current_open, target_pos) =
+            if expand_forward {
+                (
+                    &mut g_fwd,
+                    &g_bwd,
+                    &mut came_from_fwd,
+                    &mut open_fwd,
+                    end_pos,
+                )
+            } else {
+                (
+                    &mut g_bwd,
+                    &g_fwd,
+                    &mut came_from_bwd,
+                    &mut open_bwd,
+                    start_pos,
+                )
+            };
+
+        // 惰性删除检查：如果在该方向已经有更优路径到达此点，跳过
+        if let Some(&g) = current_g_map.get(&current_node.pos) {
+            if current_node.g_cost > g {
                 continue;
             }
         }
 
-        closed_set.insert(current.pos, current.g_cost);
-
-        for neighbor_pos in get_neighbors(grid, current.pos) {
-            if closed_set.contains_key(&neighbor_pos) {
-                continue;
+        // 检查是否在当前节点与另一端相遇
+        if let Some(&other_g) = other_g_map.get(&current_node.pos) {
+            let total_cost = current_node.g_cost + other_g;
+            if total_cost < best_path_cost {
+                best_path_cost = total_cost;
+                best_connection = Some(current_node.pos);
             }
+        }
 
-            let tentative_g_cost =
-                current.g_cost + distance_cost(grid.cell_size, current.pos, neighbor_pos);
+        // 处理邻居的逻辑提取为闭包以减少缩进
+        let mut process_neighbor = |neighbor_pos: (usize, usize)| {
+            let tentative_g =
+                current_node.g_cost + distance_cost(grid.cell_size, current_node.pos, neighbor_pos);
 
-            if let Some(&existing_g_cost) = g_scores.get(&neighbor_pos) {
-                if tentative_g_cost >= existing_g_cost {
-                    continue;
+            if let Some(&existing_g) = current_g_map.get(&neighbor_pos) {
+                if tentative_g >= existing_g {
+                    return;
                 }
             }
 
-            let neighbor_node = AStarNode {
-                pos: neighbor_pos,
-                g_cost: tentative_g_cost,
-                h_cost: heuristic_cost(grid.cell_size, neighbor_pos, end_pos),
-            };
+            current_came_from.insert(neighbor_pos, current_node.pos);
+            current_g_map.insert(neighbor_pos, tentative_g);
 
-            came_from.insert(neighbor_pos, current.pos);
-            g_scores.insert(neighbor_pos, tentative_g_cost);
-            open_set.push(neighbor_node);
+            current_open.push(AStarNode {
+                pos: neighbor_pos,
+                g_cost: tentative_g,
+                h_cost: heuristic_cost(grid.cell_size, neighbor_pos, target_pos),
+            });
+
+            // 扩展时立即检查连接，加速收敛
+            if let Some(&other_g) = other_g_map.get(&neighbor_pos) {
+                let total_cost = tentative_g + other_g;
+                if total_cost < best_path_cost {
+                    best_path_cost = total_cost;
+                    best_connection = Some(neighbor_pos);
+                }
+            }
+        };
+
+        for neighbor_pos in get_neighbors(grid, current_node.pos) {
+            process_neighbor(neighbor_pos);
         }
     }
 
-    warn!(
-        "A* pathfinding: No path found after {} iterations",
-        iterations
-    );
-    // 即使没有找到路径，也返回访问过的单元格信息
+    if let Some(meet_node) = best_connection {
+        debug!("Bidirectional A*: Found path iterations={}", iterations);
+        let path = reconstruct_bidirectional_path(meet_node, &came_from_fwd, &came_from_bwd);
+        return Some(AStarResult {
+            path,
+            visited_cells,
+        });
+    }
+
     Some(AStarResult {
         path: Vec::new(),
         visited_cells,
     })
 }
 
-fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize, usize)> {
-    let mut neighbors = Vec::new();
+fn reconstruct_bidirectional_path(
+    meet_node: (usize, usize),
+    came_from_fwd: &HashMap<(usize, usize), (usize, usize)>,
+    came_from_bwd: &HashMap<(usize, usize), (usize, usize)>,
+) -> Vec<(usize, usize)> {
+    let mut path = Vec::new();
 
+    // 1. 从相遇点回溯到起点
+    let mut curr = meet_node;
+    path.push(curr);
+    while let Some(&parent) = came_from_fwd.get(&curr) {
+        path.push(parent);
+        curr = parent;
+    }
+    path.reverse();
+
+    // 2. 从相遇点回溯到终点 (注意：came_from_bwd 记录的是从终点反向搜索的父节点)
+    curr = meet_node;
+    while let Some(&parent) = came_from_bwd.get(&curr) {
+        path.push(parent);
+        curr = parent;
+    }
+
+    path
+}
+
+fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize, usize)> {
+    let mut neighbors = Vec::with_capacity(8);
     let directions = [
         (-1, 0),
         (0, -1),
@@ -187,23 +264,18 @@ fn get_neighbors(grid: &ConfigNavigationGrid, pos: (usize, usize)) -> Vec<(usize
         }
 
         let new_pos = (new_x as usize, new_y as usize);
-
-        if !grid.is_walkable_by_xy(new_pos) {
-            continue;
+        if grid.is_walkable_by_xy(new_pos) {
+            neighbors.push(new_pos);
         }
-
-        neighbors.push(new_pos);
     }
-
     neighbors
 }
 
 fn distance_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f32 {
-    let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
-    let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
+    let dx = (to.0 as i32 - from.0 as i32).abs();
+    let dy = (to.1 as i32 - from.1 as i32).abs();
 
-    // 对角线移动成本更高
-    if dx == 1.0 && dy == 1.0 {
+    if dx == 1 && dy == 1 {
         1.414 * cell_size
     } else {
         cell_size
@@ -213,10 +285,8 @@ fn distance_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f3
 fn heuristic_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f32 {
     let dx = (to.0 as i32 - from.0 as i32).abs() as f32;
     let dy = (to.1 as i32 - from.1 as i32).abs() as f32;
-    let euclidean_distance = (dx * dx + dy * dy).sqrt() * cell_size;
+    let euclidean = (dx * dx + dy * dy).sqrt() * cell_size;
 
-    // 引入一个非常小的权重来打破平局，p 应该很小
-    // 例如 1.0 / (地图最大距离)
     const P: f32 = 1.0 / (300.0 * 300.0);
-    return euclidean_distance * (1.0 + P);
+    euclidean * (1.0 + P)
 }

@@ -1,10 +1,10 @@
 use bevy::prelude::*;
 
-use crate::State;
+use crate::{HealthBar, HealthBarType, State};
 
 #[derive(Component, Reflect, Default)]
 #[reflect(Component)]
-#[require(State)]
+#[require(State, HealthBar = HealthBar { bar_type: HealthBarType::Champion })]
 pub struct Champion;
 
 #[derive(Default)]

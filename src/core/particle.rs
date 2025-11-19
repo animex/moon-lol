@@ -67,7 +67,8 @@ impl Plugin for PluginParticle {
                     sync_simple_transforms,
                 )
                     .chain(),
-                (update_emitter, update_emitter_attached),
+                update_emitter,
+                update_emitter_attached,
                 update_decal_intersections,
                 update_particle_transform,
                 (
@@ -132,12 +133,19 @@ fn on_command_particle_spawn(
     res_config_map: Res<ConfigMap>,
     q_global_transform: Query<&GlobalTransform>,
 ) {
+    let entity = trigger.event_target();
+
+    let Ok(global_transform) = q_global_transform
+        .get(entity)
+        .map(|v| v.compute_transform())
+    else {
+        return;
+    };
+
     let vfx_system_definition_data = res_config_map
         .vfx_system_definition_datas
         .get(&trigger.particle)
         .unwrap();
-
-    let entity = trigger.event_target();
 
     // if !vfx_system_definition_data
     //     .particle_name
@@ -159,8 +167,6 @@ fn on_command_particle_spawn(
     {
         vfx_emitter_definition_datas.extend(simple_emitter_definition_data);
     }
-
-    let global_transform = q_global_transform.get(entity).unwrap().compute_transform();
 
     for (i, vfx_emitter_definition_data) in vfx_emitter_definition_datas.into_iter().enumerate() {
         // if vfx_emitter_definition_data.emitter_name.clone().unwrap() != "Fiora_Flash" {

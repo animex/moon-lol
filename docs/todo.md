@@ -69,7 +69,7 @@ warning active timeout_red
 
 ## 飞沙走石
 
-- [ ] 加载慧的角色
+- [x] 加载慧的角色
 
 - [ ] e 触发慧的特效
 

@@ -274,7 +274,7 @@ fn on_command_attack_start(
                 return;
             }
 
-            commands.entity(entity).remove::<AttackState>();
+            commands.entity(entity).try_remove::<AttackState>();
             commands.trigger(CommandAttackStart { entity, target });
         }
         AttackStatus::Cooldown { .. } => {
@@ -295,7 +295,7 @@ fn on_command_attack_reset(
         return;
     };
 
-    commands.entity(entity).remove::<AttackState>();
+    commands.entity(entity).try_remove::<AttackState>();
 
     let Some(target) = attack_state.target else {
         return;
@@ -317,7 +317,7 @@ fn on_command_attack_stop(
 
     match attack_state.status {
         AttackStatus::Windup { .. } => {
-            commands.entity(entity).remove::<AttackState>();
+            commands.entity(entity).try_remove::<AttackState>();
         }
         AttackStatus::Cooldown { .. } => {
             attack_state.target = None;
@@ -335,7 +335,7 @@ fn on_event_dead(
     for (entity, attack_state) in q_attack_state.iter() {
         if let AttackStatus::Windup { target, .. } = &attack_state.status {
             if *target == dead_entity {
-                commands.entity(entity).remove::<AttackState>();
+                commands.entity(entity).try_remove::<AttackState>();
             }
         }
     }
@@ -373,7 +373,7 @@ fn fixed_update(
             AttackStatus::Cooldown { end_time } => {
                 // 检查后摇是否完成
                 if *end_time <= now {
-                    commands.entity(entity).remove::<AttackState>();
+                    commands.entity(entity).try_remove::<AttackState>();
                     commands.try_trigger(EventAttackReady { entity });
 
                     if let Some(target) = attack_state.target {

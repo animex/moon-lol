@@ -23,6 +23,7 @@ plugin_group! {
         :PluginCharacter,
         :PluginDebugSphere,
         :PluginFiora,
+        :PluginHwei,
         :PluginMinion,
 
         :PluginAction,

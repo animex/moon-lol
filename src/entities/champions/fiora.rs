@@ -30,22 +30,10 @@ impl Plugin for PluginFiora {
 #[reflect(Component)]
 pub struct Fiora;
 
-pub fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Without<Skills>)>) {
+fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Without<Skills>)>) {
     for entity in q_fiora.iter() {
         commands
             .entity(entity)
-            .insert((
-                Movement { speed: 325.0 },
-                Health {
-                    value: 600.0,
-                    max: 600.0,
-                },
-                Attack::new(150.0, 0.2, 1.45),
-                Bounding {
-                    radius: 35.0,
-                    height: 300.0,
-                },
-            ))
             .with_related::<SkillOf>((Skill { effect: None }, AbilityFioraPassive))
             .with_related::<SkillOf>((Skill {
                 effect: Some(behave! {

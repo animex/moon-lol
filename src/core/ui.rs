@@ -1,13 +1,29 @@
 use bevy::color::palettes::css::{BLUE, RED, WHITE};
-use bevy::{color::palettes, prelude::*};
+use bevy::prelude::*;
 
 use crate::{Bounding, DamageType, EventDamageCreate, Health};
+
+#[derive(Component, Reflect, Debug, Clone, Copy, Default)]
+#[reflect(Component)]
+pub struct HealthBar {
+    pub bar_type: HealthBarType,
+}
+
+#[derive(Reflect, Debug, Clone, Copy, PartialEq, Eq, Default)]
+pub enum HealthBarType {
+    #[default]
+    Minion,
+    Champion,
+    Turret,
+}
 
 #[derive(Default)]
 pub struct PluginUI;
 
 impl Plugin for PluginUI {
     fn build(&self, app: &mut App) {
+        app.register_type::<HealthBar>();
+        app.register_type::<HealthBarType>();
         app.add_systems(Update, (init_health_bar, ui, update_damage_numbers));
         app.add_observer(on_damage_create);
     }
@@ -44,17 +60,16 @@ pub struct DamageNumber {
 
 fn init_health_bar(
     mut commands: Commands,
-    q_health: Query<Entity, Added<Health>>,
+    res_asset_server: Res<AssetServer>,
+    q_added_health_bar: Query<(Entity, &HealthBar), Added<HealthBar>>,
     q_bounding: Query<&Bounding>,
 ) {
-    for entity in q_health.iter() {
+    for (entity, health_bar) in q_added_health_bar.iter() {
         commands
             .spawn((
                 Node {
-                    width: Val::Px(75.0),
-                    height: Val::Px(5.0),
                     position_type: PositionType::Absolute,
-                    ..Default::default()
+                    ..default()
                 },
                 UIBind {
                     entity,
@@ -64,37 +79,101 @@ fn init_health_bar(
                 },
             ))
             .with_children(|parent| {
-                parent
-                    .spawn((Node {
-                        width: Val::Percent(100.0),
-                        height: Val::Percent(100.0),
-                        left: Val::Percent(-50.0),
-                        position_type: PositionType::Absolute,
-                        ..Default::default()
-                    },))
-                    .with_children(|parent| {
-                        parent.spawn((
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Percent(100.0),
-                                position_type: PositionType::Absolute,
-                                ..Default::default()
-                            },
-                            BackgroundColor(Color::Srgba(palettes::css::BLACK)),
-                            BorderRadius::all(Val::Px(5.0)),
-                        ));
-                        parent.spawn((
-                            Node {
-                                width: Val::Percent(100.0),
-                                height: Val::Percent(100.0),
-                                position_type: PositionType::Absolute,
-                                ..Default::default()
-                            },
-                            HealthBind(entity),
-                            BackgroundColor(Color::Srgba(palettes::tailwind::GREEN_300)),
-                            BorderRadius::all(Val::Px(5.0)),
-                        ));
-                    });
+                match health_bar.bar_type {
+                    HealthBarType::Minion => {
+                        parent
+                            .spawn((
+                                Node {
+                                    width: Val::Px(74.0),
+                                    height: Val::Px(7.0),
+                                    left: Val::Px(-15.0),
+                                    top: Val::Px(-10.0),
+                                    position_type: PositionType::Absolute,
+                                    ..default()
+                                },
+                                ImageNode {
+                                    image: res_asset_server
+                                        .load("spotlighthealthbaratlas.tex#srgb"),
+                                    rect: Some(Rect::new(2.0, 503.0, 68.0, 510.0)),
+                                    color: Color::srgb(0.9, 0.9, 0.9),
+                                    ..default()
+                                },
+                            ))
+                            .with_children(|parent| {
+                                parent
+                                    .spawn((Node {
+                                        width: Val::Px(72.0),
+                                        height: Val::Px(5.0),
+                                        left: Val::Px(1.0),
+                                        top: Val::Px(1.0),
+                                        ..default()
+                                    },))
+                                    .with_child((
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            ..default()
+                                        },
+                                        ImageNode {
+                                            image: res_asset_server
+                                                .load("spotlighthealthbaratlas.tex#srgb"),
+                                            rect: Some(Rect::new(147.0, 4.0, 258.0, 15.0)),
+                                            color: Color::srgb(0.9, 0.9, 0.9),
+                                            image_mode: NodeImageMode::Stretch,
+                                            ..default()
+                                        },
+                                        HealthBind(entity),
+                                    ));
+                            });
+                    }
+                    HealthBarType::Champion => {
+                        parent
+                            .spawn((
+                                Node {
+                                    width: Val::Px(136.0),
+                                    height: Val::Px(29.0),
+                                    left: Val::Px(-70.0),
+                                    top: Val::Px(-60.0),
+                                    position_type: PositionType::Absolute,
+                                    ..default()
+                                },
+                                ImageNode {
+                                    image: res_asset_server
+                                        .load("spotlighthealthbaratlas.tex#srgb"),
+                                    rect: Some(Rect::new(3.0, 2.0, 139.0, 31.0)),
+                                    color: Color::srgb(0.9, 0.9, 0.9),
+                                    ..default()
+                                },
+                            ))
+                            .with_children(|parent| {
+                                parent
+                                    .spawn((Node {
+                                        width: Val::Px(104.0),
+                                        height: Val::Px(11.0),
+                                        left: Val::Px(28.0),
+                                        top: Val::Px(7.0),
+                                        ..default()
+                                    },))
+                                    .with_child((
+                                        Node {
+                                            width: Val::Percent(100.0),
+                                            ..default()
+                                        },
+                                        ImageNode {
+                                            image: res_asset_server
+                                                .load("spotlighthealthbaratlas.tex#srgb"),
+                                            rect: Some(Rect::new(147.0, 4.0, 258.0, 15.0)),
+                                            color: Color::srgb(0.9, 0.9, 0.9),
+                                            image_mode: NodeImageMode::Stretch,
+                                            ..default()
+                                        },
+                                        HealthBind(entity),
+                                    ));
+                            });
+                    }
+                    HealthBarType::Turret => {
+                        // 预留：塔类血条样式
+                    }
+                }
             });
     }
 }
@@ -105,7 +184,7 @@ fn ui(
     global_transform: Query<&GlobalTransform>,
     mut q_node: Query<&mut Node>,
     q_health_bind: Query<(Entity, &HealthBind)>,
-    q_health: Query<&Health>,
+    q_health: Query<(&Health, &HealthBar)>,
     q_ui_bind: Query<(Entity, &UIBind)>,
 ) {
     let (camera, camera_global_transform) = camera_info.into_inner();
@@ -132,10 +211,31 @@ fn ui(
         let Ok(mut node) = q_node.get_mut(entity) else {
             continue;
         };
-        let Ok(health) = q_health.get(health_bind.0) else {
+        let Ok((health, health_bar)) = q_health.get(health_bind.0) else {
             continue;
         };
         node.width = Val::Percent(health.value / health.max * 100.0);
+
+        // 英雄血条需要生成每 100 点血的标记
+        if health_bar.bar_type == HealthBarType::Champion {
+            commands.entity(entity).despawn_children();
+            commands.entity(entity).with_children(|parent| {
+                let health_indicator_num = (health.value / 100.0) as usize;
+                let health_bar_width = ((100.0 / health.max) * 104.0).floor();
+                for i in 0..health_indicator_num {
+                    parent.spawn((
+                        Node {
+                            width: Val::Px(1.0),
+                            height: Val::Px(6.0),
+                            left: Val::Px(health_bar_width * (i + 1) as f32),
+                            position_type: PositionType::Absolute,
+                            ..default()
+                        },
+                        BackgroundColor(Color::BLACK),
+                    ));
+                }
+            });
+        }
     }
 }
 
@@ -165,7 +265,7 @@ fn on_damage_create(
         Text::new(format!("{:.0}", damage_result.final_damage)),
         TextFont {
             font_size: 24.0,
-            ..Default::default()
+            ..default()
         },
         TextColor(Color::Srgba(match trigger.damage_type {
             DamageType::Physical => RED,
@@ -174,7 +274,7 @@ fn on_damage_create(
         })),
         Node {
             position_type: PositionType::Absolute,
-            ..Default::default()
+            ..default()
         },
         DamageNumber {
             damage: damage_result.final_damage,

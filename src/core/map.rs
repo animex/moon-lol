@@ -4,6 +4,7 @@ use bevy::{math::bounding::Aabb3d, prelude::*};
 
 use league_file::LeagueMapGeoMesh;
 use lol_config::ConfigMap;
+use lol_core::Team;
 
 use crate::{spawn_geometry_object, Action, CommandAction, CommandSpawnCharacter, Controller};
 
@@ -34,11 +35,8 @@ impl Plugin for PluginMap {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, configs: Res<ConfigMap>) {
     let geo_entity = spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
-
-    commands
-        .entity(geo_entity)
-        .insert(Map)
-        .observe(on_click_map);
+    println!("geo_entity: {:?}", geo_entity);
+    commands.entity(geo_entity).insert(Map);
 
     let environment_entities = spawn_environment_objects_from_configs(&mut commands, &configs);
 
@@ -54,8 +52,9 @@ pub fn spawn_environment_objects_from_configs(
     let mut entities = Vec::new();
 
     for (_, environment_object) in &configs.environment_objects {
+        let transform = Transform::from_matrix(environment_object.transform);
         let entity = commands
-            .spawn(Transform::from_matrix(environment_object.transform))
+            .spawn((transform, Team::from(environment_object.definition.team)))
             .id();
         commands.trigger(CommandSpawnCharacter {
             entity,
@@ -79,7 +78,7 @@ pub fn spawn_geometry_objects_from_configs(
 
     for config_geo_object in &configs.geometry_objects {
         let entity = spawn_geometry_object(commands, asset_server, config_geo_object);
-
+        commands.entity(entity).observe(on_click_map);
         commands.entity(geo_entity).add_child(entity);
     }
 
@@ -97,9 +96,11 @@ pub fn on_click_map(
     };
     let targets = q_move.iter().collect::<Vec<Entity>>();
 
-    // let map_geo_entity = click.target;
+    // let map_geo_entity = click.entity;
     // if let Ok(map_geo) = q_map_geo.get(map_geo_entity) {
     //     println!("map_geo: {:?}", map_geo.config);
+    // } else {
+    //     println!("map_geo_entity: {:?}", map_geo_entity);
     // }
 
     for entity in targets {
