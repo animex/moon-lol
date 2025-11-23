@@ -47,7 +47,7 @@ pub struct ParticleEmitterState {
 pub struct EmitterOf(pub Entity);
 
 #[derive(Component, Debug)]
-#[relationship_target(relationship = EmitterOf)]
+#[relationship_target(relationship = EmitterOf, linked_spawn)]
 pub struct Emitters(Vec<Entity>);
 
 pub fn update_emitter_position(

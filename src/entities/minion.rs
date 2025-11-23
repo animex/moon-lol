@@ -81,9 +81,10 @@ pub fn fixed_update(
             entity,
             priority: 0,
             action: MovementAction::Start {
-                way: MovementWay::Pathfind(
-                    *path.get(closest_index + 1).unwrap_or(&path[closest_index]),
-                ),
+                way: MovementWay::Pathfind({
+                    let p = *path.get(closest_index + 1).unwrap_or(&path[closest_index]);
+                    Vec3::new(p.x, transform.translation.y, p.y)
+                }),
                 speed: None,
                 source: "Minion".to_string(),
             },

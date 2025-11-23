@@ -61,7 +61,6 @@ fn setup(mut commands: Commands, res_game_config: Res<ConfigMap>) {
 
         // let initial_delay = barrack_config.initial_spawn_time_secs;
         let initial_delay = 0.0;
-        println!("生成兵营 {:?}", hash);
 
         commands.spawn((
             Transform::from_matrix(barrack.transform),
@@ -125,7 +124,7 @@ fn barracks_spawning_system(
         // --- 2. 处理属性和移速升级 ---
         if barrack_state.upgrade_timer.just_finished() {
             barrack_state.upgrade_count += 1;
-            println!(
+            debug!(
                 "Barrack upgraded! New count: {}",
                 barrack_state.upgrade_count
             );
@@ -135,7 +134,7 @@ fn barracks_spawning_system(
             if barrack_state.move_speed_upgrade_count < barrack_config.move_speed_increase_max_times
             {
                 barrack_state.move_speed_upgrade_count += 1;
-                println!(
+                debug!(
                     "Minion move speed upgraded! New count: {}",
                     barrack_state.move_speed_upgrade_count
                 );

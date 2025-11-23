@@ -46,7 +46,11 @@ pub fn on_action_dash(
                 entity,
                 priority: 100,
                 action: MovementAction::Start {
-                    way: MovementWay::Path(vec![destination]),
+                    way: MovementWay::Path(vec![Vec3::new(
+                        destination.x,
+                        transform.translation.y,
+                        destination.y,
+                    )]),
                     speed: Some(*speed),
                     source: "Dash".to_string(),
                 },

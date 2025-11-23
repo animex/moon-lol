@@ -57,7 +57,7 @@ pub fn on_attack_damage(
         amount: 100.0,
     });
     commands.trigger(CommandParticleSpawn {
-        entity: target,
+        entity,
         particle: hash_bin("Fiora_Q_Slash_Cas"),
     });
     commands.trigger(ctx.success());

@@ -1,10 +1,11 @@
 use bevy::{animation::AnimationTarget, prelude::*};
 use league_core::MissileSpecificationMovementComponent;
-use league_utils::{hash_bin, hash_joint};
+use league_utils::hash_joint;
 use serde::{Deserialize, Serialize};
 
 use crate::{
-    CommandMovement, CommandParticleSpawn, Movement, MovementAction, MovementWay, ResourceCache,
+    CommandDamageCreate, CommandMovement, CommandParticleSpawn, Damage, DamageType,
+    EntityCommandsTrigger, EventMovementEnd, Movement, MovementAction, MovementWay, ResourceCache,
 };
 
 #[derive(Default)]
@@ -13,6 +14,7 @@ pub struct PluginMissile;
 impl Plugin for PluginMissile {
     fn build(&self, app: &mut App) {
         app.add_observer(on_command_missile_create);
+        app.add_observer(on_event_movement_end);
 
         app.add_systems(FixedUpdate, fixed_update);
     }
@@ -28,8 +30,10 @@ pub struct Missile {
 /// 攻击状态机
 #[derive(Component, Clone, Serialize, Deserialize)]
 pub struct MissileState {
+    pub source: Entity,
     /// 攻击目标
     pub target: Option<Entity>,
+    pub target_bone: Option<Entity>,
 }
 
 #[derive(EntityEvent, Debug)]
@@ -39,7 +43,28 @@ pub struct CommandMissileCreate {
     pub spell_key: u32,
 }
 
-fn fixed_update() {}
+fn fixed_update(
+    mut commands: Commands,
+    q_missile: Query<(Entity, &Missile, &MissileState)>,
+    q_transform: Query<&GlobalTransform>,
+) {
+    for (entity, missile, state) in q_missile.iter() {
+        if let Some(target_bone) = state.target_bone {
+            if let Ok(target_transform) = q_transform.get(target_bone) {
+                let target_translation = target_transform.translation();
+                commands.trigger(CommandMovement {
+                    entity,
+                    priority: 0,
+                    action: MovementAction::Start {
+                        way: MovementWay::Path(vec![target_translation]),
+                        speed: Some(missile.speed),
+                        source: "Missile".to_string(),
+                    },
+                });
+            }
+        }
+    }
+}
 
 fn on_command_missile_create(
     trigger: On<CommandMissileCreate>,
@@ -76,55 +101,52 @@ fn on_command_missile_create(
                         if hash_joint(&m_start_bone_name) as u128 == id {
                             start_translation =
                                 Some(q_global_transform.get(child).unwrap().translation());
-                            println!("start_translation: {:?}", start_translation);
                         }
                     }
                 }
             }
-            MissileSpecificationMovementComponent::TrackMouseMovement(track_mouse_movement) => {
-                todo!()
+            _ => {
+                // TODO: Implement other movement types
             }
-            MissileSpecificationMovementComponent::WallFollowMovement(wall_follow_movement) => {
-                todo!()
-            }
-            MissileSpecificationMovementComponent::FixedTimeMovement(fixed_time_movement) => {
-                todo!()
-            }
-            MissileSpecificationMovementComponent::FixedSpeedSplineMovement(
-                fixed_speed_spline_movement,
-            ) => todo!(),
-            MissileSpecificationMovementComponent::DecelToLocationMovement(
-                decel_to_location_movement,
-            ) => todo!(),
-            MissileSpecificationMovementComponent::PhysicsMovement(physics_movement) => todo!(),
-            MissileSpecificationMovementComponent::AcceleratingMovement(accelerating_movement) => {
-                todo!()
-            }
-            MissileSpecificationMovementComponent::ParametricMovement(parametric_movement) => {
-                todo!()
-            }
-            MissileSpecificationMovementComponent::FixedTimeSplineMovement(
-                fixed_time_spline_movement,
-            ) => todo!(),
-            MissileSpecificationMovementComponent::SyncCircleMovement(sync_circle_movement) => {
-                todo!()
-            }
-            MissileSpecificationMovementComponent::CircleMovement(circle_movement) => {
-                todo!()
+        }
+    }
+
+    let mut end_entity = trigger.target;
+    if let Some(m_hit_bone_name) = spell_data_resource.m_hit_bone_name {
+        for child in q_children.iter_descendants(trigger.target) {
+            let Ok(joint_target) = q_joint_target.get(child) else {
+                continue;
+            };
+            let id = joint_target.id.0.as_u128();
+            if hash_joint(&m_hit_bone_name) as u128 == id {
+                end_entity = child;
+                break;
             }
         }
     }
 
     let translation = match start_translation {
         Some(t) => t,
-        None => q_global_transform.get(entity).unwrap().translation(),
+        None => {
+            if let Ok(t) = q_global_transform.get(entity) {
+                t.translation()
+            } else {
+                return;
+            }
+        }
     };
 
+    debug!("{} 发射导弹 {}", entity, trigger.spell_key);
     let missile_entity = commands
         .spawn((
             Missile {
                 key: trigger.spell_key,
                 speed,
+            },
+            MissileState {
+                source: entity,
+                target: Some(trigger.target),
+                target_bone: Some(end_entity),
             },
             Transform::from_translation(translation),
             Movement { speed },
@@ -137,13 +159,42 @@ fn on_command_missile_create(
         entity: missile_entity,
         priority: 0,
         action: MovementAction::Start {
-            way: MovementWay::Path(vec![target_translation.xz()]),
+            way: MovementWay::Path(vec![target_translation]),
             speed: Some(speed),
             source: "Missile".to_string(),
         },
     });
-    commands.trigger(CommandParticleSpawn {
-        entity: missile_entity,
-        particle: spell_data_resource.m_missile_effect_key.unwrap(),
-    });
+    if let Some(particle) = spell_data_resource.m_missile_effect_key {
+        commands.trigger(CommandParticleSpawn {
+            entity: missile_entity,
+            particle,
+        });
+    }
+}
+
+fn on_event_movement_end(
+    trigger: On<EventMovementEnd>,
+    mut commands: Commands,
+    q_missile: Query<&MissileState>,
+    q_damage: Query<&Damage>,
+) {
+    let Ok(state) = q_missile.get(trigger.entity) else {
+        return;
+    };
+
+    commands.entity(trigger.entity).despawn();
+
+    let Some(target) = state.target else {
+        return;
+    };
+
+    if let Ok(damage) = q_damage.get(target) {
+        debug!("{} 对 {} 造成伤害 {}", state.source, target, damage.0);
+        commands.try_trigger(CommandDamageCreate {
+            entity: target,
+            source: state.source,
+            damage_type: DamageType::Physical,
+            amount: damage.0,
+        });
+    }
 }

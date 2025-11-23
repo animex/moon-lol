@@ -48,13 +48,13 @@ pub struct Movement {
 
 #[derive(Component, Default)]
 pub struct MovementState {
-    pub path: Vec<Vec2>,
+    pub path: Vec<Vec3>,
     pub speed: Option<f32>,
     pub direction: Vec2,
     pub velocity: Vec2,
     pub current_target_index: usize,
     pub completed: bool,
-    pub pathfind: Option<(Vec2, f32)>,
+    pub pathfind: Option<(Vec3, f32)>,
     pub source: String,
 }
 
@@ -80,8 +80,8 @@ pub enum MovementAction {
 
 #[derive(Debug, Clone, PartialEq)]
 pub enum MovementWay {
-    Pathfind(Vec2),
-    Path(Vec<Vec2>),
+    Pathfind(Vec3),
+    Path(Vec<Vec3>),
 }
 
 #[derive(EntityEvent, Debug)]
@@ -120,7 +120,7 @@ impl PipelineStages for MovementPipeline {
 }
 
 impl MovementState {
-    pub fn reset_path(&mut self, path: &Vec<Vec2>, source: &str) {
+    pub fn reset_path(&mut self, path: &Vec<Vec3>, source: &str) {
         self.path = path.clone();
         self.speed = None;
         self.current_target_index = 0;
@@ -180,11 +180,12 @@ fn update_path_movement(
                 }
             };
 
-            let current_pos = transform.translation.xz();
-            let vector_to_target = target - current_pos;
-            let distance_to_target = vector_to_target.length();
+            let current_pos_xz = transform.translation.xz();
+            let target_xz = target.xz();
+            let vector_to_target_xz = target_xz - current_pos_xz;
+            let distance_to_target_xz = vector_to_target_xz.length();
 
-            if distance_to_target.abs() < f32::EPSILON {
+            if distance_to_target_xz.abs() < f32::EPSILON {
                 let new_index = movement_state.current_target_index + 1;
                 if new_index >= movement_state.path.len() {
                     movement_state.completed = true;
@@ -195,17 +196,26 @@ fn update_path_movement(
                 }
             }
 
-            last_direction = vector_to_target.normalize();
+            last_direction = vector_to_target_xz.normalize();
 
-            if distance_to_target > remaining_distance_this_frame {
-                let new_pos = current_pos + last_direction * remaining_distance_this_frame;
-                transform.translation.x = new_pos.x;
-                transform.translation.z = new_pos.y;
+            if remaining_distance_this_frame < distance_to_target_xz {
+                let move_fraction = remaining_distance_this_frame / distance_to_target_xz;
+                let new_pos_xz = current_pos_xz + last_direction * remaining_distance_this_frame;
+                let new_y = transform.translation.y.lerp(target.y, move_fraction);
+
+                debug!("{} 移动一小步 {}", entity, remaining_distance_this_frame);
+                transform.translation.x = new_pos_xz.x;
+                transform.translation.z = new_pos_xz.y;
+                transform.translation.y = new_y;
+
                 remaining_distance_this_frame = 0.0;
             } else {
+                debug!("{} 移动最后一小步到达转折点 {}", entity, target);
                 transform.translation.x = target.x;
-                transform.translation.z = target.y;
-                remaining_distance_this_frame -= distance_to_target;
+                transform.translation.z = target.z;
+                transform.translation.y = target.y;
+
+                remaining_distance_this_frame -= distance_to_target_xz;
 
                 let new_index = movement_state.current_target_index + 1;
                 if new_index >= movement_state.path.len() {
@@ -376,21 +386,37 @@ fn apply_final_movement_decision(
                             HashSet::new()
                         };
 
-                        if let Some(path) =
-                            get_nav_path(&transform.translation.xz(), target, &grid, &mut stats)
-                        {
-                            movement_state.reset_path(&path, source);
+                        if let Some(path) = get_nav_path(
+                            &transform.translation.xz(),
+                            &target.xz(),
+                            &grid,
+                            &mut stats,
+                        ) {
+                            let start_y = transform.translation.y;
+                            let total = path.len() as f32;
+                            let path_3d = path
+                                .into_iter()
+                                .enumerate()
+                                .map(|(i, p)| {
+                                    let t = (i as f32 + 1.0) / total;
+                                    let y = start_y + (target.y - start_y) * t;
+                                    Vec3::new(p.x, y, p.y)
+                                })
+                                .collect();
+                            movement_state.reset_path(&path_3d, source);
                         }
 
                         // 恢复全局 occupied_cells
                         grid.occupied_cells.extend(removed_cells);
                     }
                     MovementWay::Path(path) => {
+                        debug!("{} 设置路径 {:?}", entity, path);
                         movement_state.reset_path(path, source);
                     }
                 }
 
                 if let Some(speed) = speed {
+                    debug!("{} 设置速度 {:?}", entity, speed);
                     movement_state.with_speed(*speed);
                 }
 
@@ -406,5 +432,5 @@ fn apply_final_movement_decision(
 fn on_event_movement_end(trigger: On<EventMovementEnd>, mut commands: Commands) {
     commands
         .entity(trigger.event_target())
-        .remove::<LastDecision<CommandMovement>>();
+        .try_remove::<LastDecision<CommandMovement>>();
 }

@@ -37,7 +37,7 @@ impl Plugin for PluginMap {
 
 fn setup(mut commands: Commands, asset_server: Res<AssetServer>, configs: Res<ConfigMap>) {
     let geo_entity = spawn_geometry_objects_from_configs(&mut commands, &asset_server, &configs);
-    println!("geo_entity: {:?}", geo_entity);
+
     commands.entity(geo_entity).insert(Map);
 
     let environment_entities = spawn_environment_objects_from_configs(&mut commands, &configs);

@@ -6,6 +6,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Buffs, CommandDamageCreate, CommandMissileCreate, CommandRotate, Damage, DamageType, EventDead,
+    ResourceCache,
 };
 
 #[derive(Default)]
@@ -285,6 +286,7 @@ fn on_command_attack_start(
                 return;
             }
 
+            debug!("{} 移除攻击状态：攻击目标改变", entity);
             commands.entity(entity).try_remove::<AttackState>();
             commands.trigger(CommandAttackStart { entity, target });
         }
@@ -306,6 +308,7 @@ fn on_command_attack_reset(
         return;
     };
 
+    debug!("{} 移除攻击状态：攻击重置", entity);
     commands.entity(entity).try_remove::<AttackState>();
 
     let Some(target) = attack_state.target else {
@@ -328,9 +331,11 @@ fn on_command_attack_stop(
 
     match attack_state.status {
         AttackStatus::Windup { .. } => {
+            debug!("{} 移除攻击状态：停止攻击", entity);
             commands.entity(entity).try_remove::<AttackState>();
         }
         AttackStatus::Cooldown { .. } => {
+            debug!("{} 攻击冷却中，停止下一次攻击", entity);
             attack_state.target = None;
         }
     };
@@ -346,6 +351,7 @@ fn on_event_dead(
     for (entity, attack_state) in q_attack_state.iter() {
         if let AttackStatus::Windup { target, .. } = &attack_state.status {
             if *target == dead_entity {
+                debug!("{} 移除攻击状态：攻击目标 {} 死亡", dead_entity, entity);
                 commands.entity(entity).try_remove::<AttackState>();
             }
         }
@@ -356,6 +362,7 @@ fn on_event_dead(
 fn fixed_update(
     mut query: Query<(Entity, &mut AttackState, &Attack, &Damage)>,
     mut commands: Commands,
+    resource_cache: Res<ResourceCache>,
     time: Res<Time<Fixed>>,
 ) {
     let now = time.elapsed_secs();
@@ -371,11 +378,22 @@ fn fixed_update(
 
                     match attack.spell_key {
                         Some(spell_key) => {
-                            commands.trigger(CommandMissileCreate {
-                                entity,
-                                target: *target,
-                                spell_key,
-                            });
+                            let spell = resource_cache.spells.get(&spell_key).unwrap();
+
+                            if spell.m_spell.as_ref().unwrap().m_cast_type.unwrap_or(0) == 1 {
+                                commands.trigger(CommandMissileCreate {
+                                    entity,
+                                    target: *target,
+                                    spell_key,
+                                });
+                            } else {
+                                commands.try_trigger(CommandDamageCreate {
+                                    entity: *target,
+                                    source: entity,
+                                    damage_type: DamageType::Physical,
+                                    amount: damage.0,
+                                });
+                            }
                         }
                         None => {
                             commands.try_trigger(CommandDamageCreate {
@@ -395,10 +413,15 @@ fn fixed_update(
             AttackStatus::Cooldown { end_time } => {
                 // 检查后摇是否完成
                 if *end_time <= now {
+                    debug!("{} 移除攻击状态：攻击冷却结束", entity);
                     commands.entity(entity).try_remove::<AttackState>();
                     commands.try_trigger(EventAttackReady { entity });
 
                     if let Some(target) = attack_state.target {
+                        debug!(
+                            "{} 攻击冷却结束时依然存在攻击目标，继续攻击 {}",
+                            entity, target
+                        );
                         commands.try_trigger(CommandAttackStart { entity, target });
                     };
                 }

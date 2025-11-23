@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 
-use crate::{Aggro, CommandAttackStart, EventAggroTargetFound, HealthBar, HealthBarType};
+use crate::{Aggro, CommandAttackAutoStart, EventAggroTargetFound, HealthBar, HealthBarType};
 
 #[derive(Default)]
 pub struct PluginTurret;
@@ -23,7 +23,9 @@ fn on_event_aggro_target_found(
     let entity = trigger.event_target();
 
     if q_turret.get(entity).is_ok() {
-        commands.trigger(CommandAttackStart {
+        debug!("{} 对仇恨目标 {} 发起攻击", entity, trigger.target);
+
+        commands.trigger(CommandAttackAutoStart {
             entity,
             target: trigger.target,
         });

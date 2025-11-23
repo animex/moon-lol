@@ -295,7 +295,7 @@ pub fn on_command_damage_create(
     if let Ok((mut health, white_shield, magic_shield, damage_reductions)) =
         query.get_mut(trigger.event_target())
     {
-        // let health_before = health.value;
+        let health_before = health.value;
         let result = calculate_damage(
             trigger.damage_type,
             trigger.amount,
@@ -307,19 +307,19 @@ pub fn on_command_damage_create(
         // 应用最终伤害到生命值
         health.value -= result.final_damage;
 
-        // println!(
-        //     "Damage applied: {:?} -> {:?}, Type: {:?}, Original: {:.1}, Final: {:.1}, Health: {:.1} -> {:.1}, Shields: W{:.1}/M{:.1}, Reduced: {:.1}",
-        //     trigger.source,
-        //     trigger.target(),
-        //     trigger.damage_type,
-        //     result.original_damage,
-        //     result.final_damage,
-        //     health_before,
-        //     health.value,
-        //     result.white_shield_absorbed,
-        //     result.magic_shield_absorbed,
-        //     result.reduced_damage
-        // );
+        debug!(
+            "Damage applied: {:?} -> {:?}, Type: {:?}, Original: {:.1}, Final: {:.1}, Health: {:.1} -> {:.1}, Shields: W{:.1}/M{:.1}, Reduced: {:.1}",
+            trigger.source,
+            trigger.event_target(),
+            trigger.damage_type,
+            result.original_damage,
+            result.final_damage,
+            health_before,
+            health.value,
+            result.white_shield_absorbed,
+            result.magic_shield_absorbed,
+            result.reduced_damage
+        );
 
         // 触发伤害生效事件
         commands.trigger(EventDamageCreate {
@@ -330,17 +330,17 @@ pub fn on_command_damage_create(
         });
 
         if health.value <= 0.0 {
-            // println!(
-            //     "Entity {:?} health dropped to {:.1} (death threshold)",
-            //     trigger.target(),
-            //     health.value
-            // );
+            debug!(
+                "Entity {:?} health dropped to {:.1} (death threshold)",
+                trigger.event_target(),
+                health.value
+            );
         }
     } else {
-        // println!(
-        //     "Failed to find target entity {:?} for damage event",
-        //     trigger.target()
-        // );
+        debug!(
+            "Failed to find target entity {:?} for damage event",
+            trigger.event_target()
+        );
     }
 }
 
@@ -348,7 +348,7 @@ pub fn on_command_damage_create(
 pub fn update_damage_reductions_system(mut query: Query<&mut DamageReductions>, time: Res<Time>) {
     let entity_count = query.iter().count();
     if entity_count > 0 {
-        // println!("Updating {} entities with damage reductions", entity_count);
+        debug!("Updating {} entities with damage reductions", entity_count);
     }
 
     for mut reductions in query.iter_mut() {
@@ -358,10 +358,10 @@ pub fn update_damage_reductions_system(mut query: Query<&mut DamageReductions>, 
         let expired_after = reductions.buffs.iter().filter(|r| r.is_expired()).count();
 
         if expired_before != expired_after {
-            // println!(
-            //     "Removed {} expired damage reductions",
-            //     expired_before - expired_after
-            // );
+            debug!(
+                "Removed {} expired damage reductions",
+                expired_before - expired_after
+            );
         }
     }
 }
@@ -376,10 +376,10 @@ pub fn cleanup_depleted_shields_system(
     let magic_shield_count = magic_shields.iter().count();
 
     if white_shield_count > 0 || magic_shield_count > 0 {
-        // println!(
-        //     "Checking {} white shields and {} magic shields for depletion",
-        //     white_shield_count, magic_shield_count
-        // );
+        debug!(
+            "Checking {} white shields and {} magic shields for depletion",
+            white_shield_count, magic_shield_count
+        );
     }
 
     let mut removed_white = 0;
@@ -388,7 +388,7 @@ pub fn cleanup_depleted_shields_system(
     // 移除耗尽的白色护盾
     for (entity, shield) in white_shields.iter() {
         if shield.is_depleted() {
-            // println!("Removing depleted white shield from entity {:?}", entity);
+            debug!("Removing depleted white shield from entity {:?}", entity);
             commands.entity(entity).remove::<WhiteShield>();
             removed_white += 1;
         }
@@ -397,17 +397,17 @@ pub fn cleanup_depleted_shields_system(
     // 移除耗尽的魔法护盾
     for (entity, shield) in magic_shields.iter() {
         if shield.is_depleted() {
-            // println!("Removing depleted magic shield from entity {:?}", entity);
+            debug!("Removing depleted magic shield from entity {:?}", entity);
             commands.entity(entity).remove::<MagicShield>();
             removed_magic += 1;
         }
     }
 
     if removed_white > 0 || removed_magic > 0 {
-        // println!(
-        //     "Removed {} white shields and {} magic shields",
-        //     removed_white, removed_magic
-        // );
+        debug!(
+            "Removed {} white shields and {} magic shields",
+            removed_white, removed_magic
+        );
     }
 }
 

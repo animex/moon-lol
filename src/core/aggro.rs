@@ -77,6 +77,7 @@ pub fn aggro_scan(
 
         // 如果找到有效目标则触发
         if target_entity != Entity::PLACEHOLDER {
+            debug!("{} 找到仇恨目标 {}", entity, target_entity);
             commands.trigger(EventAggroTargetFound {
                 entity,
                 target: target_entity,

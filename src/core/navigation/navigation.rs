@@ -4,7 +4,7 @@ use std::time::{Duration, Instant};
 
 use lol_config::ConfigNavigationGrid;
 
-use crate::{find_grid_path, system_debug, Bounding, Character, Movement};
+use crate::{find_grid_path, system_debug, Bounding, Character};
 
 #[derive(Default)]
 pub struct PluginNavigaton;
@@ -17,16 +17,13 @@ impl Plugin for PluginNavigaton {
             *res_stats = Default::default();
         });
         app.add_systems(Last, |res_stats: Res<NavigationStats>| {
-            // print!("\x1B[2J\x1B[1;1H"); // 清屏
-            // println!("NavigationStats: {:#?}", res_stats);
-
             if res_stats.get_nav_path_time > Duration::from_millis(10) {
-                info!("{:#?}", res_stats);
+                debug!("{:#?}", res_stats);
             }
 
-            // if res_stats.occupied_grid_cells_num > 0 {
-            //     info!("{:#?}", res_stats.occupied_grid_cells_num);
-            // }
+            if res_stats.occupied_grid_cells_num > 0 {
+                debug!("{:#?}", res_stats.occupied_grid_cells_num);
+            }
         });
         app.add_systems(Update, update);
     }

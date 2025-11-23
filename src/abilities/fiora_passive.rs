@@ -199,6 +199,10 @@ fn update_remove_vital(
                 vital.active_timer.tick(time.delta());
 
                 if vital.is_active() {
+                    commands.trigger(CommandParticleDespawn {
+                        entity: target_entity,
+                        hash: get_particle_hash(&vital.direction, "Fiora_Passive_", "_Warning"),
+                    });
                     commands.trigger(CommandParticleSpawn {
                         entity: target_entity,
                         particle: get_particle_hash(&vital.direction, "Fiora_Passive_", ""),
@@ -267,6 +271,11 @@ fn on_damage_create(
         entity: target_entity,
         particle: hash_bin("Fiora_Passive_Hit_Tar"),
     });
+
+    commands.trigger(CommandParticleDespawn {
+        entity: target_entity,
+        hash: get_particle_hash(&vital.direction, "Fiora_Passive_", "_Warning"),
+    });
     commands.trigger(CommandParticleDespawn {
         entity: target_entity,
         hash: get_particle_hash(&vital.direction, "Fiora_Passive_", ""),
@@ -308,7 +317,7 @@ fn on_damage_create(
         .entity_to_last_direction
         .insert(target_entity, direction.clone());
 
-    commands.entity(target_entity).insert(Vital::new(
+    commands.entity(target_entity).try_insert(Vital::new(
         direction.clone(),
         FIORA_PASSIVE_ACTIVE_DURATION,
         FIORA_PASSIVE_DURATION,

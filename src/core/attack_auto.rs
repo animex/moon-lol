@@ -1,5 +1,3 @@
-use std::time::Duration;
-
 use bevy::prelude::*;
 
 use crate::{
@@ -22,7 +20,6 @@ impl Plugin for PluginAttackAuto {
 #[derive(Component)]
 pub struct AttackAuto {
     pub target: Entity,
-    pub timer: Timer,
 }
 
 #[derive(EntityEvent)]
@@ -42,14 +39,10 @@ fn on_command_attack_auto_start(
     q_transform: Query<&Transform>,
     q_attack: Query<&Attack>,
 ) {
-    let mut timer = Timer::from_seconds(1.0, TimerMode::Repeating);
-
-    timer.tick(Duration::from_secs_f32(1.0));
-
     let entity = trigger.event_target();
     let target = trigger.target;
 
-    let mut attack_auto = AttackAuto { target, timer };
+    let mut attack_auto = AttackAuto { target };
 
     let Ok(transform) = q_transform.get(entity) else {
         return;
@@ -87,11 +80,8 @@ fn update_attack_auto(
     mut query: Query<(Entity, &mut AttackAuto, &Attack)>,
     q_attack_state: Query<&AttackState>,
     q_transform: Query<&Transform>,
-    time: Res<Time<Fixed>>,
 ) {
     for (entity, mut attack_auto, attack) in query.iter_mut() {
-        attack_auto.timer.tick(time.delta());
-
         if let Ok(attack_state) = q_attack_state.get(entity) {
             if matches!(attack_state.status, AttackStatus::Windup { .. }) {
                 continue;
@@ -128,16 +118,17 @@ fn check_and_action(
     range: f32,
 ) {
     if position.distance(target_position) > range {
-        if attack_auto.timer.just_finished() {
-            commands.trigger(CommandRunStart {
-                entity,
-                target: RunTarget::Target(target),
-            });
+        commands.trigger(CommandRunStart {
+            entity,
+            target: RunTarget::Target(target),
+        });
 
-            attack_auto.timer.reset();
-        }
+        debug!("{} 停止攻击：离开攻击范围", entity);
+        commands.trigger(CommandAttackStop { entity });
     } else {
         commands.trigger(CommandRunStop { entity });
+
+        debug!("{} 开始攻击：进入攻击范围", entity);
         commands.trigger(CommandAttackStart {
             entity,
             target: attack_auto.target,
