@@ -2,7 +2,7 @@ use std::io::{Cursor, Read};
 
 use binrw::{io::NoSeek, BinRead};
 use league_file::LeagueMapGeo;
-use league_property::{from_entry, PropFile};
+use league_property::{from_entry_unwrap, PropFile};
 use league_utils::{hash_bin, hash_wad};
 
 use league_core::StaticMaterialDef;
@@ -59,7 +59,7 @@ impl LeagueWadMapLoader {
             .iter()
             .find(|v| v.hash == hash_bin(material_name))?;
 
-        let material = from_entry::<StaticMaterialDef>(entry);
+        let material = from_entry_unwrap::<StaticMaterialDef>(entry);
 
         // 2. 将列表转换为可迭代的 BinEmbed
         let embedded_samplers = material.sampler_values?;

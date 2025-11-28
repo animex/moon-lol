@@ -27,8 +27,12 @@ fn add_skills(mut commands: Commands, q_hwei: Query<Entity, (With<Hwei>, Without
     for entity in q_hwei.iter() {
         commands
             .entity(entity)
-            .with_related::<SkillOf>(Skill { effect: None })
+            .with_related::<SkillOf>(Skill {
+                level: 0,
+                effect: None,
+            })
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
@@ -41,6 +45,7 @@ fn add_skills(mut commands: Commands, q_hwei: Query<Entity, (With<Hwei>, Without
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
@@ -53,6 +58,7 @@ fn add_skills(mut commands: Commands, q_hwei: Query<Entity, (With<Hwei>, Without
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
@@ -65,6 +71,7 @@ fn add_skills(mut commands: Commands, q_hwei: Query<Entity, (With<Hwei>, Without
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(

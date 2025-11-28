@@ -12,10 +12,12 @@ use bevy::{
 };
 use serde::de::DeserializeSeed;
 
-use league_core::{CharacterRecord, SpellObject};
+use league_core::{
+    CharacterRecord, SpellObject, UiElementEffectAnimationDataTextureData, UiElementIconData,
+};
 use league_to_lol::{
     get_character_record_save_path, get_character_spell_objects_save_path, get_struct_from_file,
-    CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID,
+    CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID, CONFIG_UI,
 };
 use lol_config::{
     CharacterConfigsDeserializer, ConfigCharacterSkin, ConfigGame, ConfigMap, ConfigNavigationGrid,
@@ -39,8 +41,14 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderAnimationClip>();
         app.init_asset_loader::<LeagueLoaderSkinnedMeshInverseBindposes>();
 
-        let config_map: ConfigMap = get_struct_from_file(CONFIG_PATH_MAP).unwrap();
         let mut resource_cache = ResourceCache::default();
+
+        let ui_elements: HashMap<String, UiElementIconData> =
+            get_struct_from_file(CONFIG_UI).unwrap();
+
+        resource_cache.ui_elements = ui_elements;
+
+        let config_map: ConfigMap = get_struct_from_file(CONFIG_PATH_MAP).unwrap();
 
         for (_, v) in config_map.environment_objects.iter() {
             resource_cache.skins.insert(
@@ -180,6 +188,19 @@ impl Plugin for PluginResource {
         }
 
         app.insert_resource(ConfigGame { legends });
+
+        for (_, ui_element) in &resource_cache.ui_elements {
+            if let Some(texture_data) = ui_element.texture_data.as_ref() {
+                if let UiElementEffectAnimationDataTextureData::AtlasData(atlas_data) = texture_data
+                {
+                    // if atlas_data.m_texture_name.contains("Clarity_HUDAtlas") {
+                    if ui_element.name.contains("PlayerFrame") {
+                        println!("{:?}", ui_element.name);
+                        println!("{:?}", atlas_data.m_texture_uv);
+                    }
+                }
+            }
+        }
         app.insert_resource(resource_cache);
     }
 }
@@ -191,6 +212,7 @@ pub struct ResourceCache {
     pub skins: HashMap<String, ConfigCharacterSkin>,
     pub character_records: HashMap<String, CharacterRecord>,
     pub spells: HashMap<u32, SpellObject>,
+    pub ui_elements: HashMap<String, UiElementIconData>,
 }
 
 impl ResourceCache {

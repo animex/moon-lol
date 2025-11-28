@@ -3,7 +3,7 @@ use std::io::BufReader;
 
 use binrw::BinRead;
 use league_core::AnimationGraphData;
-use league_property::{from_entry, PropFile};
+use league_property::{from_entry_unwrap, PropFile};
 
 fn main() {
     let path = "assets/skin41.bin";
@@ -14,7 +14,7 @@ fn main() {
 
     let prop_file = PropFile::read(&mut BufReader::new(file)).unwrap();
 
-    let data = from_entry::<AnimationGraphData>(
+    let data = from_entry_unwrap::<AnimationGraphData>(
         &prop_file
             .entries
             .iter()

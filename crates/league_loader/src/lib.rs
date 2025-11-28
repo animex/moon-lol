@@ -19,4 +19,7 @@ pub enum Error {
 
     #[error("{0}")]
     Binrw(#[from] binrw::Error),
+
+    #[error("{0}")]
+    Custom(&'static str),
 }

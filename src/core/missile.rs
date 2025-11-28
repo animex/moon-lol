@@ -195,7 +195,7 @@ fn on_event_movement_end(
         return;
     };
 
-    if let Ok(damage) = q_damage.get(target) {
+    if let Ok(damage) = q_damage.get(state.source) {
         debug!("{} 对 {} 造成伤害 {}", state.source, target, damage.0);
         commands.try_trigger(CommandDamageCreate {
             entity: target,

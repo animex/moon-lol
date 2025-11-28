@@ -6,7 +6,7 @@ use league_core::{
     BarracksConfig, MapPlaceableContainer, MissileSpecificationBehaviors, Unk0x9d9f60d2,
 };
 use league_loader::{LeagueLoader, LeagueWadMapLoader};
-use league_property::from_entry;
+use league_property::from_entry_unwrap;
 use league_utils::hash_bin;
 use lol_config::{ConfigMap, ConfigNavigationGrid};
 use lol_core::Lane;
@@ -39,11 +39,11 @@ pub async fn save_config_map(
     {
         barrack_configs
             .entry(entry.hash)
-            .or_insert(from_entry::<BarracksConfig>(entry));
+            .or_insert(from_entry_unwrap::<BarracksConfig>(entry));
     }
 
     for entry in map_loader.materials_bin.iter_entry_by_class(0x9d9f60d2) {
-        let record = from_entry::<Unk0x9d9f60d2>(entry);
+        let record = from_entry_unwrap::<Unk0x9d9f60d2>(entry);
         characters.entry(entry.hash).or_insert(record);
     }
 
@@ -51,7 +51,7 @@ pub async fn save_config_map(
         .materials_bin
         .iter_entry_by_class(hash_bin("MapPlaceableContainer"))
     {
-        let map_placeable_container = from_entry::<MapPlaceableContainer>(entry);
+        let map_placeable_container = from_entry_unwrap::<MapPlaceableContainer>(entry);
 
         for (hash, value) in map_placeable_container.items {
             match value {

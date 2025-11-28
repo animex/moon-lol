@@ -32,12 +32,16 @@ pub struct CoolDown {
 #[require(CoolDown)]
 pub struct Skill {
     pub effect: Option<Tree<Behave>>,
+    pub level: usize,
 }
 
 #[derive(Component)]
 pub struct SkillEffectContext {
     pub point: Vec2,
 }
+
+#[derive(Component)]
+pub struct SkillEffectBehaveCtx(pub BehaveCtx);
 
 #[derive(EntityEvent)]
 pub struct CommandSkillStart {
@@ -66,6 +70,3 @@ fn on_skill_cast(
         ));
     }
 }
-
-#[derive(Component)]
-pub struct SkillEffectBehaveCtx(pub BehaveCtx);

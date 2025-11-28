@@ -9,16 +9,16 @@ use league_core::{
     VfxSystemDefinitionData,
 };
 use league_file::{
-    AnimationFile, CompressedTransformType, InibinFile, LeagueSkeleton, LeagueSkinnedMesh,
-    UncompressedData,
+    AnimationFile, CompressedTransformType, LeagueSkeleton, LeagueSkinnedMesh, UncompressedData,
 };
-use league_loader::LeagueWadLoader;
-use league_property::{from_entry, EntryData};
+use league_loader::{LeagueWadLoader, PropBinLoader};
+use league_property::{from_entry_unwrap, EntryData};
 use league_utils::{hash_bin, hash_joint};
 use lol_config::{
     ConfigAnimationClip, ConfigCharacterSkin, ConfigJoint, ConfigSkinnedMeshInverseBindposes,
     LeagueMaterial,
 };
+// use league_file::InibinFile;
 
 use crate::{
     get_bin_path, get_character_record_save_path, get_character_spell_objects_save_path,
@@ -26,7 +26,7 @@ use crate::{
 };
 
 pub async fn save_character(
-    data_loader: &LeagueWadLoader,
+    _data_loader: &LeagueWadLoader,
     loader: &LeagueWadLoader,
     skin: &str,
     character_record_path: &str,
@@ -40,7 +40,8 @@ pub async fn save_character(
             let Some(entry_data) = flat_map.get(&link) else {
                 continue;
             };
-            let vfx_system_definition_data = from_entry::<VfxSystemDefinitionData>(entry_data);
+            let vfx_system_definition_data =
+                from_entry_unwrap::<VfxSystemDefinitionData>(entry_data);
 
             if let Some(ref complex_emitter_definition_data) =
                 vfx_system_definition_data.complex_emitter_definition_data
@@ -82,18 +83,18 @@ pub async fn save_character(
         for vfx_emitter_definition_data in complex_emitter_definition_data {
             if let Some(ref texture) = vfx_emitter_definition_data.texture {
                 if !texture.is_empty() {
-                    save_wad_entry_to_file(&loader, &texture).await?;
+                    save_wad_entry_to_file(loader, &texture).await?;
                 }
             }
             if let Some(ref texture) = vfx_emitter_definition_data.particle_color_texture {
                 if !texture.is_empty() {
-                    save_wad_entry_to_file(&loader, &texture).await?;
+                    save_wad_entry_to_file(loader, &texture).await?;
                 }
             }
             if let Some(ref texture) = vfx_emitter_definition_data.texture_mult {
                 if let Some(ref texture) = texture.texture_mult {
                     if !texture.is_empty() {
-                        save_wad_entry_to_file(&loader, &texture).await?;
+                        save_wad_entry_to_file(loader, &texture).await?;
                     }
                 }
             }
@@ -206,7 +207,7 @@ pub async fn save_character(
 
     let character_bin = loader.get_prop_bin_by_path(&character_bin_path).unwrap();
 
-    let character_record: CharacterRecord = from_entry(
+    let character_record: CharacterRecord = from_entry_unwrap(
         character_bin
             .entries
             .iter()
@@ -221,23 +222,23 @@ pub async fn save_character(
 
     let spell_objects = character_bin
         .iter_entry_by_class(hash_bin(&"SpellObject"))
-        .map(|v| (v.hash, from_entry::<SpellObject>(v)))
+        .map(|v| (v.hash, from_entry_unwrap::<SpellObject>(v)))
         .collect::<HashMap<_, _>>();
 
-    for spell_object in spell_objects.values() {
-        let Some(missile_effect_name) = spell_object
-            .m_spell
-            .as_ref()
-            .and_then(|v| v.m_missile_effect_name.as_ref())
-        else {
-            continue;
-        };
+    // for spell_object in spell_objects.values() {
+    //     let Some(missile_effect_name) = spell_object
+    //         .m_spell
+    //         .as_ref()
+    //         .and_then(|v| v.m_missile_effect_name.as_ref())
+    //     else {
+    //         continue;
+    //     };
 
-        // let path = format!("data/particles/{}bin", missile_effect_name);
+    //     let path = format!("data/particles/{}bin", missile_effect_name);
 
-        // let mut reader = data_loader.get_wad_entry_reader_by_path(&path).unwrap();
-        // let inibin = InibinFile::read(&mut reader).unwrap();
-    }
+    //     let mut reader = data_loader.get_wad_entry_reader_by_path(&path).unwrap();
+    //     let inibin = InibinFile::read(&mut reader).unwrap();
+    // }
 
     let spell_objects_save_path = get_bin_path(&get_character_spell_objects_save_path(&name));
     save_struct_to_file(&spell_objects_save_path, &spell_objects).await?;
@@ -254,7 +255,7 @@ pub fn load_animation_map(
     ),
     Error,
 > {
-    let animation_graph_data = from_entry::<AnimationGraphData>(value);
+    let animation_graph_data = from_entry_unwrap::<AnimationGraphData>(value);
 
     let (Some(nodes), Some(blend_data)) = (
         animation_graph_data.m_clip_data_map,

@@ -1,5 +1,3 @@
-use std::io;
-
 use league_property::PropFile;
 
 use crate::{Error, LeagueWadLoader, LeagueWadMapLoader};
@@ -248,9 +246,6 @@ impl LeagueLoader {
             }
         }
 
-        Err(Error::Io(io::Error::new(
-            io::ErrorKind::NotFound,
-            "Prop file not found",
-        )))
+        Err(Error::Custom("Prop file not found"))
     }
 }

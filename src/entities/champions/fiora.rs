@@ -34,8 +34,15 @@ fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Witho
     for entity in q_fiora.iter() {
         commands
             .entity(entity)
-            .with_related::<SkillOf>((Skill { effect: None }, AbilityFioraPassive))
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    effect: None,
+                },
+                AbilityFioraPassive,
+            ))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
@@ -56,6 +63,7 @@ fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Witho
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(
@@ -80,6 +88,7 @@ fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Witho
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(ActionBuffSpawn{
@@ -99,6 +108,7 @@ fn add_skills(mut commands: Commands, q_fiora: Query<Entity, (With<Fiora>, Witho
                 }),
             },))
             .with_related::<SkillOf>((Skill {
+                level: 0,
                 effect: Some(behave! {
                     Behave::Sequence => {
                         Behave::trigger(

@@ -4,7 +4,7 @@ use binrw::BinRead;
 use league_core::{MapContainer, MissileSpecificationBehaviors};
 use league_file::AiMeshNGrid;
 use league_loader::LeagueWadMapLoader;
-use league_property::from_entry;
+use league_property::from_entry_unwrap;
 use league_utils::hash_bin;
 use lol_config::{ConfigNavigationGrid, ConfigNavigationGridCell};
 
@@ -19,7 +19,7 @@ pub async fn load_navigation_grid(
         .next()
         .unwrap();
 
-    let map_container = from_entry::<MapContainer>(entry);
+    let map_container = from_entry_unwrap::<MapContainer>(entry);
 
     let components = map_container.components;
 

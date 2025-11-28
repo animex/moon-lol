@@ -61,7 +61,7 @@ fn on_event_damage_create(
 
     if health.value <= 0.0 {
         debug!("{:?} 死了", entity);
-        commands.entity(entity).despawn();
         commands.trigger(EventDead { entity });
+        commands.entity(entity).despawn();
     }
 }
