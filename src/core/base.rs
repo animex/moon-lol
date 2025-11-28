@@ -18,8 +18,6 @@ pub use state::*;
 
 use bevy::app::{App, Plugin};
 
-use lol_core::Team;
-
 #[derive(Default)]
 pub struct PluginBase;
 

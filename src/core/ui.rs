@@ -281,7 +281,7 @@ fn init_health_bar(
                             Node {
                                 width: Val::Px(74.0),
                                 height: Val::Px(7.0),
-                                left: Val::Px(-15.0),
+                                left: Val::Px(-37.0),
                                 top: Val::Px(-10.0),
                                 position_type: PositionType::Absolute,
                                 ..default()
@@ -325,7 +325,7 @@ fn init_health_bar(
                             Node {
                                 width: Val::Px(136.0),
                                 height: Val::Px(29.0),
-                                left: Val::Px(-70.0),
+                                left: Val::Px(-68.0),
                                 top: Val::Px(-60.0),
                                 position_type: PositionType::Absolute,
                                 ..default()

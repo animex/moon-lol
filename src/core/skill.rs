@@ -20,7 +20,7 @@ impl Plugin for PluginSkill {
 pub struct SkillOf(pub Entity);
 
 #[derive(Component, Debug)]
-#[relationship_target(relationship = SkillOf)]
+#[relationship_target(relationship = SkillOf, linked_spawn)]
 pub struct Skills(Vec<Entity>);
 
 #[derive(Component, Default)]

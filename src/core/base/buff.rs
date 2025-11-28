@@ -10,5 +10,5 @@ pub struct Buff {
 pub struct BuffOf(pub Entity);
 
 #[derive(Component, Debug)]
-#[relationship_target(relationship = BuffOf)]
+#[relationship_target(relationship = BuffOf, linked_spawn)]
 pub struct Buffs(Vec<Entity>);

@@ -12,9 +12,7 @@ use bevy::{
 };
 use serde::de::DeserializeSeed;
 
-use league_core::{
-    CharacterRecord, SpellObject, UiElementEffectAnimationDataTextureData, UiElementIconData,
-};
+use league_core::{CharacterRecord, SpellObject, UiElementIconData};
 use league_to_lol::{
     get_character_record_save_path, get_character_spell_objects_save_path, get_struct_from_file,
     CONFIG_PATH_MAP, CONFIG_PATH_MAP_NAV_GRID, CONFIG_UI,
