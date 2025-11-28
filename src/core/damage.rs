@@ -9,8 +9,6 @@ pub struct PluginDamage;
 
 impl Plugin for PluginDamage {
     fn build(&self, app: &mut App) {
-        app.register_type::<Damage>();
-
         app.add_systems(FixedUpdate, update_damage_reductions_system);
         app.add_systems(FixedUpdate, cleanup_depleted_shields_system);
 

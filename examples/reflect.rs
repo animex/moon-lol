@@ -5,7 +5,6 @@ fn main() {
     let mut app = App::new();
 
     app.add_plugins(MinimalPlugins)
-        .register_type::<Movement>()
         .add_systems(Startup, startup)
         .add_systems(Update, dynamic_conditional_animation_system);
 

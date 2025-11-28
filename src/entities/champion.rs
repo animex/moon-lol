@@ -11,7 +11,5 @@ pub struct Champion;
 pub struct PluginChampion;
 
 impl Plugin for PluginChampion {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Champion>();
-    }
+    fn build(&self, _app: &mut App) {}
 }

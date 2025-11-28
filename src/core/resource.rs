@@ -189,18 +189,18 @@ impl Plugin for PluginResource {
 
         app.insert_resource(ConfigGame { legends });
 
-        for (_, ui_element) in &resource_cache.ui_elements {
-            if let Some(texture_data) = ui_element.texture_data.as_ref() {
-                if let UiElementEffectAnimationDataTextureData::AtlasData(atlas_data) = texture_data
-                {
-                    // if atlas_data.m_texture_name.contains("Clarity_HUDAtlas") {
-                    if ui_element.name.contains("PlayerFrame") {
-                        println!("{:?}", ui_element.name);
-                        println!("{:?}", atlas_data.m_texture_uv);
-                    }
-                }
-            }
-        }
+        // for (_, ui_element) in &resource_cache.ui_elements {
+        //     if let Some(texture_data) = ui_element.texture_data.as_ref() {
+        //         if let UiElementEffectAnimationDataTextureData::AtlasData(atlas_data) = texture_data
+        //         {
+        //             // if atlas_data.m_texture_name.contains("Clarity_HUDAtlas") {
+        //             if ui_element.name.contains("PlayerFrame") {
+        //                 println!("{:?}", ui_element.name);
+        //                 println!("{:?}", atlas_data.m_texture_uv);
+        //             }
+        //         }
+        //     }
+        // }
         app.insert_resource(resource_cache);
     }
 }

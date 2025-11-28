@@ -24,7 +24,5 @@ use lol_core::Team;
 pub struct PluginBase;
 
 impl Plugin for PluginBase {
-    fn build(&self, app: &mut App) {
-        app.register_type::<Team>();
-    }
+    fn build(&self, _app: &mut App) {}
 }

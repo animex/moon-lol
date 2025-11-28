@@ -12,8 +12,6 @@ pub struct PluginHwei;
 
 impl Plugin for PluginHwei {
     fn build(&self, app: &mut App) {
-        app.register_type::<Hwei>();
-
         app.add_systems(FixedUpdate, add_skills);
     }
 }

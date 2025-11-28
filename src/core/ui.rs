@@ -20,9 +20,7 @@ pub struct PluginUI;
 impl Plugin for PluginUI {
     fn build(&self, app: &mut App) {
         app.init_resource::<UIElementEntity>();
-        app.register_type::<HealthBar>();
-        app.register_type::<HealthBarType>();
-        app.register_type::<HealthFade>();
+
         app.add_systems(Startup, startup);
         app.add_systems(
             Update,

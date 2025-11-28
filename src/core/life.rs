@@ -8,7 +8,6 @@ pub struct PluginLife;
 
 impl Plugin for PluginLife {
     fn build(&self, app: &mut App) {
-        app.register_type::<Health>();
         app.add_systems(FixedUpdate, spawn_event);
         app.add_observer(on_event_damage_create);
     }

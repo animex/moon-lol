@@ -19,8 +19,6 @@ pub struct PluginFiora;
 
 impl Plugin for PluginFiora {
     fn build(&self, app: &mut App) {
-        app.register_type::<Fiora>();
-
         app.add_systems(FixedUpdate, add_skills);
     }
 }

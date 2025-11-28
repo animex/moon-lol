@@ -12,8 +12,6 @@ pub struct PluginRotate;
 
 impl Plugin for PluginRotate {
     fn build(&self, app: &mut App) {
-        app.register_type::<Rotate>();
-
         app.add_plugins(ArbitrationPipelinePlugin::<CommandRotate, RotatePipeline>::default());
 
         app.add_systems(

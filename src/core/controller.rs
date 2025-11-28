@@ -10,8 +10,6 @@ pub struct PluginController;
 
 impl Plugin for PluginController {
     fn build(&self, app: &mut App) {
-        app.register_type::<Controller>();
-
         app.add_systems(PreUpdate, on_key_pressed);
     }
 }
