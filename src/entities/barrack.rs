@@ -207,8 +207,7 @@ fn barracks_spawning_system(
         } else {
             upgrade_config.hp_upgrade
         };
-        health.max += upgrade_config.hp_max_bonus + hp_upgrade * upgrade_count as f32;
-        health.value = health.max;
+        health.max += (hp_upgrade * upgrade_count as f32).min(upgrade_config.hp_max_bonus);
 
         let mut damage = Damage(character_record.base_damage.unwrap_or(0.0));
         let damage_upgrade = if is_late_game {
@@ -216,12 +215,14 @@ fn barracks_spawning_system(
         } else {
             upgrade_config.damage_upgrade
         };
-        damage.0 +=
-            upgrade_config.damage_max + damage_upgrade.unwrap_or(0.0) * upgrade_count as f32;
+        damage.0 += damage_upgrade.unwrap_or(0.0) * upgrade_count as f32;
+        damage.0 = damage.0.min(upgrade_config.damage_max);
 
         let mut armor = Armor(character_record.base_armor.unwrap_or(0.0));
-        armor.0 += upgrade_config.armor_max.unwrap_or(0.0)
-            + upgrade_config.armor_upgrade_growth.unwrap_or(0.0) * upgrade_count as f32;
+        armor.0 += upgrade_config.armor_upgrade_growth.unwrap_or(0.0) * upgrade_count as f32;
+        if let Some(max) = upgrade_config.armor_max {
+            armor.0 = armor.0.min(max);
+        }
 
         let mut movement = Movement {
             speed: character_record.base_move_speed.unwrap_or(0.0),

@@ -116,14 +116,11 @@ impl PipelineStages for MovementPipeline {
 
 impl MovementState {
     pub fn reset_path(&mut self, path: &Vec<Vec3>, source: &str) {
-        self.completed = false;
-        self.current_target_index = 0;
-        self.direction = Vec2::ZERO;
-        self.path = path.clone();
-        // self.pathfind = None;
-        self.source = source.to_string();
-        self.speed = None;
-        self.velocity = Vec2::ZERO;
+        *self = MovementState {
+            path: path.clone(),
+            source: source.to_string(),
+            ..default()
+        }
     }
 
     pub fn clear_path(&mut self) {
@@ -222,12 +219,12 @@ fn update_path_movement(
         if movement_state.completed {
             movement_state.velocity = Vec2::ZERO;
             movement_state.direction = Vec2::ZERO;
-            movement_state.clear_path();
 
             commands.trigger(EventMovementEnd {
                 entity,
                 source: movement_state.source.clone(),
             });
+            movement_state.clear_path();
         } else {
             movement_state.direction = last_direction;
             movement_state.velocity = last_direction * speed;

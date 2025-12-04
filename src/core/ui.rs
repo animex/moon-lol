@@ -42,7 +42,7 @@ impl Plugin for PluginUI {
                 update_level,
                 update_player_health,
                 update_player_health_fade,
-                update_damage_numbers,
+                // update_damage_numbers,
                 update_player_ability_resource,
                 update_skill_icon,
                 update_skill_level_up_button,
@@ -54,7 +54,7 @@ impl Plugin for PluginUI {
             ),
         );
 
-        app.add_observer(on_event_damage_create);
+        // app.add_observer(on_event_damage_create);
         app.add_observer(on_command_update_ui_element);
         app.add_observer(on_command_ui_animation_start);
         app.add_observer(on_command_spawn_button);
@@ -153,7 +153,7 @@ fn init_health_bar(
                                 width: Val::Px(74.0),
                                 height: Val::Px(7.0),
                                 left: Val::Px(-37.0),
-                                top: Val::Px(-10.0),
+                                top: Val::Px(-20.0),
                                 position_type: PositionType::Absolute,
                                 ..default()
                             },

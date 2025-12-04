@@ -104,7 +104,7 @@ pub fn update_skill_level_up_button(
                 continue;
             }
 
-            info!("{} 生成技能升级按钮: 索引 {}", entity, index);
+            debug!("{} 生成技能升级按钮: 索引 {}", entity, index);
             let entity_button = commands
                 .spawn_empty()
                 .observe(move |event: On<Pointer<Click>>, mut commands: Commands| {
@@ -118,7 +118,7 @@ pub fn update_skill_level_up_button(
             });
         } else {
             if let Some(entity_button) = res_skill_level_up_button.entities[index] {
-                info!("{} 销毁技能升级按钮: 索引 {}", entity, index);
+                debug!("{} 销毁技能升级按钮: 索引 {}", entity, index);
                 res_skill_level_up_button.entities[index] = None;
                 commands.trigger(CommandDespawnButton {
                     entity: entity_button,
