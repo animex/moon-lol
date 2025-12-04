@@ -26,6 +26,8 @@ pub struct PluginUI;
 impl Plugin for PluginUI {
     fn build(&self, app: &mut App) {
         app.init_resource::<UIElementEntity>();
+        app.init_resource::<UIButtonEntity>();
+        app.init_resource::<SkillLevelUpButton>();
 
         app.add_systems(
             Startup,
@@ -43,9 +45,11 @@ impl Plugin for PluginUI {
                 update_damage_numbers,
                 update_player_ability_resource,
                 update_skill_icon,
+                update_skill_level_up_button,
                 update_player_icon,
                 update_ui_animation,
-                update_resize_system,
+                update_ui_element,
+                update_on_add_ui_element,
                 update_button,
             ),
         );
@@ -53,6 +57,8 @@ impl Plugin for PluginUI {
         app.add_observer(on_event_damage_create);
         app.add_observer(on_command_update_ui_element);
         app.add_observer(on_command_ui_animation_start);
+        app.add_observer(on_command_spawn_button);
+        app.add_observer(on_command_despawn_button);
     }
 }
 

@@ -19,7 +19,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement, CommandRunStart,
-    CommandSkillStart, MovementAction, RunTarget,
+    CommandSkillLevelUp, CommandSkillStart, MovementAction, RunTarget,
 };
 
 #[derive(Default)]
@@ -53,6 +53,7 @@ pub enum Action {
     Move(Vec2),
     Stop,
     Skill { index: usize, point: Vec2 },
+    SkillLevelUp(usize),
 }
 
 fn on_command_action(trigger: On<CommandAction>, mut commands: Commands) {
@@ -80,6 +81,9 @@ fn on_command_action(trigger: On<CommandAction>, mut commands: Commands) {
                 index,
                 point,
             });
+        }
+        Action::SkillLevelUp(index) => {
+            commands.trigger(CommandSkillLevelUp { entity, index });
         }
         Action::Stop => {
             commands.trigger(CommandAttackAutoStop { entity });

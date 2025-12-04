@@ -1,6 +1,11 @@
 use bevy::prelude::*;
 
-use crate::{Controller, ResourceCache, Skill, Skills, UIElementEntity};
+use lol_config::ConfigUi;
+
+use crate::{
+    CommandDespawnButton, CommandSkillLevelUp, CommandSpawnButton, Controller, Level,
+    ResourceCache, Skill, SkillPoints, Skills, UIElementEntity,
+};
 
 pub fn update_skill_icon(
     mut commands: Commands,
@@ -12,7 +17,7 @@ pub fn update_skill_icon(
     q_children: Query<&Children>,
     mut q_image_node: Query<&mut ImageNode>,
 ) {
-    let Ok(skills) = q_skills.single() else {
+    let Some(skills) = q_skills.iter().next() else {
         return;
     };
 
@@ -53,5 +58,72 @@ pub fn update_skill_icon(
         image_node.rect = None;
 
         commands.entity(entity).insert(Visibility::Visible);
+    }
+}
+
+#[derive(Resource, Default)]
+pub struct SkillLevelUpButton {
+    pub entities: [Option<Entity>; 4],
+}
+
+pub fn update_skill_level_up_button(
+    mut commands: Commands,
+    q_skill_points: Query<(Entity, &Level, &SkillPoints, &Skills), With<Controller>>,
+    mut res_skill_level_up_button: ResMut<SkillLevelUpButton>,
+    q_skill: Query<&Skill>,
+) {
+    let Ok((entity, level, skill_points, skills)) = q_skill_points.single() else {
+        return;
+    };
+
+    for (index, skill_entity) in skills.iter().skip(1).enumerate() {
+        let key_str = format!(
+            "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/LevelUp/LevelUp{}_Button",
+            index
+        );
+        let key = league_utils::hash_bin(&key_str);
+
+        // 如果没有技能点，或者技能已经满级，或者不满足加点条件，则隐藏/销毁按钮
+        let mut should_show = skill_points.0 > 0;
+
+        if should_show {
+            if let Ok(skill) = q_skill.get(skill_entity) {
+                // 1 级只能加点 q w e，6 级才能加点 r，6 级前一个技能最多加 3 点
+                if level.value < 6 {
+                    if index == 3 {
+                        should_show = false;
+                    } else if skill.level >= 3 {
+                        should_show = false;
+                    }
+                }
+            }
+        }
+
+        if should_show {
+            if res_skill_level_up_button.entities[index].is_some() {
+                continue;
+            }
+
+            info!("{} 生成技能升级按钮: 索引 {}", entity, index);
+            let entity_button = commands
+                .spawn_empty()
+                .observe(move |event: On<Pointer<Click>>, mut commands: Commands| {
+                    commands.trigger(CommandSkillLevelUp { entity, index });
+                })
+                .id();
+            res_skill_level_up_button.entities[index] = Some(entity_button);
+            commands.trigger(CommandSpawnButton {
+                key,
+                entity: Some(entity_button),
+            });
+        } else {
+            if let Some(entity_button) = res_skill_level_up_button.entities[index] {
+                info!("{} 销毁技能升级按钮: 索引 {}", entity, index);
+                res_skill_level_up_button.entities[index] = None;
+                commands.trigger(CommandDespawnButton {
+                    entity: entity_button,
+                });
+            }
+        }
     }
 }

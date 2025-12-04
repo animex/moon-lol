@@ -1,25 +1,11 @@
 use bevy::prelude::*;
 use league_utils::hash_bin;
+use lol_core::Team;
 
 use crate::{
     AbilityResource, AbilityResourceType, Armor, Attack, Bounding, CommandSkinSpawn, Damage,
-    EventDead, Health, Level, Movement, ResourceCache,
+    EventDead, EventLevelUp, Health, Level, Movement, ResourceCache,
 };
-
-/// 生成角色的命令
-#[derive(EntityEvent, Debug, Clone)]
-pub struct CommandSpawnCharacter {
-    pub entity: Entity,
-    pub character_record_key: String,
-    pub skin_path: String,
-}
-
-/// 角色组件标记
-#[derive(Component, Debug)]
-pub struct Character {
-    pub character_record_key: String,
-    pub skin_key: String,
-}
 
 #[derive(Default)]
 pub struct PluginCharacter;
@@ -29,6 +15,21 @@ impl Plugin for PluginCharacter {
         app.add_observer(on_command_spawn_character);
         app.add_observer(on_event_dead);
     }
+}
+
+/// 角色组件标记
+#[derive(Component, Debug)]
+pub struct Character {
+    pub character_record_key: String,
+    pub skin_key: String,
+}
+
+/// 生成角色的命令
+#[derive(EntityEvent, Debug, Clone)]
+pub struct CommandSpawnCharacter {
+    pub entity: Entity,
+    pub character_record_key: String,
+    pub skin_path: String,
 }
 
 /// 处理角色生成命令的观察者
@@ -138,14 +139,15 @@ fn on_command_spawn_character(
 }
 
 fn on_event_dead(
-    trigger: On<EventDead>,
-    query: Query<(&Character, &GlobalTransform)>,
-    mut level_query: Query<(&GlobalTransform, &mut Level)>,
+    event: On<EventDead>,
+    query: Query<(&GlobalTransform, &Character, &Team)>,
+    mut level_query: Query<(Entity, &GlobalTransform, &Team, &mut Level)>,
     resource_cache: Res<ResourceCache>,
+    mut commands: Commands,
 ) {
-    let entity = trigger.event_target();
+    let entity = event.event_target();
 
-    let Ok((character, transform)) = query.get(entity) else {
+    let Ok((transform, character, team)) = query.get(entity) else {
         return;
     };
 
@@ -165,9 +167,24 @@ fn on_event_dead(
     };
 
     let position = transform.translation();
-    for (target_transform, mut level) in level_query.iter_mut() {
-        if target_transform.translation().distance(position) <= radius {
-            level.add_experience(exp as u32);
+    for (target_entity, target_transform, target_team, mut level) in level_query.iter_mut() {
+        if target_team != team {
+            continue;
         }
+
+        if target_transform.translation().distance(position) > radius {
+            continue;
+        }
+
+        let levels_gained = level.add_experience(exp as u32);
+        if levels_gained == 0 {
+            continue;
+        }
+
+        commands.trigger(EventLevelUp {
+            entity: target_entity,
+            level: level.value,
+            delta: levels_gained,
+        });
     }
 }

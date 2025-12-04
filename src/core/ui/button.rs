@@ -1,13 +1,31 @@
+use std::collections::HashMap;
+
 use bevy::prelude::*;
 
 use lol_config::ConfigUi;
 
 use crate::{core::ui::element::UIElementEntity, UIElement};
 
+#[derive(Resource, Default)]
+pub struct UIButtonEntity {
+    pub map: HashMap<u32, Entity>,
+}
+
 #[derive(Component)]
 #[require(Interaction)]
 pub struct UIButton {
     pub key: u32,
+}
+
+#[derive(Event)]
+pub struct CommandSpawnButton {
+    pub entity: Option<Entity>,
+    pub key: u32,
+}
+
+#[derive(EntityEvent)]
+pub struct CommandDespawnButton {
+    pub entity: Entity,
 }
 
 pub fn startup_spawn_buttons(mut commands: Commands, res_config_ui: Res<ConfigUi>) {
@@ -20,19 +38,57 @@ pub fn startup_spawn_buttons(mut commands: Commands, res_config_ui: Res<ConfigUi
             continue;
         }
 
-        let hit_region = res_config_ui
-            .ui_region
-            .get(&ui_button_group.hit_region_element)
-            .unwrap();
-        commands.spawn((
-            Node::default(),
-            UIElement {
-                key: ui_button_group.hit_region_element.to_string(),
-                position: hit_region.position.clone().unwrap(),
-                update_child: false,
-            },
-            UIButton { key },
-        ));
+        commands.trigger(CommandSpawnButton { key, entity: None });
+    }
+}
+
+pub fn on_command_spawn_button(
+    trigger: On<CommandSpawnButton>,
+    mut commands: Commands,
+    res_config_ui: Res<ConfigUi>,
+) {
+    let key = trigger.key;
+    let ui_button_group = res_config_ui.ui_button_group.get(&key).unwrap();
+
+    let hit_region = res_config_ui
+        .ui_region
+        .get(&ui_button_group.hit_region_element)
+        .unwrap();
+    let bundle = (
+        Node::default(),
+        UIElement {
+            key: ui_button_group.hit_region_element.to_string(),
+            position: hit_region.position.clone().unwrap(),
+            update_child: false,
+        },
+        UIButton { key },
+    );
+
+    if let Some(entity) = trigger.entity {
+        commands.entity(entity).insert(bundle);
+    } else {
+        commands.spawn(bundle);
+    }
+}
+
+pub fn on_command_despawn_button(
+    trigger: On<CommandDespawnButton>,
+    mut commands: Commands,
+    q_ui_button: Query<&UIButton>,
+    res_config_ui: Res<ConfigUi>,
+    res_ui_element_entity: Res<UIElementEntity>,
+) {
+    commands.entity(trigger.entity).despawn();
+
+    let Ok(button) = q_ui_button.get(trigger.entity) else {
+        return;
+    };
+
+    let ui_button_group = res_config_ui.ui_button_group.get(&button.key).unwrap();
+
+    for element in ui_button_group.elements.iter() {
+        let &element_entity = res_ui_element_entity.map.get(element).unwrap();
+        commands.entity(element_entity).insert(Visibility::Hidden);
     }
 }
 
@@ -47,7 +103,7 @@ pub fn update_button(
 
         let interaction_entity = match *interaction {
             Interaction::Pressed => {
-                info!("按下 {}", ui_button_group.name);
+                debug!("按下 {}", ui_button_group.name);
                 let Some(&clicked_entity) = ui_button_group
                     .clicked_state_elements
                     .as_ref()
@@ -60,7 +116,7 @@ pub fn update_button(
                 clicked_entity
             }
             Interaction::Hovered => {
-                info!("悬停 {}", ui_button_group.name);
+                debug!("悬停 {}", ui_button_group.name);
                 let &hover_entity = ui_button_group
                     .hover_state_elements
                     .as_ref()
@@ -71,7 +127,7 @@ pub fn update_button(
                 hover_entity
             }
             Interaction::None => {
-                info!("恢复 {}", ui_button_group.name);
+                debug!("恢复 {}", ui_button_group.name);
                 let &default_entity = ui_button_group
                     .default_state_elements
                     .as_ref()

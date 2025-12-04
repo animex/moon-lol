@@ -1,11 +1,14 @@
-bevy
-0.16.1
+# bevy
 
-直接从英雄联盟的二进制数据中读取游戏配置
+0.17.0
+
+# 游戏配置
+
+从英雄联盟的 wad 文件中提取游戏资源
 
 DATA/FINAL/Maps/Shipping/Map11.wad.client
 
-这是目前主要读取的地图文件，存储了文件表和文件内容，
+这是目前主要读取的地图 wad 文件，存储了文件表和文件内容，
 
 在文件表中记录了：
 
@@ -28,44 +31,4 @@ DATA/FINAL/Maps/Shipping/Map11.wad.client
 
 # 左性坐标系 -> 右手坐标系
 
-英雄联盟是左手坐标系，而 bevy 是右手坐标系
-
-## vertex changes
-
-### position
-z = -z
-
-### normal
-z = -z
-
-### indices
-reverse()
-
-## transform changes
-
-### translation
-z = -z
-
-### rotation
-x = -x
-y = -y
-
-## joint changes
-
-### local transform
-
-apply transform changes
-
-### inverse bind pose matrix
-
-apply transform changes
-
-## animation changes
-
-### translation channel
-z = -z
-
-### rotation channel
-x = -x
-y = -y
-
+英雄联盟是左手坐标系，而 bevy 是右手坐标系，所以需要将摄像机的屏幕裁剪空间水平翻转。

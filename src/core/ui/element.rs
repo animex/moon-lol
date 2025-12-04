@@ -1,6 +1,9 @@
 use std::collections::HashMap;
 
-use bevy::{prelude::*, window::WindowResized};
+use bevy::{
+    prelude::*,
+    window::{PrimaryWindow, WindowResized},
+};
 
 use league_core::{
     UiElementEffectAnimationDataTextureData, UiElementIconData, UiElementIconDataPosition,
@@ -133,77 +136,125 @@ pub fn spawn_ui_atom(
     Some(entity)
 }
 
-pub fn update_resize_system(
+fn apply_rect_position(node: &mut Node, ui_element: &UIElement, window_size: Vec2) -> Option<Vec2> {
+    let UiElementIconDataPosition::UiPositionRect(ref position) = ui_element.position else {
+        return None;
+    };
+
+    let Some(ui_rect) = &position.ui_rect else {
+        return None;
+    };
+
+    let Some(anchors) = &position.anchors else {
+        return None;
+    };
+
+    let UiPositionRectAnchors::AnchorSingle(anchor) = anchors else {
+        return None;
+    };
+    let anchor = anchor.anchor;
+
+    let Some(position) = ui_rect.position else {
+        return None;
+    };
+
+    let Some(size) = ui_rect.size else {
+        return None;
+    };
+
+    let Some(source_resolution_width) = ui_rect.source_resolution_width else {
+        return None;
+    };
+
+    let Some(source_resolution_height) = ui_rect.source_resolution_height else {
+        return None;
+    };
+
+    let scale_y = window_size.y / source_resolution_height as f32;
+
+    let canvas_size_old = vec2(
+        source_resolution_width as f32,
+        source_resolution_height as f32,
+    );
+    let canvas_size_new = window_size;
+
+    let anchor_old = canvas_size_old * anchor;
+    let anchor_new = canvas_size_new * anchor;
+
+    let position_new = (position - anchor_old) * scale_y + anchor_new;
+    let size_new = size * scale_y;
+
+    node.left = Val::Px(position_new.x);
+    node.top = Val::Px(position_new.y);
+
+    node.width = Val::Px(size_new.x);
+    node.height = Val::Px(size_new.y);
+
+    Some(size_new)
+}
+
+fn update_element_layout(
+    entity: Entity,
+    ui_element: &UIElement,
+    window_size: Vec2,
+    q_node: &mut Query<&mut Node>,
+    q_children: &Query<&Children>,
+) {
+    let Some(size_new) = ({
+        let Ok(mut node) = q_node.get_mut(entity) else {
+            return;
+        };
+        apply_rect_position(&mut node, ui_element, window_size)
+    }) else {
+        return;
+    };
+
+    if !ui_element.update_child {
+        return;
+    }
+
+    let Ok(children) = q_children.get(entity) else {
+        return;
+    };
+
+    let Some(&child) = children.first() else {
+        return;
+    };
+
+    let Ok(mut child_node) = q_node.get_mut(child) else {
+        return;
+    };
+
+    child_node.width = Val::Px(size_new.x);
+    child_node.height = Val::Px(size_new.y);
+}
+
+pub fn update_on_add_ui_element(
+    mut q_element: Query<(Entity, &UIElement), Added<UIElement>>,
+    q_children: Query<&Children>,
+    mut q_node: Query<&mut Node>,
+    q_window: Query<&Window, With<PrimaryWindow>>,
+) {
+    let Ok(window) = q_window.single() else {
+        return;
+    };
+    let window_size = vec2(window.width(), window.height());
+
+    for (entity, ui_element) in q_element.iter_mut() {
+        update_element_layout(entity, ui_element, window_size, &mut q_node, &q_children);
+    }
+}
+
+pub fn update_ui_element(
     mut q_element: Query<(Entity, &UIElement)>,
     q_children: Query<&Children>,
     mut q_node: Query<&mut Node>,
     mut resize_reader: MessageReader<WindowResized>,
 ) {
     for e in resize_reader.read() {
+        let window_size = vec2(e.width, e.height);
         for (entity, ui_element) in q_element.iter_mut() {
-            let mut node = q_node.get_mut(entity).unwrap();
-
-            let UiElementIconDataPosition::UiPositionRect(ref position) = ui_element.position
-            else {
-                continue;
-            };
-
-            let Some(ui_rect) = &position.ui_rect else {
-                continue;
-            };
-
-            let Some(anchors) = &position.anchors else {
-                continue;
-            };
-
-            let UiPositionRectAnchors::AnchorSingle(anchor) = anchors else {
-                continue;
-            };
-            let anchor = anchor.anchor;
-
-            let Some(position) = ui_rect.position else {
-                continue;
-            };
-
-            let Some(size) = ui_rect.size else {
-                continue;
-            };
-
-            let Some(source_resolution_width) = ui_rect.source_resolution_width else {
-                continue;
-            };
-
-            let Some(source_resolution_height) = ui_rect.source_resolution_height else {
-                continue;
-            };
-
-            let scale_y = e.height / source_resolution_height as f32;
-
-            let canvas_size_old = vec2(
-                source_resolution_width as f32,
-                source_resolution_height as f32,
-            );
-            let canvas_size_new = vec2(e.width, e.height);
-
-            let anchor_old = canvas_size_old * anchor;
-            let anchor_new = canvas_size_new * anchor;
-
-            let position_new = (position - anchor_old) * scale_y + anchor_new;
-            let size_new = size * scale_y;
-
-            node.left = Val::Px(position_new.x);
-            node.top = Val::Px(position_new.y);
-
-            node.width = Val::Px(size_new.x);
-            node.height = Val::Px(size_new.y);
-
-            if ui_element.update_child {
-                let children = q_children.get(entity).unwrap();
-                let mut child_node = q_node.get_mut(children[0]).unwrap();
-
-                child_node.width = Val::Px(size_new.x);
-                child_node.height = Val::Px(size_new.y);
-            }
+            update_element_layout(entity, ui_element, window_size, &mut q_node, &q_children);
         }
     }
 }
