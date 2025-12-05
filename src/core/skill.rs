@@ -40,6 +40,7 @@ impl Deref for Skills {
 #[derive(Component, Default)]
 pub struct CoolDown {
     pub timer: Timer,
+    pub duration: f32,
 }
 
 #[derive(Component)]
@@ -78,12 +79,28 @@ fn on_skill_cast(
     trigger: On<CommandSkillStart>,
     mut commands: Commands,
     skills: Query<&Skills>,
-    q_skill: Query<&Skill>,
+    mut q_skill: Query<(&Skill, &mut CoolDown)>,
 ) {
     let entity = trigger.event_target();
-    let skills = skills.get(entity).unwrap();
-    let skill_entity = skills.0[trigger.index];
-    let skill = q_skill.get(skill_entity).unwrap();
+    let Ok(skills) = skills.get(entity) else {
+        return;
+    };
+    let Some(&skill_entity) = skills.0.get(trigger.index) else {
+        return;
+    };
+    let Ok((skill, mut cooldown)) = q_skill.get_mut(skill_entity) else {
+        return;
+    };
+
+    if !cooldown.timer.is_finished() {
+        debug!(
+            "{} 技能 {} 冷却中，剩余 {:.2}s",
+            entity,
+            trigger.index,
+            cooldown.timer.remaining_secs()
+        );
+        return;
+    }
 
     if let Some(effect) = &skill.effect {
         commands.entity(entity).with_child((
@@ -93,6 +110,12 @@ fn on_skill_cast(
             },
         ));
     }
+
+    cooldown.timer = Timer::from_seconds(cooldown.duration, TimerMode::Once);
+    debug!(
+        "{} 技能 {} 开始冷却 {}s",
+        entity, trigger.index, cooldown.duration
+    );
 }
 
 #[derive(EntityEvent)]

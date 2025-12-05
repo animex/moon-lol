@@ -3,7 +3,7 @@ use bevy_behave::{behave, Behave};
 use league_utils::hash_bin;
 
 use crate::{
-    core::{ActionAnimationPlay, ActionParticleSpawn, Skill, SkillOf, Skills},
+    core::{ActionAnimationPlay, ActionParticleSpawn, CoolDown, Skill, SkillOf, Skills},
     entities::champion::Champion,
 };
 
@@ -25,66 +25,96 @@ fn add_skills(mut commands: Commands, q_hwei: Query<Entity, (With<Hwei>, Without
     for entity in q_hwei.iter() {
         commands
             .entity(entity)
-            .with_related::<SkillOf>(Skill {
-                level: 0,
-                key: hash_bin("Characters/Hwei/Spells/HweiPassiveAbility/HweiPassive"),
-                effect: None,
-            })
-            .with_related::<SkillOf>((Skill {
-                level: 0,
-                key: hash_bin("Characters/Hwei/Spells/HweiQAbility/HweiQ"),
-                effect: Some(behave! {
-                    Behave::Sequence => {
-                        Behave::trigger(
-                            ActionAnimationPlay { hash: hash_bin("Spell1") }
-                        ),
-                        Behave::trigger(
-                            ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
-                        ),
-                    }
-                }),
-            },))
-            .with_related::<SkillOf>((Skill {
-                level: 0,
-                key: hash_bin("Characters/Hwei/Spells/HweiWAbility/HweiW"),
-                effect: Some(behave! {
-                    Behave::Sequence => {
-                        Behave::trigger(
-                            ActionAnimationPlay { hash: hash_bin("Spell1") }
-                        ),
-                        Behave::trigger(
-                            ActionParticleSpawn { hash: hash_bin("Hwei_Q_W_AoE") },
-                        ),
-                    }
-                }),
-            },))
-            .with_related::<SkillOf>((Skill {
-                level: 0,
-                key: hash_bin("Characters/Hwei/Spells/HweiEAbility/HweiE"),
-                effect: Some(behave! {
-                    Behave::Sequence => {
-                        Behave::trigger(
-                            ActionAnimationPlay { hash: hash_bin("Spell1") }
-                        ),
-                        Behave::trigger(
-                            ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
-                        ),
-                    }
-                }),
-            },))
-            .with_related::<SkillOf>((Skill {
-                level: 0,
-                key: hash_bin("Characters/Hwei/Spells/HweiRAbility/HweiR"),
-                effect: Some(behave! {
-                    Behave::Sequence => {
-                        Behave::trigger(
-                            ActionAnimationPlay { hash: hash_bin("Spell1") }
-                        ),
-                        Behave::trigger(
-                            ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
-                        ),
-                    }
-                }),
-            },));
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    key: hash_bin("Characters/Hwei/Spells/HweiPassiveAbility/HweiPassive"),
+                    effect: None,
+                },
+                CoolDown {
+                    duration: 0.0,
+                    ..default()
+                },
+            ))
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    key: hash_bin("Characters/Hwei/Spells/HweiQAbility/HweiQ"),
+                    effect: Some(behave! {
+                        Behave::Sequence => {
+                            Behave::trigger(
+                                ActionAnimationPlay { hash: hash_bin("Spell1") }
+                            ),
+                            Behave::trigger(
+                                ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
+                            ),
+                        }
+                    }),
+                },
+                CoolDown {
+                    duration: 8.0,
+                    ..default()
+                },
+            ))
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    key: hash_bin("Characters/Hwei/Spells/HweiWAbility/HweiW"),
+                    effect: Some(behave! {
+                        Behave::Sequence => {
+                            Behave::trigger(
+                                ActionAnimationPlay { hash: hash_bin("Spell1") }
+                            ),
+                            Behave::trigger(
+                                ActionParticleSpawn { hash: hash_bin("Hwei_Q_W_AoE") },
+                            ),
+                        }
+                    }),
+                },
+                CoolDown {
+                    duration: 8.0,
+                    ..default()
+                },
+            ))
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    key: hash_bin("Characters/Hwei/Spells/HweiEAbility/HweiE"),
+                    effect: Some(behave! {
+                        Behave::Sequence => {
+                            Behave::trigger(
+                                ActionAnimationPlay { hash: hash_bin("Spell1") }
+                            ),
+                            Behave::trigger(
+                                ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
+                            ),
+                        }
+                    }),
+                },
+                CoolDown {
+                    duration: 8.0,
+                    ..default()
+                },
+            ))
+            .with_related::<SkillOf>((
+                Skill {
+                    level: 0,
+                    key: hash_bin("Characters/Hwei/Spells/HweiRAbility/HweiR"),
+                    effect: Some(behave! {
+                        Behave::Sequence => {
+                            Behave::trigger(
+                                ActionAnimationPlay { hash: hash_bin("Spell1") }
+                            ),
+                            Behave::trigger(
+                                ActionParticleSpawn { hash: hash_bin("Hwei_Q_Q_Tar") },
+                            ),
+                        }
+                    }),
+                },
+                CoolDown {
+                    duration: 80.0,
+                    ..default()
+                },
+            ));
     }
 }

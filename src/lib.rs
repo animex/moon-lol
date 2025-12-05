@@ -35,6 +35,7 @@ plugin_group! {
         :PluginBase,
         :PluginCamera,
         :PluginController,
+        :PluginCooldown,
         :PluginDamage,
         :PluginGame,
         :PluginLife,

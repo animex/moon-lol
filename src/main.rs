@@ -36,6 +36,7 @@ plugin_group! {
         :PluginBase,
         :PluginCamera,
         :PluginController,
+        :PluginCooldown,
         :PluginDamage,
         :PluginGame,
         :PluginLife,
@@ -92,6 +93,7 @@ fn main() {
     app.add_plugins(PluginBase);
     app.add_plugins(PluginCamera);
     app.add_plugins(PluginController);
+    app.add_plugins(PluginCooldown);
     app.add_plugins(PluginDamage);
     app.add_plugins(PluginGame);
     app.add_plugins(PluginLife);
