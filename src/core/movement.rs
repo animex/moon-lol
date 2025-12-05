@@ -1,8 +1,5 @@
 use core::f32;
-use std::{
-    collections::{HashMap, HashSet},
-    time::Instant,
-};
+use std::{collections::HashSet, time::Instant};
 
 use bevy::prelude::*;
 use lol_config::ConfigNavigationGrid;
@@ -115,12 +112,13 @@ impl PipelineStages for MovementPipeline {
 }
 
 impl MovementState {
-    pub fn reset_path(&mut self, path: &Vec<Vec3>, source: &str) {
+    pub fn reset_path(&mut self, path: &Vec<Vec3>, source: &str) -> &mut Self {
         *self = MovementState {
             path: path.clone(),
             source: source.to_string(),
             ..default()
-        }
+        };
+        self
     }
 
     pub fn clear_path(&mut self) {
@@ -133,6 +131,11 @@ impl MovementState {
 
     pub fn with_speed(&mut self, speed: f32) -> &mut Self {
         self.speed = Some(speed);
+        self
+    }
+
+    pub fn with_pathfind(&mut self, pathfind: (Vec3, f32)) -> &mut Self {
+        self.pathfind = Some(pathfind);
         self
     }
 }
@@ -346,6 +349,8 @@ fn apply_final_movement_decision(
 
                         // 检查是否需要重新规划路径
                         let need_replan = if let Some((last_target, _)) = movement_state.pathfind {
+                            let start = Instant::now();
+
                             // 目标位置发生变化
                             let target_changed =
                                 (target - last_target).xz().length() > f32::EPSILON;
@@ -355,12 +360,17 @@ fn apply_final_movement_decision(
                                 &movement_state.path,
                                 movement_state.current_target_index,
                             );
+
                             if target_changed {
                                 debug!("{} 的目标位置发生变化: {}", entity, target_changed);
                             }
                             if path_blocked {
                                 debug!("{} 的路径上有障碍物阻挡: {}", entity, path_blocked);
                             }
+
+                            stats.check_path_count += 1;
+                            stats.check_path_time += start.elapsed();
+
                             target_changed || path_blocked
                         } else {
                             // 第一次规划
@@ -372,8 +382,6 @@ fn apply_final_movement_decision(
                             debug!("{} 不需要重新规划，{:#?}", entity, movement_state);
                             continue;
                         }
-
-                        movement_state.pathfind = Some((*target, time.elapsed_secs()));
 
                         debug!("{} 寻路到 {:?}", entity, target);
 
@@ -401,7 +409,9 @@ fn apply_final_movement_decision(
                                     Vec3::new(p.x, y, p.y)
                                 })
                                 .collect();
-                            movement_state.reset_path(&path_3d, source);
+                            movement_state
+                                .reset_path(&path_3d, source)
+                                .with_pathfind((*target, time.elapsed_secs()));
                         } else {
                             debug!("{} 寻路失败", entity);
                         }

@@ -1,5 +1,3 @@
-use bevy::asset::RenderAssetUsages;
-use bevy::mesh::{Indices, PrimitiveTopology};
 use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use std::collections::{HashMap, HashSet, VecDeque};
@@ -20,15 +18,11 @@ impl Plugin for PluginNavigaton {
         app.add_systems(First, |mut res_stats: ResMut<NavigationStats>| {
             *res_stats = Default::default();
         });
-        // app.add_systems(Last, |res_stats: Res<NavigationStats>| {
-        //     if res_stats.get_nav_path_time > Duration::from_millis(10) {
-        //         info!("{:#?}", res_stats);
-        //     }
-
-        //     if res_stats.occupied_grid_cells_num > 0 {
-        //         info!("{:#?}", res_stats.occupied_grid_cells_num);
-        //     }
-        // });
+        app.add_systems(Last, |res_stats: Res<NavigationStats>| {
+            if res_stats.get_nav_path_time > Duration::from_millis(10) {
+                info!("{:#?}", res_stats);
+            }
+        });
         app.add_systems(PreUpdate, pre_update_global_occupied_cells);
         app.add_systems(Update, update_y);
         app.add_systems(Update, update_visualization_astar);
@@ -51,6 +45,9 @@ pub struct NavigationStats {
 
     pub exclude_count: u32,
     pub exclude_time: Duration,
+
+    pub check_path_count: u32,
+    pub check_path_time: Duration,
 }
 
 /// A* 可视化 debug 资源

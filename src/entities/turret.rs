@@ -12,7 +12,7 @@ impl Plugin for PluginTurret {
 }
 
 #[derive(Component)]
-#[require(Aggro = Aggro { range: 750.0 }, HealthBar = HealthBar { bar_type: HealthBarType::Turret })]
+#[require(Aggro = Aggro { range: 1000.0 }, HealthBar = HealthBar { bar_type: HealthBarType::Turret })]
 pub struct Turret;
 
 fn on_event_aggro_target_found(
