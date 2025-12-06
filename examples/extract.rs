@@ -96,7 +96,11 @@ async fn main() {
     save_config_map(
         root_dir,
         "base_srx",
-        vec![("Fiora", "Skin22"), ("Hwei", "Skin0")],
+        vec![
+            ("Fiora", "Skin22"),
+            ("Hwei", "Skin0"),
+            ("Cassiopeia", "Skin0"),
+        ],
     )
     .await
     .unwrap();

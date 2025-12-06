@@ -1,7 +1,5 @@
 use bevy::prelude::*;
 
-use lol_config::ConfigUi;
-
 use crate::{
     CommandDespawnButton, CommandSkillLevelUp, CommandSpawnButton, Controller, Level,
     ResourceCache, Skill, SkillPoints, Skills, UIElementEntity,
@@ -107,7 +105,7 @@ pub fn update_skill_level_up_button(
             debug!("{} 生成技能升级按钮: 索引 {}", entity, index);
             let entity_button = commands
                 .spawn_empty()
-                .observe(move |event: On<Pointer<Click>>, mut commands: Commands| {
+                .observe(move |_event: On<Pointer<Click>>, mut commands: Commands| {
                     commands.trigger(CommandSkillLevelUp { entity, index });
                 })
                 .id();

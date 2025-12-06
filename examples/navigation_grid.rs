@@ -30,10 +30,6 @@ fn main() {
                 }),
         ))
         .init_resource::<FlagFilters>()
-        .insert_resource(NavigationDebug {
-            enabled: true,
-            ..default()
-        })
         .add_systems(Startup, setup)
         .add_systems(EguiPrimaryContextPass, ui_system)
         .add_systems(Update, update_grid_visibility)
@@ -90,62 +86,62 @@ fn setup(
     // Initialize to show all grid points
     flag_filters.show_all = true;
 
-    // let mesh = meshes.add(Plane3d::new(
-    //     vec3(0.0, 1.0, 0.0),
-    //     Vec2::splat(grid.cell_size / 2.0 - 5.0),
-    // ));
+    let mesh = meshes.add(Plane3d::new(
+        vec3(0.0, 1.0, 0.0),
+        Vec2::splat(grid.cell_size / 2.0 - 5.0),
+    ));
 
-    // let red_material = materials.add(StandardMaterial {
-    //     base_color: Color::srgb(1.0, 0.0, 0.0),
-    //     unlit: true,
-    //     cull_mode: Some(Face::Front),
-    //     depth_bias: 100.0,
-    //     ..default()
-    // });
+    let red_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(1.0, 0.0, 0.0),
+        unlit: true,
+        cull_mode: Some(Face::Front),
+        depth_bias: 100.0,
+        ..default()
+    });
 
-    // let green_material = materials.add(StandardMaterial {
-    //     base_color: Color::srgb(0.0, 1.0, 0.0),
-    //     unlit: true,
-    //     cull_mode: Some(Face::Front),
-    //     depth_bias: 100.0,
-    //     ..default()
-    // });
+    let green_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 1.0, 0.0),
+        unlit: true,
+        cull_mode: Some(Face::Front),
+        depth_bias: 100.0,
+        ..default()
+    });
 
-    // let blue_material = materials.add(StandardMaterial {
-    //     base_color: Color::srgb(0.0, 0.0, 1.0),
-    //     unlit: true,
-    //     cull_mode: Some(Face::Front),
-    //     depth_bias: 100.0,
-    //     ..default()
-    // });
+    let blue_material = materials.add(StandardMaterial {
+        base_color: Color::srgb(0.0, 0.0, 1.0),
+        unlit: true,
+        cull_mode: Some(Face::Front),
+        depth_bias: 100.0,
+        ..default()
+    });
 
-    // for (y, row) in grid.cells.iter().enumerate() {
-    //     for (x, cell) in row.iter().enumerate() {
-    //         let position = grid.get_cell_center_position_by_xy((x, y));
-    //         commands
-    //             .spawn((
-    //                 Mesh3d(mesh.clone()),
-    //                 MeshMaterial3d(
-    //                     if cell
-    //                         .vision_pathing_flags
-    //                         .contains(VisionPathingFlags::BlueTeamOnly)
-    //                     {
-    //                         blue_material.clone()
-    //                     } else if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
-    //                         red_material.clone()
-    //                     } else {
-    //                         green_material.clone()
-    //                     },
-    //                 ),
-    //                 Transform::from_translation(position),
-    //                 GridCell {
-    //                     flags: cell.vision_pathing_flags.bits() as u32,
-    //                 },
-    //                 Visibility::Visible,
-    //             ))
-    //             .observe(on_click_map);
-    //     }
-    // }
+    for (y, row) in grid.cells.iter().enumerate() {
+        for (x, cell) in row.iter().enumerate() {
+            let position = grid.get_cell_center_position_by_xy((x, y));
+            commands
+                .spawn((
+                    Mesh3d(mesh.clone()),
+                    MeshMaterial3d(
+                        if cell
+                            .vision_pathing_flags
+                            .contains(VisionPathingFlags::BlueTeamOnly)
+                        {
+                            blue_material.clone()
+                        } else if cell.vision_pathing_flags.contains(VisionPathingFlags::Wall) {
+                            red_material.clone()
+                        } else {
+                            green_material.clone()
+                        },
+                    ),
+                    Transform::from_translation(position),
+                    GridCell {
+                        flags: cell.vision_pathing_flags.bits() as u32,
+                    },
+                    Visibility::Visible,
+                ))
+                .observe(on_click_map);
+        }
+    }
 }
 
 fn on_key_space(
