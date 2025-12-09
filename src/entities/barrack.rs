@@ -2,9 +2,9 @@ use std::{collections::VecDeque, time::Duration};
 
 use bevy::prelude::*;
 use league_core::{
-    BarracksConfig, BarracksMinionConfigWaveBehavior, CharacterRecord, ConstantWaveBehavior,
-    InhibitorWaveBehavior, MapContainer, MapPlaceableContainer, MissileSpecificationBehaviors,
-    RotatingWaveBehavior, TimedVariableWaveBehavior, Unk0xad65d8c4,
+    BarracksConfig, CharacterRecord, ConstantWaveBehavior, EnumAddLevelTimer, EnumWaveBehavior,
+    InhibitorWaveBehavior, MapContainer, MapPlaceableContainer, RotatingWaveBehavior,
+    TimedVariableWaveBehavior, Unk0xad65d8c4,
 };
 use league_utils::{get_asset_id_by_hash, get_asset_id_by_path};
 use lol_core::{Lane, Team};
@@ -72,9 +72,9 @@ fn startup_spawn_barrack(
             continue;
         };
 
-        for (_, value) in &map_placeable_container.items {
+        for (_, value) in map_placeable_container.items.as_ref().unwrap() {
             match value {
-                MissileSpecificationBehaviors::Unk0x3c995caf(unk0x3c995caf) => {
+                EnumAddLevelTimer::Unk0x3c995caf(unk0x3c995caf) => {
                     let lane = match unk0x3c995caf.name.as_str() {
                         "MinionPath_Top" => Lane::Top,
                         "MinionPath_Mid" => Lane::Mid,
@@ -92,7 +92,7 @@ fn startup_spawn_barrack(
 
                     res_minion_path.0.entry(lane).or_insert(path);
                 }
-                MissileSpecificationBehaviors::Unk0xba138ae3(unk0xba138ae3) => {
+                EnumAddLevelTimer::Unk0xba138ae3(unk0xba138ae3) => {
                     let key_barracks_config =
                         get_asset_id_by_hash(unk0xba138ae3.definition.barracks_config);
 
@@ -238,7 +238,7 @@ fn barracks_spawning_system(
         let is_late_game = upgrade_count >= barracks_config.upgrades_before_late_game_scaling;
 
         let character = res_assets_unk_ad65d8c4
-            .get(get_asset_id_by_hash(minion_config.unk_0x8a3fc6eb))
+            .get(get_asset_id_by_hash(minion_config.unk_0xfee040bc))
             .unwrap();
 
         let character_record = res_assets_character_record
@@ -304,16 +304,16 @@ fn barracks_spawning_system(
 
 /// 辅助函数：根据不同的 WaveBehavior 计算应生成的数量
 fn calculate_spawn_count(
-    behavior: &BarracksMinionConfigWaveBehavior,
+    behavior: &EnumWaveBehavior,
     game_time_secs: f32,
     wave_count: u32,
     inhibitor_state: &InhibitorState,
 ) -> i32 {
     match behavior {
-        BarracksMinionConfigWaveBehavior::ConstantWaveBehavior(ConstantWaveBehavior {
-            spawn_count,
-        }) => *spawn_count,
-        BarracksMinionConfigWaveBehavior::InhibitorWaveBehavior(InhibitorWaveBehavior {
+        EnumWaveBehavior::ConstantWaveBehavior(ConstantWaveBehavior { spawn_count }) => {
+            spawn_count.unwrap()
+        }
+        EnumWaveBehavior::InhibitorWaveBehavior(InhibitorWaveBehavior {
             spawn_count_per_inhibitor_down,
         }) => {
             if inhibitor_state.inhibitors_down == 0 {
@@ -325,9 +325,10 @@ fn calculate_spawn_count(
                 .copied()
                 .unwrap_or(0)
         }
-        BarracksMinionConfigWaveBehavior::TimedVariableWaveBehavior(
-            TimedVariableWaveBehavior { behaviors },
-        ) => {
+        EnumWaveBehavior::TimedVariableWaveBehavior(TimedVariableWaveBehavior {
+            behaviors,
+            ..
+        }) => {
             // 寻找当前时间点最合适的行为
             let mut active_behavior = None;
             for timed_behavior in behaviors.iter().rev() {
@@ -344,7 +345,7 @@ fn calculate_spawn_count(
                 0
             }
         }
-        BarracksMinionConfigWaveBehavior::RotatingWaveBehavior(RotatingWaveBehavior {
+        EnumWaveBehavior::RotatingWaveBehavior(RotatingWaveBehavior {
             spawn_counts_by_wave,
         }) => {
             if spawn_counts_by_wave.is_empty() {

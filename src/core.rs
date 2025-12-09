@@ -23,7 +23,7 @@ mod resource;
 mod rotate;
 mod run;
 mod skill;
-mod spawn;
+mod skin;
 mod ui;
 mod utils;
 
@@ -52,6 +52,6 @@ pub use resource::*;
 pub use rotate::*;
 pub use run::*;
 pub use skill::*;
-pub use spawn::*;
+pub use skin::*;
 pub use ui::*;
 pub use utils::*;

@@ -2,9 +2,7 @@ use std::collections::HashMap;
 
 use bevy::prelude::*;
 
-use league_core::{
-    AnimationGraphData, AnimationGraphDataMBlendDataTable, AnimationGraphDataMClipDataMap,
-};
+use league_core::{AnimationGraphData, EnumBlendData, EnumClipData};
 use league_file::{AnimationFile, CompressedTransformType, UncompressedData};
 use lol_config::ConfigAnimationClip;
 
@@ -14,8 +12,8 @@ pub fn load_animation_map(
     animation_graph_data: AnimationGraphData,
 ) -> Result<
     (
-        HashMap<u32, AnimationGraphDataMClipDataMap>,
-        HashMap<(u32, u32), AnimationGraphDataMBlendDataTable>,
+        HashMap<u32, EnumClipData>,
+        HashMap<(u32, u32), EnumBlendData>,
     ),
     Error,
 > {

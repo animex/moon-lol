@@ -1,6 +1,6 @@
 use std::{collections::HashMap, hash::Hasher};
 
-use heck::ToPascalCase;
+use heck::{ToPascalCase, ToSnakeCase};
 
 use bevy::{asset::uuid::Uuid, prelude::*};
 use binrw::binread;
@@ -91,6 +91,29 @@ pub fn get_asset_id_by_hash<A: Asset>(hash: u32) -> AssetId<A> {
 pub fn hash_to_type_name(hash: &u32, hash_to_string: &HashMap<u32, String>) -> String {
     hash_to_string
         .get(hash)
-        .map(|s| s.to_pascal_case())
+        .map(|s| {
+            let pascal = s.to_pascal_case();
+            match pascal.as_str() {
+                "Self" => "MySelf".to_string(),
+                _ => pascal,
+            }
+        })
         .unwrap_or_else(|| format!("Unk0x{:x}", hash))
+}
+
+pub fn hash_to_field_name(hash: &u32, hash_to_string: &HashMap<u32, String>) -> String {
+    hash_to_string
+        .get(hash)
+        .map(|s| {
+            let snake = s.to_snake_case();
+            match snake.as_str() {
+                "type" => "r#type".to_string(),
+                "move" => "r#move".to_string(),
+                "loop" => "r#loop".to_string(),
+                "trait" => "r#trait".to_string(),
+                "box" => "r#box".to_string(),
+                _ => snake,
+            }
+        })
+        .unwrap_or_else(|| format!("unk_0x{:x}", hash))
 }

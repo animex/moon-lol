@@ -1,4 +1,5 @@
 mod accessor;
+mod cycle;
 mod deserializer;
 mod extract;
 mod parser;
@@ -7,6 +8,7 @@ mod register;
 mod types;
 
 pub use accessor::*;
+pub use cycle::*;
 pub use deserializer::*;
 pub use extract::*;
 pub use parser::*;

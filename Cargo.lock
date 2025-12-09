@@ -4110,9 +4110,12 @@ dependencies = [
  "bincode",
  "binrw",
  "league_file",
+ "league_loader",
+ "league_property",
  "league_to_lol",
  "league_utils",
  "lol_config",
+ "rayon",
  "thiserror 2.0.12",
 ]
 

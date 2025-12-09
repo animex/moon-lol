@@ -1,8 +1,5 @@
 use bevy::prelude::*;
-use league_core::{
-    UiElementEffectAnimationData, UiElementEffectAnimationDataTextureData,
-    UiElementIconDataPosition,
-};
+use league_core::{EnumData, EnumUiPosition, UiElementEffectAnimationData};
 use league_utils::{get_asset_id_by_hash, hash_bin};
 
 use crate::spawn_ui_atom;
@@ -32,7 +29,7 @@ pub fn on_command_ui_animation_start(
         &mut commands,
         &res_asset_server,
         &ui_animation.name,
-        &UiElementIconDataPosition::UiPositionRect(ui_animation.position.clone()),
+        &EnumUiPosition::UiPositionRect(ui_animation.position.clone()),
         &ui_animation.layer,
         &Some(ui_animation.texture_data.clone()),
     ) else {
@@ -85,9 +82,7 @@ pub fn update_ui_animation(
             }
         }
 
-        let UiElementEffectAnimationDataTextureData::AtlasData(ref atlas_data) =
-            ui_animation.texture_data
-        else {
+        let EnumData::AtlasData(ref atlas_data) = ui_animation.texture_data else {
             continue;
         };
         let Some(m_texture_uv) = atlas_data.m_texture_uv else {

@@ -1,5 +1,5 @@
 use bevy::{animation::AnimationTarget, color::palettes::tailwind::RED_500, prelude::*};
-use league_core::{MissileSpecificationMovementComponent, SpellObject};
+use league_core::{EnumMovement, SpellObject};
 use league_utils::{get_asset_id_by_hash, hash_joint};
 use serde::{Deserialize, Serialize};
 
@@ -93,7 +93,7 @@ fn on_command_missile_create(
 
     if let Some(m_missile_spec) = spell_data_resource.m_missile_spec {
         match m_missile_spec.movement_component {
-            MissileSpecificationMovementComponent::FixedSpeedMovement(fixed_speed_movement) => {
+            EnumMovement::FixedSpeedMovement(fixed_speed_movement) => {
                 if let Some(m_start_bone_name) = fixed_speed_movement.m_start_bone_name {
                     for child in q_children.iter_descendants(entity) {
                         let Ok(joint_target) = q_joint_target.get(child) else {

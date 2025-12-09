@@ -1,7 +1,7 @@
 use std::{collections::HashMap, time::Duration};
 
 use bevy::prelude::*;
-use league_core::{AnimationGraphDataMBlendDataTable, ConditionBoolClipDataUpdater};
+use league_core::{EnumBlendData, EnumParametricUpdater};
 use league_utils::hash_bin;
 use rand::{
     distr::{weighted::WeightedIndex, Distribution},
@@ -28,7 +28,7 @@ impl Plugin for PluginAnimation {
 #[derive(Component, Clone)]
 pub struct Animation {
     pub hash_to_node: HashMap<u32, AnimationNode>,
-    pub blend_data: HashMap<(u32, u32), AnimationGraphDataMBlendDataTable>,
+    pub blend_data: HashMap<(u32, u32), EnumBlendData>,
 }
 
 #[derive(Component, Clone, Debug)]
@@ -61,7 +61,7 @@ pub enum AnimationNode {
         node_index: AnimationNodeIndex,
     },
     ConditionFloat {
-        updater: ConditionBoolClipDataUpdater,
+        updater: EnumParametricUpdater,
         conditions: Vec<AnimationNodeF32>,
     },
     Selector {
@@ -73,7 +73,7 @@ pub enum AnimationNode {
         current_index: Option<usize>,
     },
     ConditionBool {
-        updater: ConditionBoolClipDataUpdater,
+        updater: EnumParametricUpdater,
         true_node: u32,
         false_node: u32,
     },
@@ -420,7 +420,7 @@ fn update_condition_animation(
             };
 
             let value = match updater {
-                ConditionBoolClipDataUpdater::MoveSpeedParametricUpdater => {
+                EnumParametricUpdater::MoveSpeedParametricUpdater => {
                     q_movement.get(entity).unwrap().speed
                 }
                 _ => {

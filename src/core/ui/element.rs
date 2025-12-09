@@ -5,10 +5,7 @@ use bevy::{
     window::{PrimaryWindow, WindowResized},
 };
 
-use league_core::{
-    UiElementEffectAnimationDataTextureData, UiElementIconData, UiElementIconDataPosition,
-    UiPositionRectAnchors,
-};
+use league_core::{EnumAddLevelTimer, EnumData, EnumUiPosition, UiElementIconData};
 use league_utils::hash_bin;
 
 use crate::CommandUiAnimationStart;
@@ -27,7 +24,7 @@ impl UIElementEntity {
 #[derive(Component)]
 pub struct UIElement {
     pub key: String,
-    pub position: UiElementIconDataPosition,
+    pub position: EnumUiPosition,
     pub update_child: bool,
 }
 
@@ -84,9 +81,9 @@ pub fn spawn_ui_atom(
     commands: &mut Commands,
     res_asset_server: &Res<AssetServer>,
     key: &String,
-    position: &UiElementIconDataPosition,
+    position: &EnumUiPosition,
     layer: &Option<u32>,
-    texture_data: &Option<UiElementEffectAnimationDataTextureData>,
+    texture_data: &Option<EnumData>,
 ) -> Option<Entity> {
     let entity = commands
         .spawn((
@@ -114,7 +111,7 @@ pub fn spawn_ui_atom(
     let child_entity = commands.spawn((Node::default(), Pickable::IGNORE)).id();
 
     if let Some(texture_data) = texture_data {
-        if let UiElementEffectAnimationDataTextureData::AtlasData(atlas_data) = texture_data {
+        if let EnumData::AtlasData(atlas_data) = texture_data {
             if let Some(m_texture_uv) = atlas_data.m_texture_uv {
                 commands.entity(child_entity).insert(ImageNode {
                     image: res_asset_server.load(format!("{}#srgb", atlas_data.m_texture_name)),
@@ -136,7 +133,7 @@ pub fn spawn_ui_atom(
 }
 
 fn apply_rect_position(node: &mut Node, ui_element: &UIElement, window_size: Vec2) -> Option<Vec2> {
-    let UiElementIconDataPosition::UiPositionRect(ref position) = ui_element.position else {
+    let EnumUiPosition::UiPositionRect(ref position) = ui_element.position else {
         return None;
     };
 
@@ -148,7 +145,7 @@ fn apply_rect_position(node: &mut Node, ui_element: &UIElement, window_size: Vec
         return None;
     };
 
-    let UiPositionRectAnchors::AnchorSingle(anchor) = anchors else {
+    let EnumAddLevelTimer::AnchorSingle(anchor) = anchors else {
         return None;
     };
     let anchor = anchor.anchor;

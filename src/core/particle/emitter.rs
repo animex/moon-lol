@@ -7,9 +7,9 @@ use bevy::{
 };
 
 use league_core::{
-    Unk0xee39916f, VfxEmitterDefinitionData, VfxEmitterDefinitionDataPrimitive,
-    VfxEmitterDefinitionDataSpawnShape, VfxPrimitiveMesh, VfxPrimitivePlanarProjection,
-    VfxShapeBox, VfxShapeCylinder, VfxShapeLegacy, VfxSystemDefinitionData,
+    EnumVfxPrimitive, EnumVfxShape, Unk0xee39916f, VfxEmitterDefinitionData, VfxPrimitiveMesh,
+    VfxPrimitivePlanarProjection, VfxShapeBox, VfxShapeCylinder, VfxShapeLegacy,
+    VfxSystemDefinitionData,
 };
 
 use crate::{
@@ -124,7 +124,7 @@ fn calculate_particle_transform_frame(
     birth_params: &ParticleBirthParams,
     is_uniform_scale: bool,
     vfx_emitter_definition_data: &VfxEmitterDefinitionData,
-    primitive: &VfxEmitterDefinitionDataPrimitive,
+    primitive: &EnumVfxPrimitive,
     progress: f32,
 ) -> (Transform, Vec3, f32) {
     let mut birth_scale0 = if is_uniform_scale {
@@ -137,18 +137,11 @@ fn calculate_particle_transform_frame(
         .spawn_shape
         .clone()
         .and_then(|v| match v {
-            VfxEmitterDefinitionDataSpawnShape::Unk0xee39916f(Unk0xee39916f { emit_offset }) => {
-                emit_offset
-            }
-            VfxEmitterDefinitionDataSpawnShape::VfxShapeLegacy(VfxShapeLegacy {
-                emit_offset,
-                ..
-            }) => emit_offset
+            EnumVfxShape::Unk0xee39916f(Unk0xee39916f { emit_offset }) => emit_offset,
+            EnumVfxShape::VfxShapeLegacy(VfxShapeLegacy { emit_offset, .. }) => emit_offset
                 .and_then(|v| Some(StochasticSampler::<Vec3>::from(v).sample_clamped(progress))),
-            VfxEmitterDefinitionDataSpawnShape::VfxShapeBox(VfxShapeBox { .. }) => Some(Vec3::ZERO),
-            VfxEmitterDefinitionDataSpawnShape::VfxShapeCylinder(VfxShapeCylinder { .. }) => {
-                Some(Vec3::ZERO)
-            }
+            EnumVfxShape::VfxShapeBox(VfxShapeBox { .. }) => Some(Vec3::ZERO),
+            EnumVfxShape::VfxShapeCylinder(VfxShapeCylinder { .. }) => Some(Vec3::ZERO),
             _ => todo!(),
         })
         .unwrap_or(Vec3::ZERO);
@@ -160,9 +153,9 @@ fn calculate_particle_transform_frame(
         0.,
     );
 
-    if let VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
-        VfxPrimitivePlanarProjection { ref m_projection },
-    ) = primitive
+    if let EnumVfxPrimitive::VfxPrimitivePlanarProjection(VfxPrimitivePlanarProjection {
+        ref m_projection,
+    }) = primitive
     {
         birth_scale0.x = birth_scale0.x * 2.;
         birth_scale0.y = m_projection.as_ref().unwrap().m_y_range.unwrap();
@@ -222,7 +215,7 @@ fn attach_particle_visuals(
     commands: &mut Commands,
     particle_entity: Entity,
     vfx_emitter_definition_data: &VfxEmitterDefinitionData,
-    primitive: &VfxEmitterDefinitionDataPrimitive,
+    primitive: &EnumVfxPrimitive,
     texture: Option<Handle<Image>>,
     particle_color_texture: Option<Handle<Image>>,
     texture_mult: Option<Handle<Image>>,
@@ -238,8 +231,8 @@ fn attach_particle_visuals(
     res_asset_server: &Res<AssetServer>,
 ) {
     match primitive {
-        VfxEmitterDefinitionDataPrimitive::VfxPrimitiveArbitraryQuad
-        | VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad => {
+        EnumVfxPrimitive::VfxPrimitiveArbitraryQuad
+        | EnumVfxPrimitive::VfxPrimitiveCameraUnitQuad => {
             let mesh = res_mesh.add(ParticleMeshQuad { frame });
             commands.entity(particle_entity).insert(Mesh3d(mesh));
 
@@ -285,9 +278,9 @@ fn attach_particle_visuals(
                     )));
             };
         }
-        VfxEmitterDefinitionDataPrimitive::VfxPrimitivePlanarProjection(
-            VfxPrimitivePlanarProjection { ref m_projection },
-        ) => {
+        EnumVfxPrimitive::VfxPrimitivePlanarProjection(VfxPrimitivePlanarProjection {
+            ref m_projection,
+        }) => {
             let material_handle = res_unlit_decal_material.add(ParticleMaterialUnlitDecal {
                 uniforms_vertex: UniformsVertexUnlitDecal {
                     decal_projection_y_range: Vec4::splat(
@@ -306,10 +299,7 @@ fn attach_particle_visuals(
                 .entity(particle_entity)
                 .insert((ParticleDecal::default(), MeshMaterial3d(material_handle)));
         }
-        VfxEmitterDefinitionDataPrimitive::VfxPrimitiveMesh(VfxPrimitiveMesh {
-            ref m_mesh,
-            ..
-        }) => {
+        EnumVfxPrimitive::VfxPrimitiveMesh(VfxPrimitiveMesh { ref m_mesh, .. }) => {
             let Some(m_mesh) = m_mesh else {
                 println!("VfxPrimitiveMesh: m_mesh is None");
                 return;
@@ -365,12 +355,9 @@ pub fn update_emitter(
         let primitive = vfx_emitter_definition_data
             .primitive
             .clone()
-            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
+            .unwrap_or(EnumVfxPrimitive::VfxPrimitiveCameraUnitQuad);
 
-        if matches!(
-            primitive,
-            VfxEmitterDefinitionDataPrimitive::VfxPrimitiveAttachedMesh { .. }
-        ) {
+        if matches!(primitive, EnumVfxPrimitive::VfxPrimitiveAttachedMesh { .. }) {
             continue;
         }
 
@@ -503,12 +490,9 @@ pub fn update_emitter_attached(
         let primitive = vfx_emitter_definition_data
             .primitive
             .clone()
-            .unwrap_or(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad);
+            .unwrap_or(EnumVfxPrimitive::VfxPrimitiveCameraUnitQuad);
 
-        if !matches!(
-            primitive,
-            VfxEmitterDefinitionDataPrimitive::VfxPrimitiveAttachedMesh { .. }
-        ) {
+        if !matches!(primitive, EnumVfxPrimitive::VfxPrimitiveAttachedMesh { .. }) {
             continue;
         }
 

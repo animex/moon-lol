@@ -3,8 +3,7 @@ use std::collections::HashMap;
 use bevy::prelude::*;
 
 use league_core::{
-    ResourceResolver, SkinCharacterDataProperties, VfxEmitterDefinitionDataPrimitive,
-    VfxSystemDefinitionData,
+    EnumVfxPrimitive, ResourceResolver, SkinCharacterDataProperties, VfxSystemDefinitionData,
 };
 use league_loader::{LeagueWadLoader, PropBinLoader};
 use league_property::from_entry_unwrap;
@@ -57,9 +56,7 @@ pub async fn save_character(
                         continue;
                     };
 
-                    let VfxEmitterDefinitionDataPrimitive::VfxPrimitiveMesh(vfx_primitive_mesh) =
-                        primitive
-                    else {
+                    let EnumVfxPrimitive::VfxPrimitiveMesh(vfx_primitive_mesh) = primitive else {
                         continue;
                     };
 
@@ -114,7 +111,7 @@ pub async fn save_character(
     // 保存动画文件
     // for (_, animation) in &animation_map {
     //     match animation {
-    //         AnimationGraphDataMClipDataMap::AtomicClipData(AtomicClipData {
+    //         EnumClipData::AtomicClipData(AtomicClipData {
     //             m_animation_resource_data,
     //             ..
     //         }) => {

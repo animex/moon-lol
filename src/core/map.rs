@@ -3,7 +3,7 @@ use std::{collections::HashMap, f32};
 use bevy::{math::bounding::Aabb3d, prelude::*};
 
 use league_core::{
-    EnvironmentVisibility, MapContainer, MapPlaceableContainer, MissileSpecificationBehaviors,
+    EnumAddLevelTimer, EnvironmentVisibility, MapContainer, MapPlaceableContainer,
     StaticMaterialDef,
 };
 use league_file::{LeagueMapGeo, LeagueMapGeoMesh};
@@ -25,6 +25,7 @@ pub struct PluginMap;
 impl Plugin for PluginMap {
     fn build(&self, app: &mut App) {
         app.add_plugins(MeshPickingPlugin);
+        app.init_resource::<MapName>();
         app.add_systems(Startup, startup_spawn_map_character);
         app.add_systems(Startup, startup_spawn_map_geometry);
     }
@@ -68,10 +69,10 @@ fn startup_spawn_map_character(
             continue;
         };
 
-        for (_, value) in &map_placeable_container.items {
+        for (_, value) in map_placeable_container.items.as_ref().unwrap() {
             match value {
-                MissileSpecificationBehaviors::Unk0xad65d8c4(unk0xad65d8c4) => {
-                    let transform = Transform::from_matrix(unk0xad65d8c4.transform);
+                EnumAddLevelTimer::Unk0xad65d8c4(unk0xad65d8c4) => {
+                    let transform = Transform::from_matrix(unk0xad65d8c4.transform.unwrap());
                     let entity = commands
                         .spawn((
                             transform,

@@ -70,6 +70,7 @@ impl LeagueLoader {
     pub fn from_relative_path(root_dir: &str, wads: Vec<&str>) -> Self {
         let mut wad_loaders = Vec::new();
         for wad in wads {
+            println!("Loading wad: {}", wad);
             wad_loaders.push(LeagueWadLoader::from_relative_path(root_dir, wad).unwrap());
         }
         Self {

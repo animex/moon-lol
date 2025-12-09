@@ -40,8 +40,12 @@ impl Plugin for PluginResource {
         app.init_asset::<UiElementGroupButtonData>();
         app.init_asset::<UiElementRegionData>();
 
+        app.init_asset_loader::<LeagueLoaderImage>();
+        app.init_asset_loader::<LeagueLoaderMesh>();
+        app.init_asset_loader::<LeagueLoaderMeshStatic>();
+        app.init_asset_loader::<LeagueLoaderAnimationClip>();
+
         let mut asset_loader_registry = AssetLoaderRegistry::default();
-        init_league_asset(&mut asset_loader_registry);
 
         let prop_bin_paths = vec![
             "data/maps/mapgeometry/map11/base_srx.materials.bin",
@@ -59,11 +63,6 @@ impl Plugin for PluginResource {
         //         }
         //     });
 
-        app.init_asset_loader::<LeagueLoaderImage>();
-        app.init_asset_loader::<LeagueLoaderMesh>();
-        app.init_asset_loader::<LeagueLoaderMeshStatic>();
-        app.init_asset_loader::<LeagueLoaderAnimationClip>();
-
         let mut resource_cache = ResourceCache::default();
 
         let mut file = File::open(format!("assets/{}", &self.game_config_path)).unwrap();
@@ -74,6 +73,8 @@ impl Plugin for PluginResource {
             get_struct_from_file(CONFIG_PATH_MAP_NAV_GRID).unwrap();
 
         app.insert_resource(nav_grid);
+
+        init_league_asset(app, &mut asset_loader_registry);
 
         let world = app.world_mut();
 
@@ -139,7 +140,7 @@ impl Plugin for PluginResource {
 
         // for (_, ui_element) in &resource_cache.ui_elements {
         //     if let Some(texture_data) = ui_element.texture_data.as_ref() {
-        //         if let UiElementEffectAnimationDataTextureData::AtlasData(atlas_data) = texture_data
+        //         if let EnumData::AtlasData(atlas_data) = texture_data
         //         {
         //             // if atlas_data.m_texture_name.contains("Clarity_HUDAtlas") {
         //             if ui_element.name.contains("PlayerFrame") {

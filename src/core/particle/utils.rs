@@ -2,7 +2,10 @@ use bevy::{
     prelude::*,
     render::render_resource::{Extent3d, TextureDimension, TextureFormat},
 };
-use league_core::{ValueColor, ValueFloat, ValueVector2, ValueVector3, VfxProbabilityTableData};
+use league_core::{
+    ValueColor, ValueFloat, ValueVector2, ValueVector3, VfxAnimatedColorVariableData,
+    VfxProbabilityTableData,
+};
 use rand::Rng;
 
 pub fn create_black_pixel_texture() -> Image {
@@ -52,23 +55,16 @@ macro_rules! impl_sampler_traits {
         impl From<$Value> for $Sampler {
             fn from(value: $Value) -> Self {
                 if let Some(dynamics) = value.dynamics {
-                    match dynamics.times {
-                        Some(times) => match times.len() {
-                            0 => Self::Constant(value.constant_value.unwrap_or_default()),
-                            1 => {
-                                Self::Constant(dynamics.values.unwrap().into_iter().next().unwrap())
+                    match dynamics.times.len() {
+                        0 => Self::Constant(value.constant_value.unwrap_or_default()),
+                        1 => Self::Constant(dynamics.values.into_iter().next().unwrap()),
+                        _ => {
+                            let samples = dynamics.times.into_iter().zip(dynamics.values);
+                            match UnevenSampleAutoCurve::new(samples) {
+                                Ok(curve) => Self::Curve(curve),
+                                Err(_) => Self::Constant(value.constant_value.unwrap_or_default()),
                             }
-                            _ => {
-                                let samples = times.into_iter().zip(dynamics.values.unwrap());
-                                match UnevenSampleAutoCurve::new(samples) {
-                                    Ok(curve) => Self::Curve(curve),
-                                    Err(_) => {
-                                        Self::Constant(value.constant_value.unwrap_or_default())
-                                    }
-                                }
-                            }
-                        },
-                        None => Self::Constant(value.constant_value.unwrap_or_default()),
+                        }
                     }
                 } else {
                     Self::Constant(value.constant_value.unwrap_or_default())
@@ -84,7 +80,48 @@ impl_sampler_traits!(Sampler<Vec3>, ValueVector3, Vec3, Interval::EVERYWHERE);
 
 impl_sampler_traits!(Sampler<Vec2>, ValueVector2, Vec2, Interval::EVERYWHERE);
 
-impl_sampler_traits!(Sampler<Vec4>, ValueColor, Vec4, Interval::EVERYWHERE);
+impl Curve<Vec4> for Sampler<Vec4> {
+    fn sample_clamped(&self, t: f32) -> Vec4 {
+        match self {
+            Self::Constant(v) => *v,
+            Self::Curve(c) => c.sample_clamped(t),
+        }
+    }
+    fn sample_unchecked(&self, t: f32) -> Vec4 {
+        match self {
+            Self::Constant(v) => *v,
+            Self::Curve(c) => c.sample_unchecked(t),
+        }
+    }
+    fn domain(&self) -> Interval {
+        Interval::EVERYWHERE
+    }
+}
+
+impl From<ValueColor> for Sampler<Vec4> {
+    fn from(value: ValueColor) -> Self {
+        if let Some(VfxAnimatedColorVariableData {
+            times: Some(times),
+            values: Some(values),
+            ..
+        }) = value.dynamics
+        {
+            match times.len() {
+                0 => Self::Constant(value.constant_value.unwrap_or_default()),
+                1 => Self::Constant(values.into_iter().next().unwrap()),
+                _ => {
+                    let samples = times.into_iter().zip(values);
+                    match UnevenSampleAutoCurve::new(samples) {
+                        Ok(curve) => Self::Curve(curve),
+                        Err(_) => Self::Constant(value.constant_value.unwrap_or_default()),
+                    }
+                }
+            }
+        } else {
+            Self::Constant(value.constant_value.unwrap_or_default())
+        }
+    }
+}
 
 #[derive(Debug, Clone)]
 pub enum ProbabilityCurve {

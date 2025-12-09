@@ -14,7 +14,7 @@ use bevy::{
     prelude::*,
 };
 
-use league_core::{VfxEmitterDefinitionDataPrimitive, VfxSystemDefinitionData};
+use league_core::{EnumVfxPrimitive, VfxSystemDefinitionData};
 
 use crate::{
     Lifetime, ParticleEmitterState, ParticleId, ParticleMaterialSkinnedMeshParticle,
@@ -153,7 +153,7 @@ pub fn update_particle(
         if vfx_emitter_definition_data.primitive.is_none()
             || matches!(
                 vfx_emitter_definition_data.primitive,
-                Some(VfxEmitterDefinitionDataPrimitive::VfxPrimitiveCameraUnitQuad)
+                Some(EnumVfxPrimitive::VfxPrimitiveCameraUnitQuad)
             )
         {
             let camera_transform = q_camera_transform.single().unwrap();

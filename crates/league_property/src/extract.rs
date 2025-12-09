@@ -1,9 +1,9 @@
 use std::collections::{HashMap, HashSet};
 
 use heck::{ToPascalCase, ToSnakeCase};
-use league_utils::hash_to_type_name;
+use league_utils::{hash_bin, hash_to_field_name, hash_to_type_name};
 
-use crate::{BinParser, BinType, EntryData, Error, PropFile};
+use crate::{detect_cyclic_types, BinParser, BinType, EntryData, Error, PropFile};
 
 #[derive(Debug, Clone)]
 pub enum ClassData {
@@ -15,268 +15,432 @@ pub enum ClassData {
     Option(Box<ClassData>),
 }
 
-#[derive(Debug, Clone)]
-struct EnumInfo {
-    name: String,
-    hashes: HashSet<u32>,
+pub type ClassMap = HashMap<u32, HashMap<u32, ClassData>>;
+
+#[derive(Debug)]
+pub struct EnumInfo {
+    pub name: String,
+    pub variants: HashSet<u32>,
 }
 
-type ClassMap = HashMap<u32, HashMap<u32, ClassData>>;
+struct GeneratedItem {
+    name: String,
+    code: String,
+}
 
-fn collect_enum_info_recursively(
-    parent_class_name: &str,
-    field_hash: u32,
-    field_data: &ClassData,
+pub fn class_map_to_rust_code(
+    class_map: &mut ClassMap,
     hashes: &HashMap<u32, String>,
-    enum_infos: &mut Vec<EnumInfo>,
-) {
+    entry_hashes: &HashSet<u32>,
+) -> Result<(String, String), Error> {
+    // 1. 收集所有枚举信息
+    let mut enums = Vec::new();
+    for (_, class_fields) in class_map.iter() {
+        for (_, field_data) in class_fields.iter() {
+            collect_enums(field_data, &mut enums);
+        }
+    }
+
+    // 2. 合并有交集的枚举
+    let merged_enums = merge_enums(enums);
+
+    let mut merged_enum_map: HashMap<u32, EnumInfo> = HashMap::new();
+    for variants in merged_enums {
+        let (hash, enum_info) = generate_enum_info(variants, hashes);
+        if merged_enum_map.contains_key(&hash) {
+            merged_enum_map
+                .get_mut(&hash)
+                .unwrap()
+                .variants
+                .extend(enum_info.variants.clone());
+
+            println!(
+                "--------- {:?} already exists\n{:?}\n{:?}",
+                enum_info.name,
+                enum_info
+                    .variants
+                    .iter()
+                    .map(|v| hash_to_type_name(v, hashes))
+                    .collect::<Vec<_>>(),
+                merged_enum_map
+                    .get(&hash)
+                    .unwrap()
+                    .variants
+                    .iter()
+                    .map(|v| hash_to_type_name(v, hashes))
+                    .collect::<Vec<_>>()
+            );
+            continue;
+        }
+        merged_enum_map.insert(hash, enum_info);
+    }
+    let merged_enums = merged_enum_map;
+
+    // 3. 检测循环类型
+    let cyclic_types = detect_cyclic_types(class_map, &merged_enums);
+
+    // 用于收集所有的定义，最后统一排序
+    let mut all_generated_items: Vec<GeneratedItem> = Vec::new();
+
+    // 4. 生成枚举定义
+    let generated_enum_items = generate_enum_definitions(&merged_enums, class_map, hashes);
+    all_generated_items.extend(generated_enum_items);
+
+    let mut init_code = "pub fn init_league_asset(app: &mut App, asset_loader_registry: &mut AssetLoaderRegistry) {".to_string();
+
+    // 6. 生成结构体定义
+    for (class_hash, class_data) in class_map.iter() {
+        let class_name = hash_to_type_name(class_hash, hashes);
+
+        let mut struct_def = String::new();
+        if entry_hashes.contains(class_hash) {
+            struct_def
+                .push_str("#[derive(Serialize, Deserialize, Debug, Clone, Asset, TypePath)]\n");
+            init_code.push_str(&format!(
+                "app.init_asset::<{}>();\nasset_loader_registry.register::<{}>();\n",
+                class_name, class_name
+            ));
+        } else {
+            struct_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone)]\n");
+        }
+        struct_def.push_str("#[serde(rename_all = \"camelCase\")]\n");
+        struct_def.push_str(&format!("pub struct {} {{\n", class_name));
+
+        // 对字段按名称排序
+        let mut sorted_fields: Vec<_> = class_data.iter().collect();
+        sorted_fields.sort_by(|(h1, _), (h2, _)| {
+            let name1 = hash_to_field_name(*h1, hashes);
+            let name2 = hash_to_field_name(*h2, hashes);
+            name1.cmp(&name2)
+        });
+
+        for (field_hash, field_data) in sorted_fields {
+            let field_name = hash_to_field_name(field_hash, hashes);
+
+            let mut current_cyclic_types = Vec::new();
+            for scc in &cyclic_types {
+                if scc.contains(&class_hash) {
+                    current_cyclic_types.push(scc.clone());
+                }
+            }
+
+            let type_name = field_type_to_string(
+                class_map,
+                field_data,
+                hashes,
+                &merged_enums,
+                &current_cyclic_types,
+            );
+
+            struct_def.push_str(&format!("    pub {}: {},\n", field_name, type_name));
+        }
+        struct_def.push_str("}\n\n");
+
+        all_generated_items.push(GeneratedItem {
+            name: class_name,
+            code: struct_def,
+        });
+    }
+
+    // 7. 对所有生成的项（Enum 和 Struct）按名称排序
+    all_generated_items.sort_by(|a, b| a.name.cmp(&b.name));
+
+    // 8. 拼接结果
+    let mut all_definitions = String::new();
+    for item in all_generated_items {
+        all_definitions.push_str(&item.code);
+    }
+
+    init_code.push_str("}\n");
+
+    Ok((all_definitions, init_code))
+}
+
+fn collect_enums(field_data: &ClassData, enums: &mut Vec<HashSet<u32>>) {
     match field_data {
         ClassData::Enum(enum_hashes) => {
-            let field_name = hashes
-                .get(&field_hash)
-                .map(|s| s.as_str())
-                .unwrap_or("UnknownEnumField");
-
-            let enum_name = format!("{}{}", parent_class_name, field_name.to_pascal_case());
-
-            enum_infos.push(EnumInfo {
-                name: enum_name,
-                hashes: enum_hashes.clone(),
-            });
+            enums.push(enum_hashes.clone());
         }
-
         ClassData::List(element_data) => {
-            collect_enum_info_recursively(
-                parent_class_name,
-                field_hash,
-                element_data,
-                hashes,
-                enum_infos,
-            );
+            collect_enums(element_data, enums);
         }
         ClassData::Map(key_data, value_data) => {
-            collect_enum_info_recursively(
-                parent_class_name,
-                field_hash,
-                key_data,
-                hashes,
-                enum_infos,
-            );
-            collect_enum_info_recursively(
-                parent_class_name,
-                field_hash,
-                value_data,
-                hashes,
-                enum_infos,
-            );
+            collect_enums(key_data, enums);
+            collect_enums(value_data, enums);
         }
         ClassData::Option(value_data) => {
-            collect_enum_info_recursively(
-                parent_class_name,
-                field_hash,
-                value_data,
-                hashes,
-                enum_infos,
-            );
+            collect_enums(value_data, enums);
         }
-        ClassData::Base(_) | ClassData::Struct(_) => {}
+        _ => {}
     }
 }
 
-fn merge_enums_with_intersection(enum_infos: Vec<EnumInfo>) -> Vec<EnumInfo> {
-    let mut merged_enums = Vec::new();
-    let mut processed = vec![false; enum_infos.len()];
+fn merge_enums(enums: Vec<HashSet<u32>>) -> Vec<HashSet<u32>> {
+    let mut merged_groups: Vec<HashSet<u32>> = Vec::new();
 
-    for i in 0..enum_infos.len() {
-        if processed[i] {
+    for new_set in enums {
+        // 1. 找出所有与当前 new_set 有交集的组的索引
+        let mut connected_indices: Vec<usize> = Vec::new();
+        for (idx, group) in merged_groups.iter().enumerate() {
+            if !group.is_disjoint(&new_set) {
+                connected_indices.push(idx);
+            }
+        }
+
+        if connected_indices.is_empty() {
+            // 没有交集，作为新组添加
+            merged_groups.push(new_set);
             continue;
         }
 
-        let mut current_merged = enum_infos[i].clone();
-        processed[i] = true;
+        // 2. 有交集，需要将 new_set 和所有相关的组融合成一个
+        // 按索引从大到小排序，以便从后往前移除，防止索引失效
+        connected_indices.sort_by(|a, b| b.cmp(a));
 
-        let mut j = i + 1;
-        while j < enum_infos.len() {
-            if processed[j] {
-                j += 1;
-                continue;
-            }
+        // 取出这些索引中最小的一个作为“目标宿主”
+        let target_idx = connected_indices.pop().unwrap();
 
-            // 检查是否有交集
-            if !current_merged.hashes.is_disjoint(&enum_infos[j].hashes) {
-                // 合并枚举，名字使用第一个
-                current_merged.hashes.extend(enum_infos[j].hashes.iter());
-                processed[j] = true;
-                // 从头开始重新检查，以处理传递合并 a-b, c-d, b-c
-                j = i + 1;
-            } else {
-                j += 1;
-            }
+        // 先把 new_set 融合进宿主
+        merged_groups[target_idx].extend(new_set);
+
+        // 把其他有交集的组全部吸收到 target_idx 中，并从列表中移除
+        for remove_idx in connected_indices {
+            let removed_group = merged_groups.remove(remove_idx);
+            merged_groups[target_idx].extend(removed_group);
         }
-        merged_enums.push(current_merged);
     }
 
-    merged_enums
+    // 转换结果为 EnumInfo
+    merged_groups
 }
 
-fn contains_enum_reference(
-    field_data: &ClassData,
-    target_enum_hashes: &HashSet<u32>,
-    class_map: &ClassMap,
-) -> bool {
-    match field_data {
-        ClassData::Enum(enum_hashes) => {
-            // 检查是否有交集，即该字段引用了目标枚举
-            !enum_hashes.is_disjoint(target_enum_hashes)
-        }
-        ClassData::Struct(struct_hash) => {
-            // 递归检查结构体字段
-            if let Some(struct_fields) = class_map.get(struct_hash) {
-                for (_, nested_field_data) in struct_fields {
-                    if contains_enum_reference(nested_field_data, target_enum_hashes, class_map) {
-                        return true;
-                    }
-                }
+// 提取出来的辅助函数，用于生成 EnumInfo，减少主函数缩进
+fn generate_enum_info(
+    variants_set: HashSet<u32>,
+    hashes: &HashMap<u32, String>,
+) -> (u32, EnumInfo) {
+    let mut variant_names: Vec<String> = variants_set
+        .iter()
+        .filter_map(|v| hashes.get(v).map(|s| s.to_pascal_case()))
+        .collect();
+
+    let name = if variant_names.is_empty() {
+        // 如果没有名字，使用哈希值的十六进制表示兜底
+        let mut unnamed: Vec<String> = variants_set
+            .iter()
+            .map(|v| hash_to_type_name(v, hashes))
+            .collect();
+        unnamed.sort();
+        unnamed.first().cloned().unwrap()
+    } else {
+        variant_names.sort();
+        // 尝试寻找公共子串作为枚举名
+        if let Some(name) = find_longest_common_capitalized_substring(variant_names.clone()) {
+            if name.len() < 3 {
+                variant_names.first().unwrap().clone()
+            } else {
+                name
             }
-            false
+        } else {
+            variant_names.first().unwrap().clone()
         }
-        ClassData::List(element_data) => {
-            contains_enum_reference(element_data, target_enum_hashes, class_map)
+    };
+
+    let name = format!("Enum{}", name);
+
+    let enum_hash = hash_bin(&name);
+    (
+        enum_hash,
+        EnumInfo {
+            name,
+            variants: variants_set,
+        },
+    )
+}
+
+pub fn find_longest_common_capitalized_substring(list: Vec<String>) -> Option<String> {
+    let shortest = list.iter().min_by_key(|s| s.chars().count())?;
+    let chars: Vec<char> = shortest.chars().collect();
+    let max_len = chars.len();
+
+    for len in (1..=max_len).rev() {
+        let result = check_substrings_of_len(&list, &chars, len);
+        if result.is_some() {
+            return result;
         }
-        ClassData::Map(_, value_data) => {
-            contains_enum_reference(value_data, target_enum_hashes, class_map)
+    }
+
+    None
+}
+
+fn check_substrings_of_len(list: &[String], chars: &[char], len: usize) -> Option<String> {
+    for window in chars.windows(len) {
+        if !is_start_uppercase(window) {
+            continue;
         }
-        ClassData::Option(value_data) => {
-            contains_enum_reference(value_data, target_enum_hashes, class_map)
+
+        let candidate: String = window.iter().collect();
+        let all_contain = list.iter().all(|s| s.contains(&candidate));
+
+        if all_contain {
+            return Some(candidate);
         }
-        ClassData::Base(_) => false,
+    }
+    None
+}
+
+fn is_start_uppercase(window: &[char]) -> bool {
+    if let Some(first_char) = window.first() {
+        return first_char.is_uppercase();
+    }
+    false
+}
+
+pub fn collect_dependencies(
+    class_data: &ClassData,
+    merged_enums: &HashMap<u32, EnumInfo>,
+    deps: &mut HashSet<u32>,
+) {
+    match class_data {
+        ClassData::Struct(h) => {
+            deps.insert(*h);
+        }
+        ClassData::Enum(hashes) => {
+            deps.insert(
+                merged_enums
+                    .iter()
+                    .find_map(|(hash, info)| {
+                        if hashes.is_subset(&info.variants) {
+                            Some(*hash)
+                        } else {
+                            None
+                        }
+                    })
+                    .unwrap(),
+            );
+        }
+        ClassData::List(inner) | ClassData::Option(inner) => {
+            collect_dependencies(inner, merged_enums, deps);
+        }
+        ClassData::Map(k, v) => {
+            collect_dependencies(k, merged_enums, deps);
+            collect_dependencies(v, merged_enums, deps);
+        }
+        _ => {}
     }
 }
 
 fn generate_enum_definitions(
-    merged_enums: &[EnumInfo],
+    merged_enums: &HashMap<u32, EnumInfo>,
     class_map: &mut ClassMap,
     hashes: &HashMap<u32, String>,
-) -> String {
-    let mut all_definitions = String::new();
-    let mut generated_names = HashSet::new();
+) -> Vec<GeneratedItem> {
+    let mut generated_items = Vec::new();
 
-    for enum_info in merged_enums {
-        if generated_names.contains(&enum_info.name) {
-            continue;
-        }
-
+    for (_, info) in merged_enums {
         let mut enum_def = String::new();
-        enum_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone, Reflect)]\n");
-        enum_def.push_str(&format!("pub enum {} {{\n", enum_info.name));
+        enum_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone)]\n");
 
-        for variant_hash in &enum_info.hashes {
-            let mut variant_name = hash_to_type_name(variant_hash, hashes);
+        enum_def.push_str(&format!("pub enum {} {{\n", info.name));
 
-            if variant_name == "Self" {
-                variant_name = "MySelf".to_string();
-            }
+        let mut variant_map = info
+            .variants
+            .iter()
+            .map(|v| (*v, hash_to_type_name(v, hashes)))
+            .collect::<Vec<(u32, String)>>();
 
+        variant_map.sort_by_key(|v| v.1.clone());
+
+        for (variant_hash, variant_name) in variant_map {
             let is_empty_struct = class_map
-                .get(variant_hash)
+                .get(&variant_hash)
                 .map_or(true, |fields| fields.is_empty());
 
             if is_empty_struct {
                 enum_def.push_str(&format!("    {},\n", variant_name));
-                class_map.remove(variant_hash);
+                class_map.remove(&variant_hash);
             } else {
-                // 不再检查递归引用，直接生成变体
                 enum_def.push_str(&format!("    {}({}),\n", variant_name, variant_name));
             }
         }
 
         enum_def.push_str("}\n\n");
-        all_definitions.push_str(&enum_def);
-        generated_names.insert(enum_info.name.clone());
+        generated_items.push(GeneratedItem {
+            name: info.name.clone(),
+            code: enum_def,
+        });
     }
 
-    all_definitions
+    generated_items
 }
 
-fn map_class_data_to_rust_type(
-    parent_class_name: &str,
+fn field_type_to_string(
+    class_map: &ClassMap,
     field_data: &ClassData,
-    field_hash: &u32,
     hashes: &HashMap<u32, String>,
-    enum_hash_to_name: &HashMap<u32, String>,
+    merged_enums: &HashMap<u32, EnumInfo>,
+    cyclic_types: &Vec<HashSet<u32>>,
 ) -> String {
     match field_data {
         ClassData::Base(type_string) => type_string.clone(),
-        ClassData::Struct(struct_hash) => hash_to_type_name(struct_hash, hashes),
-        ClassData::Enum(enum_hashes) => {
-            // 从枚举的哈希集合中取第一个哈希，查找合并后的枚举名称
-            if let Some(&first_hash) = enum_hashes.iter().next() {
-                enum_hash_to_name
-                    .get(&first_hash)
-                    .cloned()
-                    .unwrap_or_else(|| {
-                        let field_name = hashes
-                            .get(field_hash)
-                            .map(|s| s.to_pascal_case())
-                            .unwrap_or(format!("UnkEnum{:x}", field_hash));
-                        format!("{}{}", parent_class_name, field_name)
-                    })
+        ClassData::Struct(struct_hash) => {
+            let (hash, name) = if class_map.get(struct_hash).is_some() {
+                (struct_hash, hash_to_type_name(struct_hash, hashes))
             } else {
-                // 空枚举的情况
-                let field_name = hashes
-                    .get(field_hash)
-                    .map(|s| s.to_pascal_case())
-                    .unwrap_or(format!("UnkEnum{:x}", field_hash));
-                format!("{}{}", parent_class_name, field_name)
+                let enum_info = merged_enums
+                    .iter()
+                    .find(|v| v.1.variants.contains(struct_hash))
+                    .unwrap();
+
+                (enum_info.0, enum_info.1.name.clone())
+            };
+
+            if cyclic_types.iter().any(|scc| scc.contains(hash)) {
+                format!("Box<{}>", name)
+            } else {
+                name
+            }
+        }
+        ClassData::Enum(enum_hashes) => {
+            let (hash, enum_name) = merged_enums
+                .iter()
+                .find_map(|(hash, info)| {
+                    if enum_hashes.is_subset(&info.variants) {
+                        Some((hash, info.name.clone()))
+                    } else {
+                        None
+                    }
+                })
+                .unwrap();
+
+            if cyclic_types.iter().any(|scc| scc.contains(hash)) {
+                format!("Box<{}>", enum_name)
+            } else {
+                enum_name
             }
         }
         ClassData::List(element_data) => {
             format!(
                 "Vec<{}>",
-                map_class_data_to_rust_type(
-                    parent_class_name,
-                    element_data,
-                    field_hash,
-                    hashes,
-                    enum_hash_to_name
-                )
+                field_type_to_string(class_map, element_data, hashes, merged_enums, cyclic_types)
             )
         }
         ClassData::Map(key_data, value_data) => {
-            format!(
-                "HashMap<{}, {}>",
-                map_class_data_to_rust_type(
-                    parent_class_name,
-                    key_data,
-                    field_hash,
-                    hashes,
-                    enum_hash_to_name
-                ),
-                map_class_data_to_rust_type(
-                    parent_class_name,
-                    value_data,
-                    field_hash,
-                    hashes,
-                    enum_hash_to_name
-                )
-            )
+            let key = field_type_to_string(class_map, key_data, hashes, merged_enums, cyclic_types);
+            let value =
+                field_type_to_string(class_map, value_data, hashes, merged_enums, cyclic_types);
+            let key = if key == "f32" { "u32".to_string() } else { key };
+            format!("HashMap<{}, {}>", key, value)
         }
         ClassData::Option(value_data) => {
             format!(
                 "Option<{}>",
-                map_class_data_to_rust_type(
-                    parent_class_name,
-                    value_data,
-                    field_hash,
-                    hashes,
-                    enum_hash_to_name
-                )
+                field_type_to_string(class_map, value_data, hashes, merged_enums, cyclic_types)
             )
         }
     }
 }
 
-// ... a lot of unchanged functions
 fn map_base_type(bin_type: &BinType) -> String {
     match bin_type {
         BinType::None => "()".to_string(),
@@ -335,277 +499,37 @@ fn merge_class_data(old: ClassData, new: ClassData) -> ClassData {
                 ClassData::Enum(hashes)
             }
         }
-
         (ClassData::Enum(mut old_hashes), ClassData::Struct(new_hash)) => {
             old_hashes.insert(new_hash);
             ClassData::Enum(old_hashes)
         }
-
         (ClassData::Struct(old_hash), ClassData::Enum(mut new_hashes)) => {
             new_hashes.insert(old_hash);
             ClassData::Enum(new_hashes)
         }
-
         (ClassData::Enum(mut old_hashes), ClassData::Enum(new_hashes)) => {
             old_hashes.extend(new_hashes);
             ClassData::Enum(old_hashes)
         }
-
         (ClassData::List(old_inner), ClassData::List(new_inner)) => {
             ClassData::List(Box::new(merge_class_data(*old_inner, *new_inner)))
         }
-
         (ClassData::Map(old_key, old_val), ClassData::Map(new_key, new_val)) => {
             let merged_key = merge_class_data(*old_key, *new_key);
             let merged_val = merge_class_data(*old_val, *new_val);
             ClassData::Map(Box::new(merged_key), Box::new(merged_val))
         }
-
         (ClassData::Option(old_inner), ClassData::Option(new_inner)) => {
             ClassData::Option(Box::new(merge_class_data(*old_inner, *new_inner)))
         }
-
         (ClassData::Option(old_inner), new_data) => {
             ClassData::Option(Box::new(merge_class_data(*old_inner, new_data)))
         }
-
         (old_data, ClassData::Option(new_inner)) => {
             ClassData::Option(Box::new(merge_class_data(old_data, *new_inner)))
         }
-
         (_, new_data) => new_data,
     }
-}
-
-pub fn merge_class_maps(base: &mut ClassMap, new: ClassMap) {
-    let mut new = new;
-
-    for (class_hash, base_fields) in base.iter_mut() {
-        if let Some(new_fields) = new.remove(class_hash) {
-            let all_field_hashes: HashSet<u32> = base_fields
-                .keys()
-                .cloned()
-                .chain(new_fields.keys().cloned())
-                .collect();
-
-            let mut new_fields = new_fields;
-
-            for field_hash in all_field_hashes {
-                let base_val_opt = base_fields.remove(&field_hash);
-                let new_val_opt = new_fields.remove(&field_hash);
-
-                let final_data = match (base_val_opt, new_val_opt) {
-                    (Some(base_data), Some(new_data)) => merge_class_data(base_data, new_data),
-
-                    (Some(base_data), None) => make_optional(base_data),
-
-                    (None, Some(new_data)) => make_optional(new_data),
-
-                    (None, None) => unreachable!(),
-                };
-                base_fields.insert(field_hash, final_data);
-            }
-        }
-    }
-
-    for (class_hash, new_fields) in new {
-        base.insert(class_hash, new_fields);
-    }
-}
-
-pub fn get_hashes(paths: &[&str]) -> HashMap<u32, String> {
-    let mut hashes = HashMap::new();
-
-    for path in paths {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            for line in content.lines() {
-                let parts: Vec<_> = line.split_whitespace().collect();
-                if parts.len() == 2 {
-                    if let Ok(hash) = u32::from_str_radix(parts[0], 16) {
-                        hashes.insert(hash, parts[1].to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    hashes
-}
-
-pub fn get_hashes_u64(paths: &[&str]) -> HashMap<u64, String> {
-    let mut hashes = HashMap::new();
-
-    for path in paths {
-        if let Ok(content) = std::fs::read_to_string(path) {
-            for line in content.lines() {
-                let parts: Vec<_> = line.split_whitespace().collect();
-                if parts.len() == 2 {
-                    if let Ok(hash) = u64::from_str_radix(parts[0], 16) {
-                        hashes.insert(hash, parts[1].to_string());
-                    }
-                }
-            }
-        }
-    }
-
-    hashes
-}
-
-pub fn class_map_to_rust_code(
-    class_map: &mut ClassMap,
-    hashes: &HashMap<u32, String>,
-    entry_hashes: &HashSet<u32>,
-) -> Result<String, Error> {
-    let mut all_definitions = String::new();
-
-    // 1. 收集所有枚举信息
-    let mut enum_infos = Vec::new();
-    for (class_hash, class_fields) in class_map.iter() {
-        let parent_class_name = hash_to_type_name(class_hash, hashes);
-
-        for (field_hash, field_data) in class_fields.iter() {
-            collect_enum_info_recursively(
-                &parent_class_name,
-                *field_hash,
-                field_data,
-                hashes,
-                &mut enum_infos,
-            );
-        }
-    }
-
-    // 2. 合并有交集的枚举
-    let merged_enums = merge_enums_with_intersection(enum_infos);
-
-    // 3. 创建枚举映射表，基于枚举哈希值映射到合并后的枚举名称
-    let mut enum_hash_to_name = HashMap::new();
-    for enum_info in &merged_enums {
-        for &hash in &enum_info.hashes {
-            enum_hash_to_name.insert(hash, enum_info.name.clone());
-        }
-    }
-
-    // 4. 新增：识别导致递归的字段并标记它们
-    // 该集合存储需要Box的 (struct_hash, field_hash)
-    let mut recursive_fields = HashSet::new();
-    for enum_info in &merged_enums {
-        for &variant_hash in &enum_info.hashes {
-            // 对于作为结构体的每个变体...
-            if let Some(struct_fields) = class_map.get(&variant_hash) {
-                // ...检查它的字段
-                for (field_hash, field_data) in struct_fields {
-                    // 检查此字段的类型是否包含对该枚举的引用
-                    if contains_enum_reference(
-                        field_data,
-                        &enum_info.hashes, // 枚举中所有变体的集合
-                        class_map,
-                    ) {
-                        // 标记此字段以便Box处理
-                        recursive_fields.insert((variant_hash, *field_hash));
-                    }
-                }
-            }
-        }
-    }
-
-    // 5. 生成枚举定义 (简化版，无Box)
-    let enum_definitions = generate_enum_definitions(&merged_enums, class_map, hashes);
-    all_definitions.push_str(&enum_definitions);
-
-    // 6. 生成结构体定义
-    for (class_hash, class_data) in class_map.iter() {
-        let mut class_name = hash_to_type_name(class_hash, hashes);
-
-        if class_name == "Self" {
-            class_name = "r#Self".to_string();
-        }
-
-        let mut struct_def = String::new();
-        if entry_hashes.contains(class_hash) {
-            struct_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone, Reflect)]\n");
-        } else {
-            struct_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone, Reflect)]\n");
-        }
-        struct_def.push_str("#[serde(rename_all = \"camelCase\")]\n");
-        struct_def.push_str(&format!("pub struct {} {{\n", class_name));
-
-        for (field_hash, field_data) in class_data.iter() {
-            let field_name_original = hashes
-                .get(field_hash)
-                .cloned()
-                .unwrap_or(format!("unk_0x{:x}", field_hash));
-
-            let mut field_name_snake = field_name_original.to_snake_case();
-
-            if field_name_snake == "type" {
-                field_name_snake = "r#type".to_string();
-            }
-            if field_name_snake == "move" {
-                field_name_snake = "r#move".to_string();
-            }
-            if field_name_snake == "loop" {
-                field_name_snake = "r#loop".to_string();
-            }
-            if field_name_snake == "trait" {
-                field_name_snake = "r#trait".to_string();
-            }
-
-            let mut type_name = map_class_data_to_rust_type(
-                &class_name,
-                field_data,
-                field_hash,
-                hashes,
-                &enum_hash_to_name,
-            );
-
-            // 新增：如果字段被标记为递归，则应用Box<>
-            if recursive_fields.contains(&(*class_hash, *field_hash)) {
-                type_name = format!("Box<{}>", type_name);
-            }
-
-            struct_def.push_str(&format!("    pub {}: {},\n", field_name_snake, type_name));
-        }
-        struct_def.push_str("}\n\n");
-        all_definitions.push_str(&struct_def);
-    }
-
-    Ok(all_definitions)
-}
-
-pub fn extract_all_class(prop_file: &PropFile) -> Result<ClassMap, Error> {
-    let mut class_map = HashMap::new();
-    for (class_hash, entry) in prop_file.iter_class_hash_and_entry() {
-        let class_map_entry = extract_entry_class(class_hash, entry).unwrap();
-        merge_class_maps(&mut class_map, class_map_entry);
-    }
-    Ok(class_map)
-}
-
-pub fn extract_entry_class(class_hash: u32, entry: &EntryData) -> Result<ClassMap, Error> {
-    let mut parser = BinParser::from_bytes(&entry.data);
-
-    let data_map = parser.read_fields().unwrap();
-
-    let class_map = extract_struct_class(class_hash, &data_map).unwrap();
-
-    Ok(class_map)
-}
-
-pub fn extract_struct_class(
-    class_hash: u32,
-    data_map: &HashMap<u32, (BinType, &[u8])>,
-) -> Result<ClassMap, Error> {
-    let mut class_map = HashMap::new();
-    let mut struct_map = HashMap::new();
-
-    for (hash, (vtype, value_slice)) in data_map.iter() {
-        let class_data = extract_type_data(*vtype, value_slice, &mut class_map).unwrap();
-        struct_map.insert(*hash, class_data);
-    }
-
-    class_map.insert(class_hash, struct_map);
-
-    Ok(class_map)
 }
 
 fn extract_type_data(
@@ -728,7 +652,235 @@ fn extract_type_data(
                 ))))
             }
         }
-
         _ => unreachable!(),
+    }
+}
+
+pub fn merge_class_maps(base: &mut ClassMap, new: ClassMap) {
+    let mut new = new;
+
+    for (class_hash, base_fields) in base.iter_mut() {
+        if let Some(new_fields) = new.remove(class_hash) {
+            let all_field_hashes: HashSet<u32> = base_fields
+                .keys()
+                .cloned()
+                .chain(new_fields.keys().cloned())
+                .collect();
+
+            let mut new_fields = new_fields;
+
+            for field_hash in all_field_hashes {
+                let base_val_opt = base_fields.remove(&field_hash);
+                let new_val_opt = new_fields.remove(&field_hash);
+
+                let final_data = match (base_val_opt, new_val_opt) {
+                    (Some(base_data), Some(new_data)) => merge_class_data(base_data, new_data),
+                    (Some(base_data), None) => make_optional(base_data),
+                    (None, Some(new_data)) => make_optional(new_data),
+                    (None, None) => unreachable!(),
+                };
+                base_fields.insert(field_hash, final_data);
+            }
+        }
+    }
+
+    for (class_hash, new_fields) in new {
+        base.insert(class_hash, new_fields);
+    }
+}
+
+pub fn get_hashes(paths: &[&str]) -> HashMap<u32, String> {
+    let mut hashes = HashMap::new();
+    for path in paths {
+        if let Ok(content) = std::fs::read_to_string(path) {
+            for line in content.lines() {
+                let parts: Vec<_> = line.split_whitespace().collect();
+                if parts.len() == 2 {
+                    if let Ok(hash) = u32::from_str_radix(parts[0], 16) {
+                        hashes.insert(hash, parts[1].to_string());
+                    }
+                }
+            }
+        }
+    }
+    hashes
+}
+
+pub fn extract_all_class(prop_file: &PropFile) -> Result<ClassMap, Error> {
+    let mut class_map = HashMap::new();
+    for (class_hash, entry) in prop_file.iter_class_hash_and_entry() {
+        let class_map_entry = extract_entry_class(class_hash, entry).unwrap();
+        merge_class_maps(&mut class_map, class_map_entry);
+    }
+    Ok(class_map)
+}
+
+pub fn extract_entry_class(class_hash: u32, entry: &EntryData) -> Result<ClassMap, Error> {
+    let mut parser = BinParser::from_bytes(&entry.data);
+    let data_map = parser.read_fields().unwrap();
+    let class_map = extract_struct_class(class_hash, &data_map).unwrap();
+    Ok(class_map)
+}
+
+pub fn extract_struct_class(
+    class_hash: u32,
+    data_map: &HashMap<u32, (BinType, &[u8])>,
+) -> Result<ClassMap, Error> {
+    let mut class_map = HashMap::new();
+    let mut struct_map = HashMap::new();
+
+    for (hash, (vtype, value_slice)) in data_map.iter() {
+        let class_data = extract_type_data(*vtype, value_slice, &mut class_map).unwrap();
+        struct_map.insert(*hash, class_data);
+    }
+
+    class_map.insert(class_hash, struct_map);
+    Ok(class_map)
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_merge_enums_empty() {
+        let enums: Vec<HashSet<u32>> = vec![];
+        let result = merge_enums(enums);
+        assert!(result.is_empty());
+    }
+
+    #[test]
+    fn test_merge_enums_single() {
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+        let enums = vec![set1.clone()];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 1);
+        assert_eq!(result[0], set1);
+    }
+
+    #[test]
+    fn test_merge_enums_disjoint() {
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+
+        let mut set2 = HashSet::new();
+        set2.insert(3);
+        set2.insert(4);
+
+        let enums = vec![set1.clone(), set2.clone()];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 2);
+        // The order is not guaranteed, so we check if both sets are present
+        assert!(result.contains(&set1));
+        assert!(result.contains(&set2));
+    }
+
+    #[test]
+    fn test_merge_enums_simple_overlap() {
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+
+        let mut set2 = HashSet::new();
+        set2.insert(2);
+        set2.insert(3);
+
+        let enums = vec![set1, set2];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 1);
+
+        let mut expected = HashSet::new();
+        expected.insert(1);
+        expected.insert(2);
+        expected.insert(3);
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn test_merge_enums_chain_overlap() {
+        // A: {1, 2}
+        // B: {2, 3}
+        // C: {3, 4}
+        // Should merge to {1, 2, 3, 4}
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+
+        let mut set2 = HashSet::new();
+        set2.insert(2);
+        set2.insert(3);
+
+        let mut set3 = HashSet::new();
+        set3.insert(3);
+        set3.insert(4);
+
+        let enums = vec![set1, set2, set3];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 1);
+
+        let mut expected = HashSet::new();
+        expected.insert(1);
+        expected.insert(2);
+        expected.insert(3);
+        expected.insert(4);
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn test_merge_enums_subset() {
+        // A: {1, 2, 3}
+        // B: {1, 2}
+        // Should merge to {1, 2, 3}
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+        set1.insert(3);
+
+        let mut set2 = HashSet::new();
+        set2.insert(1);
+        set2.insert(2);
+
+        let enums = vec![set1, set2];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 1);
+
+        let mut expected = HashSet::new();
+        expected.insert(1);
+        expected.insert(2);
+        expected.insert(3);
+        assert_eq!(result[0], expected);
+    }
+
+    #[test]
+    fn test_merge_enums_complex_merge() {
+        // A: {1, 2}
+        // B: {3, 4}
+        // C: {2, 3}  <-- connects A and B
+        // Should merge to {1, 2, 3, 4}
+        let mut set1 = HashSet::new();
+        set1.insert(1);
+        set1.insert(2);
+
+        let mut set2 = HashSet::new();
+        set2.insert(3);
+        set2.insert(4);
+
+        let mut set3 = HashSet::new();
+        set3.insert(2);
+        set3.insert(3);
+
+        let enums = vec![set1, set2, set3];
+        let result = merge_enums(enums);
+        assert_eq!(result.len(), 1);
+
+        let mut expected = HashSet::new();
+        expected.insert(1);
+        expected.insert(2);
+        expected.insert(3);
+        expected.insert(4);
+        assert_eq!(result[0], expected);
     }
 }

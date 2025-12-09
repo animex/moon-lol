@@ -6,7 +6,6 @@ use bevy::{
 use binrw::{BinRead, BinWrite};
 use serde::{Deserialize, Serialize};
 
-/// 序列化字符串结构
 #[derive(Debug, Clone, BinRead, BinWrite)]
 #[br(little)]
 #[bw(little)]
