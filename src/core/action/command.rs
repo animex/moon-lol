@@ -1,4 +1,5 @@
-use std::{f32::MAX, sync::Arc};
+use std::f32::MAX;
+use std::sync::Arc;
 
 use bevy::prelude::*;
 use bevy_behave::prelude::BehaveTrigger;

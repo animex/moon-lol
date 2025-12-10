@@ -2,7 +2,9 @@
 mod tests {
     use std::time::Duration;
 
-    use bevy::{log::LogPlugin, prelude::*, time::TimeUpdateStrategy};
+    use bevy::log::LogPlugin;
+    use bevy::prelude::*;
+    use bevy::time::TimeUpdateStrategy;
     use moon_lol::{
         PluginAction, PluginAttack, PluginAttackAuto, PluginBarrack, PluginCharacter, PluginDamage,
         PluginLife, PluginMinion, PluginMovement, PluginNavigaton, PluginResource,

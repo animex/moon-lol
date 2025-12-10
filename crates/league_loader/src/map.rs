@@ -1,6 +1,7 @@
 use std::io::{Cursor, Read};
 
-use binrw::{io::NoSeek, BinRead};
+use binrw::io::NoSeek;
+use binrw::BinRead;
 use league_file::LeagueMapGeo;
 use league_property::PropFile;
 use league_utils::hash_wad;

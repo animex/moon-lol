@@ -5,11 +5,10 @@ use std::sync::Mutex;
 use std::time::Instant;
 
 use bevy::prelude::*;
-use league_utils::hash_bin;
-use rayon::prelude::*;
-
 use league_loader::{LeagueLoader, LeagueWadLoaderTrait};
 use league_property::{class_map_to_rust_code, extract_entry_class, get_hashes, merge_class_maps};
+use league_utils::hash_bin;
+use rayon::prelude::*;
 
 fn main() {
     let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";

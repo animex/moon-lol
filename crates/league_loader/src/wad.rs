@@ -1,14 +1,11 @@
-use std::io::{self, BufReader};
-use std::{
-    fs::File,
-    io::{Cursor, Read},
-    sync::Arc,
-};
+use std::fs::File;
+use std::io::{self, BufReader, Cursor, Read};
+use std::sync::Arc;
 
-use binrw::{args, io::NoSeek, BinRead, Endian};
-use zstd::Decoder;
-
+use binrw::io::NoSeek;
+use binrw::{args, BinRead, Endian};
 use league_utils::hash_wad;
+use zstd::Decoder;
 
 use crate::{
     ArcFileReader, Error, LeagueWad, LeagueWadEntry, LeagueWadLoaderTrait, LeagueWadSubchunk,

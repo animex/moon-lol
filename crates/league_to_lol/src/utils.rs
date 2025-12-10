@@ -1,10 +1,13 @@
-use std::{fs::File, io::Read, path::Path};
+use std::fs::File;
+use std::io::Read;
+use std::path::Path;
 
 use league_loader::LeagueWadLoaderTrait;
-use serde::{de::DeserializeOwned, Serialize};
-use tokio::{fs::File as AsyncFile, io::AsyncWriteExt};
-
+use serde::de::DeserializeOwned;
+use serde::Serialize;
 use thiserror::Error;
+use tokio::fs::File as AsyncFile;
+use tokio::io::AsyncWriteExt;
 
 #[derive(Error, Debug)]
 pub enum Error {

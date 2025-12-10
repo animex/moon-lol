@@ -1,8 +1,8 @@
-use bevy::prelude::*;
-use bevy::render::render_resource::Face;
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
+use bevy::prelude::*;
+use bevy::render::render_resource::Face;
 use lol_config::{ConfigNavigationGrid, CELL_COST_IMPASSABLE};
 
 use crate::{find_grid_path_with_result, system_debug, Bounding, Character};
@@ -491,8 +491,9 @@ pub fn calculate_occupied_grid_cells(
     entities_with_bounding: &Query<(Entity, &GlobalTransform, &Bounding)>,
     exclude_entities: &[Entity],
 ) -> HashMap<(usize, usize), f32> {
-    use lol_config::CELL_COST_IMPASSABLE;
     use std::collections::HashMap;
+
+    use lol_config::CELL_COST_IMPASSABLE;
 
     let mut occupied_cells: HashMap<(usize, usize), f32> = HashMap::new();
     let exclude_set: std::collections::HashSet<Entity> = exclude_entities.iter().copied().collect();

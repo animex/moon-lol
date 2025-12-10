@@ -1,9 +1,10 @@
 extern crate gl;
 extern crate glfw;
 
-use glfw::{Context, OpenGlProfileHint, WindowHint};
 use std::ffi::CString;
 use std::fs;
+
+use glfw::{Context, OpenGlProfileHint, WindowHint};
 
 fn main() {
     println!("正在初始化GLFW以获取OpenGL上下文...");

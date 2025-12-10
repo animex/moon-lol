@@ -1,47 +1,35 @@
-use std::{
-    sync::{
-        atomic::{AtomicBool, Ordering},
-        Arc, Mutex,
-    },
-    thread,
-};
+use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::{Arc, Mutex};
+use std::thread;
 
-use bevy::{
-    asset::RenderAssetUsages,
-    camera::RenderTarget,
-    image::TextureFormatPixelInfo,
-    prelude::*,
-    render::{
-        render_asset::RenderAssets,
-        render_graph::{self, NodeRunError, RenderGraph, RenderGraphContext, RenderLabel},
-        render_resource::{
-            Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, MapMode,
-            PollType, TexelCopyBufferInfo, TexelCopyBufferLayout, TextureDimension, TextureFormat,
-            TextureUsages,
-        },
-        renderer::{RenderContext, RenderDevice, RenderQueue},
-        Extract, Render, RenderApp, RenderSystems,
-    },
-    time::TimeUpdateStrategy,
-    window::ExitCondition,
-    winit::WinitPlugin,
+use bevy::asset::RenderAssetUsages;
+use bevy::camera::RenderTarget;
+use bevy::image::TextureFormatPixelInfo;
+use bevy::prelude::*;
+use bevy::render::render_asset::RenderAssets;
+use bevy::render::render_graph::{
+    self, NodeRunError, RenderGraph, RenderGraphContext, RenderLabel,
 };
+use bevy::render::render_resource::{
+    Buffer, BufferDescriptor, BufferUsages, CommandEncoderDescriptor, Extent3d, MapMode, PollType,
+    TexelCopyBufferInfo, TexelCopyBufferLayout, TextureDimension, TextureFormat, TextureUsages,
+};
+use bevy::render::renderer::{RenderContext, RenderDevice, RenderQueue};
+use bevy::render::{Extract, Render, RenderApp, RenderSystems};
+use bevy::time::TimeUpdateStrategy;
+use bevy::window::ExitCondition;
+use bevy::winit::WinitPlugin;
 use crossbeam_channel::{Receiver, Sender};
 use image::codecs::jpeg::JpegEncoder;
-use rocket::{
-    get,
-    http::{ContentType, Method, Status},
-    launch, post, routes,
-    serde::json::Json,
-    State,
-};
-use rocket_cors::{AllowedOrigins, CorsOptions};
-use serde::{Deserialize, Serialize};
-
 use moon_lol::{
     Action, AttackState, AttackTarget, CameraInit, CommandAction, Controller, Health,
     PluginBarrack, PluginCore, PluginGymEnv, Vital,
 };
+use rocket::http::{ContentType, Method, Status};
+use rocket::serde::json::Json;
+use rocket::{get, launch, post, routes, State};
+use rocket_cors::{AllowedOrigins, CorsOptions};
+use serde::{Deserialize, Serialize};
 
 #[derive(Resource, Deref)]
 struct MainWorldReceiver(Receiver<Vec<u8>>);

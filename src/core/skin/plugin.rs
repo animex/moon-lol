@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-
 use league_core::SkinCharacterDataProperties;
 
 use super::{on_command_spawn_animation, on_command_spawn_mesh};

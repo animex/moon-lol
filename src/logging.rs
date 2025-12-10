@@ -1,7 +1,10 @@
-use bevy::prelude::*;
 use std::fs::File;
 use std::path::PathBuf;
-use tracing_subscriber::{fmt, layer::SubscriberExt, util::SubscriberInitExt, EnvFilter};
+
+use bevy::prelude::*;
+use tracing_subscriber::layer::SubscriberExt;
+use tracing_subscriber::util::SubscriberInitExt;
+use tracing_subscriber::{fmt, EnvFilter};
 
 /// Resource to store the log file path
 #[derive(Resource)]

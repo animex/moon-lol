@@ -8,9 +8,8 @@ use league_core::{
 use league_to_lol::load_animation_map;
 use league_utils::{get_asset_id_by_hash, hash_bin};
 
-use crate::{Animation, AnimationNode, AnimationNodeF32, AnimationState};
-
 use super::CommandSpawnAnimation;
+use crate::{Animation, AnimationNode, AnimationNodeF32, AnimationState};
 
 pub fn on_command_spawn_animation(
     trigger: On<CommandSpawnAnimation>,

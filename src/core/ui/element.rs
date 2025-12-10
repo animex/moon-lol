@@ -1,10 +1,7 @@
 use std::collections::HashMap;
 
-use bevy::{
-    prelude::*,
-    window::{PrimaryWindow, WindowResized},
-};
-
+use bevy::prelude::*;
+use bevy::window::{PrimaryWindow, WindowResized};
 use league_core::{EnumAnchor, EnumData, EnumUiPosition, UiElementIconData};
 use league_utils::hash_bin;
 

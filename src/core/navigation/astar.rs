@@ -2,7 +2,6 @@ use std::cmp::Ordering;
 use std::collections::{BinaryHeap, HashMap};
 
 use bevy::prelude::*;
-
 use lol_config::ConfigNavigationGrid;
 
 #[derive(Debug, Clone)]

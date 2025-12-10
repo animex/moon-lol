@@ -1,11 +1,9 @@
-use std::{
-    collections::HashMap,
-    io::{self},
-};
-
-use crate::Error;
+use std::collections::HashMap;
+use std::io::{self};
 
 use binrw::binread;
+
+use crate::Error;
 
 #[binread]
 #[derive(Debug)]

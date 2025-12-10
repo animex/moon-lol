@@ -76,11 +76,13 @@ pub fn mesh_static_to_bevy_mesh(mesh: LeagueMeshStatic) -> Mesh {
 
 #[cfg(test)]
 mod tests {
-    use std::{fs::File, io::BufReader};
+    use std::fs::File;
+    use std::io::BufReader;
 
-    use super::*;
     use binrw::BinRead;
     use league_file::LeagueMeshStatic;
+
+    use super::*;
 
     #[test]
     fn test_mesh_static_to_bevy_mesh() {

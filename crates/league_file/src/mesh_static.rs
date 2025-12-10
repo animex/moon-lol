@@ -1,10 +1,10 @@
+use std::io::{Read, Seek};
+
 use bevy::prelude::*;
-use binrw::binread;
-use binrw::{BinRead, BinResult, Endian};
+use binrw::{binread, BinRead, BinResult, Endian};
 use bitflags::bitflags;
 use league_utils::get_padded_string_128; // 假设这个函数存在于您的工具库中
 use league_utils::BoundingBox; // 假设这个结构体存在于您的工具库中
-use std::io::{Read, Seek};
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

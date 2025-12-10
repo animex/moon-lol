@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-
 use moon_lol::{PluginCore, PluginResource};
 
 fn main() {

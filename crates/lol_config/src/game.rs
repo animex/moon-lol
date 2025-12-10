@@ -1,12 +1,10 @@
 use std::fmt::Formatter;
 
-use serde::Deserialize;
-
-use bevy::{prelude::*, reflect::TypeRegistry, scene::serde::SceneMapDeserializer};
-use serde::{
-    de::{DeserializeSeed, Visitor},
-    Deserializer,
-};
+use bevy::prelude::*;
+use bevy::reflect::TypeRegistry;
+use bevy::scene::serde::SceneMapDeserializer;
+use serde::de::{DeserializeSeed, Visitor};
+use serde::{Deserialize, Deserializer};
 
 #[derive(Resource, Default)]
 pub struct ConfigGame {

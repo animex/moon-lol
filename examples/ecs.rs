@@ -1,6 +1,8 @@
 use std::time::Duration;
 
-use bevy::{diagnostic::FrameCount, prelude::*, time::TimeUpdateStrategy};
+use bevy::diagnostic::FrameCount;
+use bevy::prelude::*;
+use bevy::time::TimeUpdateStrategy;
 
 fn main() {
     let mut app = App::new();

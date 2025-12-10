@@ -1,7 +1,7 @@
-use bevy::{app::Plugin, prelude::*};
-use serde::{Deserialize, Serialize};
-
+use bevy::app::Plugin;
+use bevy::prelude::*;
 use lol_core::{Lane, Team};
+use serde::{Deserialize, Serialize};
 
 use crate::{
     Aggro, AttackAuto, CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement,

@@ -9,10 +9,9 @@ pub use game::*;
 pub use map::*;
 pub use prop_bin::*;
 pub use reader::*;
+use thiserror::Error;
 pub use wad::*;
 pub use wad_parse::*;
-
-use thiserror::Error;
 
 #[derive(Error, Debug)]
 pub enum Error {

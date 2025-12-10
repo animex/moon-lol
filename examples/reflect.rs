@@ -1,4 +1,5 @@
-use bevy::{prelude::*, reflect::ReflectRef};
+use bevy::prelude::*;
+use bevy::reflect::ReflectRef;
 use serde::{Deserialize, Serialize};
 
 fn main() {

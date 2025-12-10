@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-
 use league_loader::LeagueWadMapLoader;
 use lol_config::ConfigNavigationGrid;
 

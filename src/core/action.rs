@@ -8,13 +8,12 @@ mod particle;
 
 pub use animation::*;
 pub use attack_reset::*;
+use bevy::prelude::*;
 pub use buff::*;
 pub use command::*;
 pub use damage::*;
 pub use dash::*;
 pub use particle::*;
-
-use bevy::prelude::*;
 use serde::{Deserialize, Serialize};
 
 use crate::{

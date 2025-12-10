@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use binrw::BinRead;
-
 use league_core::{EnumMap, MapContainer};
 use league_file::AiMeshNGrid;
 use league_loader::LeagueWadMapLoader;

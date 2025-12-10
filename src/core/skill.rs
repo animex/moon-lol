@@ -1,10 +1,8 @@
 use std::ops::Deref;
 
 use bevy::prelude::*;
-use bevy_behave::{
-    prelude::{BehaveCtx, BehavePlugin, BehaveTree, Tree},
-    Behave,
-};
+use bevy_behave::prelude::{BehaveCtx, BehavePlugin, BehaveTree, Tree};
+use bevy_behave::Behave;
 use league_core::SpellObject;
 
 use crate::{AbilityResource, EventLevelUp, Level};

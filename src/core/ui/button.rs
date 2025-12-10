@@ -1,11 +1,11 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-
 use league_core::{UiElementGroupButtonData, UiElementRegionData};
 use league_utils::get_asset_id_by_hash;
 
-use crate::{core::ui::element::UIElementEntity, UIElement};
+use crate::core::ui::element::UIElementEntity;
+use crate::UIElement;
 
 #[derive(Resource, Default)]
 pub struct UIButtonEntity {

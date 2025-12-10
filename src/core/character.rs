@@ -1,5 +1,4 @@
 use bevy::prelude::*;
-
 use league_core::{CharacterRecord, ResourceResolver, SkinCharacterDataProperties};
 use league_utils::{get_asset_id_by_hash, get_asset_id_by_path};
 use lol_core::Team;

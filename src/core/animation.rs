@@ -1,12 +1,12 @@
-use std::{collections::HashMap, time::Duration};
+use std::collections::HashMap;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use league_core::{EnumBlendData, EnumParametricUpdater};
 use league_utils::hash_bin;
-use rand::{
-    distr::{weighted::WeightedIndex, Distribution},
-    rng,
-};
+use rand::distr::weighted::WeightedIndex;
+use rand::distr::Distribution;
+use rand::rng;
 
 use crate::{Attack, Movement, State};
 

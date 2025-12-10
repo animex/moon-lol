@@ -1,4 +1,6 @@
-use bevy::{animation::AnimationTarget, color::palettes::tailwind::RED_500, prelude::*};
+use bevy::animation::AnimationTarget;
+use bevy::color::palettes::tailwind::RED_500;
+use bevy::prelude::*;
 use league_core::{EnumMovement, SpellObject};
 use league_utils::{get_asset_id_by_hash, hash_joint};
 use serde::{Deserialize, Serialize};

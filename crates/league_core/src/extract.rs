@@ -1,12 +1,10 @@
 use std::collections::HashMap;
 use std::sync::LazyLock;
 
-use bevy::{
-    asset::Asset,
-    math::{Mat4, Vec2, Vec3, Vec4},
-    prelude::{App, AssetApp},
-    reflect::TypePath,
-};
+use bevy::asset::Asset;
+use bevy::math::{Mat4, Vec2, Vec3, Vec4};
+use bevy::prelude::{App, AssetApp};
+use bevy::reflect::TypePath;
 use serde::{Deserialize, Serialize};
 
 use crate::AssetLoaderRegistry;

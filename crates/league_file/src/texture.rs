@@ -1,7 +1,7 @@
-use binrw::binread;
-use binrw::{BinRead, BinResult, Endian};
-use bitflags::bitflags;
 use std::io::{Read, Seek};
+
+use binrw::{binread, BinRead, BinResult, Endian};
+use bitflags::bitflags;
 
 #[binread]
 #[derive(Debug)]

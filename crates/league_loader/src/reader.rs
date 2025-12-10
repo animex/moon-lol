@@ -1,12 +1,10 @@
+use std::fs::File;
+use std::io::{self, Read, Seek, SeekFrom};
 #[cfg(unix)]
 use std::os::unix::fs::FileExt;
 #[cfg(windows)]
 use std::os::windows::fs::FileExt;
-use std::{
-    fs::File,
-    io::{self, Read, Seek, SeekFrom},
-    sync::Arc,
-};
+use std::sync::Arc;
 
 pub struct ArcFileReader {
     file: Arc<File>,

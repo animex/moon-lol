@@ -2,12 +2,10 @@ use std::collections::HashMap;
 use std::f32::consts::SQRT_2;
 use std::fmt::Debug;
 
-use bevy::math::Quat;
-use bevy::math::Vec3;
+use bevy::math::{Quat, Vec3};
 use binrw::io::{Read, Seek, SeekFrom};
-use binrw::{binread, BinRead};
-use binrw::{prelude::*, Endian};
-
+use binrw::prelude::*;
+use binrw::{binread, BinRead, Endian};
 use league_utils::{hash_joint, parse_quat, parse_quat_array, parse_vec3, parse_vec3_array};
 
 #[binread]

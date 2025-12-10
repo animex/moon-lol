@@ -1,5 +1,6 @@
 use core::f32;
-use std::{collections::HashSet, time::Instant};
+use std::collections::HashSet;
+use std::time::Instant;
 
 use bevy::prelude::*;
 use lol_config::ConfigNavigationGrid;

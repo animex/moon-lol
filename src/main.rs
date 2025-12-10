@@ -4,16 +4,14 @@ mod entities;
 mod logging;
 mod server;
 
-pub use abilities::*;
 pub use core::*;
+
+pub use abilities::*;
+use bevy::app::{plugin_group, App};
+use bevy::DefaultPlugins;
 pub use entities::*;
 pub use logging::*;
 pub use server::*;
-
-use bevy::{
-    app::{plugin_group, App},
-    DefaultPlugins,
-};
 
 plugin_group! {
     pub struct PluginCore {

@@ -1,6 +1,5 @@
 use bevy::prelude::*;
 use binrw::binread;
-
 use league_core::{
     JungleQuadrantFlags, MainRegionFlags, NearestLaneFlags, POIFlags, RingFlags, RiverRegionFlags,
     UnknownSRXFlags, VisionPathingFlags,

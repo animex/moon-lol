@@ -1,7 +1,8 @@
-use binrw::{binread, BinRead, BinResult, Endian};
-use bitflags::bitflags;
 use std::collections::HashMap;
 use std::io::{Read, Seek, SeekFrom};
+
+use binrw::{binread, BinRead, BinResult, Endian};
+use bitflags::bitflags;
 
 bitflags! {
     #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]

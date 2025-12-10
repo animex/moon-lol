@@ -1,11 +1,11 @@
 use bevy::prelude::*;
 use league_core::SpellObject;
+use league_utils::get_asset_id_by_hash;
 
 use crate::{
     CommandDespawnButton, CommandSkillLevelUp, CommandSpawnButton, Controller, Level,
     ResourceCache, Skill, SkillPoints, Skills, UIElementEntity,
 };
-use league_utils::get_asset_id_by_hash;
 
 pub fn update_skill_icon(
     asset_server: Res<AssetServer>,

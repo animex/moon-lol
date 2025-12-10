@@ -74,18 +74,18 @@ mod tests {
 
         /// 发送取消命令
         fn cancel(&mut self) -> &mut Self {
-            self.app
-                .world_mut()
-                .trigger(CommandAttackStop { entity: self.attacker });
+            self.app.world_mut().trigger(CommandAttackStop {
+                entity: self.attacker,
+            });
             self.app.update();
             self
         }
 
         /// 发送重置命令
         fn reset(&mut self) -> &mut Self {
-            self.app
-                .world_mut()
-                .trigger(CommandAttackReset { entity: self.attacker });
+            self.app.world_mut().trigger(CommandAttackReset {
+                entity: self.attacker,
+            });
             self.app.update();
             self
         }

@@ -1,16 +1,14 @@
 use std::f32::consts::PI;
 use std::fmt::Debug;
 
-use bevy::{
-    mesh::{MeshVertexBufferLayoutRef, VertexAttributeValues},
-    pbr::{MaterialPipeline, MaterialPipelineKey},
-    prelude::*,
-    render::render_resource::{
-        AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState,
-        RenderPipelineDescriptor, ShaderType, SpecializedMeshPipelineError,
-    },
-    shader::{ShaderDefVal, ShaderRef},
+use bevy::mesh::{MeshVertexBufferLayoutRef, VertexAttributeValues};
+use bevy::pbr::{MaterialPipeline, MaterialPipelineKey};
+use bevy::prelude::*;
+use bevy::render::render_resource::{
+    AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState, RenderPipelineDescriptor,
+    ShaderType, SpecializedMeshPipelineError,
 };
+use bevy::shader::{ShaderDefVal, ShaderRef};
 
 use crate::{ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_UV_MULT, ATTRIBUTE_WORLD_POSITION};
 

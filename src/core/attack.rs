@@ -1,7 +1,6 @@
-use bevy::{
-    ecs::{error::ignore, system::command::trigger},
-    prelude::*,
-};
+use bevy::ecs::error::ignore;
+use bevy::ecs::system::command::trigger;
+use bevy::prelude::*;
 use league_core::SpellObject;
 use serde::{Deserialize, Serialize};
 

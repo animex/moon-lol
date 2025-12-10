@@ -8,6 +8,7 @@ mod position;
 mod state;
 
 pub use ability_resource::*;
+use bevy::app::{App, Plugin};
 pub use bounding::*;
 pub use buff::*;
 pub use direction::*;
@@ -15,8 +16,6 @@ pub use level::*;
 pub use pipeline::*;
 pub use position::*;
 pub use state::*;
-
-use bevy::app::{App, Plugin};
 
 #[derive(Default)]
 pub struct PluginBase;

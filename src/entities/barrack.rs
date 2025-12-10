@@ -1,4 +1,5 @@
-use std::{collections::VecDeque, time::Duration};
+use std::collections::VecDeque;
+use std::time::Duration;
 
 use bevy::prelude::*;
 use league_core::{
@@ -9,11 +10,9 @@ use league_core::{
 use league_utils::{get_asset_id_by_hash, get_asset_id_by_path};
 use lol_core::{Lane, Team};
 
-use crate::{
-    core::{Armor, CommandCharacterSpawn, Damage, Health, Movement},
-    entities::Minion,
-    MapName, MinionPath,
-};
+use crate::core::{Armor, CommandCharacterSpawn, Damage, Health, Movement};
+use crate::entities::Minion;
+use crate::{MapName, MinionPath};
 
 /// 兵营的动态状态，用于跟踪计时器和生成队列
 #[derive(Component)]

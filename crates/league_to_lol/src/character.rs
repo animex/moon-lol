@@ -1,15 +1,14 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-
 use league_core::{
     EnumVfxPrimitive, ResourceResolver, SkinCharacterDataProperties, VfxSystemDefinitionData,
 };
 use league_loader::{LeagueWadLoader, LeagueWadLoaderTrait};
 use league_property::from_entry_unwrap;
 use league_utils::hash_bin;
-// use league_file::InibinFile;
 
+// use league_file::InibinFile;
 use crate::{save_wad_entry_to_file, Error};
 
 pub async fn save_character(

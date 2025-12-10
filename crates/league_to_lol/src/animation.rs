@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-
 use league_core::{AnimationGraphData, EnumBlendData, EnumClipData};
 use league_file::{AnimationFile, CompressedTransformType, UncompressedData};
 use lol_config::ConfigAnimationClip;

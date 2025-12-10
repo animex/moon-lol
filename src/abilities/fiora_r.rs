@@ -1,13 +1,12 @@
-use bevy::{ecs::relationship::Relationship, prelude::*};
+use bevy::ecs::relationship::Relationship;
+use bevy::prelude::*;
 use league_utils::hash_bin;
 use lol_core::Team;
 
-use crate::{
-    abilities::get_particle_hash,
-    core::{
-        is_in_direction, Buff, BuffOf, CommandCharacterParticleDespawn,
-        CommandCharacterParticleSpawn, Direction, EventDamageCreate, Health,
-    },
+use crate::abilities::get_particle_hash;
+use crate::core::{
+    is_in_direction, Buff, BuffOf, CommandCharacterParticleDespawn, CommandCharacterParticleSpawn,
+    Direction, EventDamageCreate, Health,
 };
 
 const VITAL_R_TIMEOUT: f32 = 1.5;

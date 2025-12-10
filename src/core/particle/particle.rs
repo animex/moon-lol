@@ -2,19 +2,13 @@ mod mesh;
 mod quad;
 mod quad_slice;
 
+use bevy::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
+use bevy::mesh::VertexAttributeValues;
+use bevy::prelude::*;
+use league_core::{EnumVfxPrimitive, VfxSystemDefinitionData};
 pub use mesh::*;
 pub use quad::*;
 pub use quad_slice::*;
-
-use bevy::{
-    mesh::{
-        skinning::{SkinnedMesh, SkinnedMeshInverseBindposes},
-        VertexAttributeValues,
-    },
-    prelude::*,
-};
-
-use league_core::{EnumVfxPrimitive, VfxSystemDefinitionData};
 
 use crate::{
     Lifetime, ParticleEmitterState, ParticleId, ParticleMaterialSkinnedMeshParticle,

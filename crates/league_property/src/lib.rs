@@ -12,9 +12,8 @@ pub use deserializer::*;
 pub use extract::*;
 pub use parser::*;
 pub use prop::*;
-pub use types::*;
-
 use serde::Deserialize;
+pub use types::*;
 
 pub fn from_entry_unwrap<'de, T>(slice: &'de EntryData) -> T
 where

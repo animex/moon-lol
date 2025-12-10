@@ -1,8 +1,7 @@
 use std::collections::VecDeque;
 
-use serde::de::{self, Visitor};
-
 use league_utils::hash_bin;
+use serde::de::{self, Visitor};
 
 use crate::{
     BinDeserializerResult, BinParser, BinType, EnumReader, Error, HashMapReader, MapReader,

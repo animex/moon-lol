@@ -1,7 +1,6 @@
 use std::collections::HashMap;
 
 use bevy::prelude::*;
-
 use league_core::VfxSystemDefinitionData;
 use league_loader::LeagueWadLoader;
 

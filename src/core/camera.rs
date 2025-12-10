@@ -1,6 +1,7 @@
 use bevy::camera::{CameraProjection, SubCameraView};
+use bevy::input::mouse::MouseWheel;
 use bevy::math::{Mat4, Vec3A, Vec4};
-use bevy::{input::mouse::MouseWheel, prelude::*};
+use bevy::prelude::*;
 
 // 相机距离和位置配置
 pub const CAMERA_FAR_Z: f32 = 22000.0;

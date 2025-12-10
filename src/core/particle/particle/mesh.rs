@@ -1,15 +1,13 @@
 use std::fmt::Debug;
 
-use bevy::{
-    mesh::MeshVertexBufferLayoutRef,
-    pbr::{MaterialPipeline, MaterialPipelineKey},
-    prelude::*,
-    render::render_resource::{
-        AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState,
-        RenderPipelineDescriptor, ShaderType, SpecializedMeshPipelineError,
-    },
-    shader::ShaderRef,
+use bevy::mesh::MeshVertexBufferLayoutRef;
+use bevy::pbr::{MaterialPipeline, MaterialPipelineKey};
+use bevy::prelude::*;
+use bevy::render::render_resource::{
+    AsBindGroup, BlendComponent, BlendFactor, BlendOperation, BlendState, RenderPipelineDescriptor,
+    ShaderType, SpecializedMeshPipelineError,
 };
+use bevy::shader::ShaderRef;
 
 #[derive(Clone, ShaderType, Debug)]
 pub struct UniformsVertexMesh {

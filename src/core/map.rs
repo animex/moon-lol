@@ -1,7 +1,8 @@
-use std::{collections::HashMap, f32};
+use std::collections::HashMap;
+use std::f32;
 
-use bevy::{math::bounding::Aabb3d, prelude::*};
-
+use bevy::math::bounding::Aabb3d;
+use bevy::prelude::*;
 use league_core::{
     EnumMap, EnvironmentVisibility, MapContainer, MapPlaceableContainer, StaticMaterialDef,
 };

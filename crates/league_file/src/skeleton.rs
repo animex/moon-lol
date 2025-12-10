@@ -2,8 +2,8 @@ use bevy::asset::Asset;
 use bevy::math::{Mat4, Quat, Vec3, Vec4};
 use bevy::reflect::TypePath;
 use binrw::io::{Read, Seek, SeekFrom};
-use binrw::{binread, BinRead};
-use binrw::{prelude::*, Endian};
+use binrw::prelude::*;
+use binrw::{binread, BinRead, Endian};
 use league_utils::{parse_quat, parse_vec3};
 
 const FORMAT_TOKEN: u32 = 0x22FD4FC3;

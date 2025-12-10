@@ -2,7 +2,6 @@ use std::time::Duration;
 
 use bevy::prelude::*;
 use bevy::winit::{UpdateMode, WinitSettings};
-
 // use moon_lol::CameraState;
 // use moon_lol::PluginBarrack;
 use moon_lol::{PluginCore, PluginResource};

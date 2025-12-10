@@ -1,13 +1,12 @@
-use bevy::{
-    ecs::resource::Resource,
-    math::{vec2, vec3, Vec2, Vec3},
-};
+use std::collections::{HashMap, HashSet};
+
+use bevy::ecs::resource::Resource;
+use bevy::math::{vec2, vec3, Vec2, Vec3};
 use league_core::{
     JungleQuadrantFlags, MainRegionFlags, NearestLaneFlags, POIFlags, RingFlags, RiverRegionFlags,
     UnknownSRXFlags, VisionPathingFlags,
 };
 use serde::{Deserialize, Serialize};
-use std::collections::{HashMap, HashSet};
 
 /// 表示格子不可通行的成本值
 pub const CELL_COST_IMPASSABLE: f32 = f32::MAX;

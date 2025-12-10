@@ -1,11 +1,10 @@
 use bevy::asset::AssetPlugin;
 use bevy::prelude::*;
-use rand::Rng;
-
 use moon_lol::{
     Action, PluginAnimation, PluginBarrack, PluginCamera, PluginController, PluginCore, PluginMap,
     PluginParticle, PluginSkill, PluginUI,
 };
+use rand::Rng;
 
 #[derive(Default)]
 struct PluginGymEnv;

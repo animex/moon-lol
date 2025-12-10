@@ -1,10 +1,8 @@
 use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use bevy_egui::{egui, EguiContexts, EguiPlugin, EguiPrimaryContextPass};
-
 use league_core::VisionPathingFlags;
 use lol_config::ConfigNavigationGrid;
-
 use moon_lol::{
     on_click_map, CameraState, Map, NavigationDebug, PluginBarrack, PluginCore, PluginResource,
 };

@@ -4,24 +4,22 @@ mod particle;
 mod skinned_mesh;
 mod utils;
 
+use bevy::mesh::{MeshVertexAttribute, VertexFormat};
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
+use bevy::transform::systems::{
+    mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms,
+};
 pub use emitter::*;
 pub use environment::*;
-pub use particle::*;
-pub use skinned_mesh::*;
-pub use utils::*;
-
-use bevy::{
-    mesh::{MeshVertexAttribute, VertexFormat},
-    platform::collections::HashMap,
-    prelude::*,
-    transform::systems::{mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms},
-};
-
 use league_core::{
     ValueColor, ValueFloat, ValueVector2, ValueVector3, VfxEmitterDefinitionData,
     VfxSystemDefinitionData,
 };
 use league_utils::hash_wad;
+pub use particle::*;
+pub use skinned_mesh::*;
+pub use utils::*;
 
 use crate::{Lifetime, LifetimeMode};
 

@@ -1,11 +1,8 @@
-use bevy::{
-    animation::AnimationTarget,
-    math::bounding::{Aabb3d, IntersectsVolume},
-    mesh::skinning::SkinnedMesh,
-    platform::collections::HashSet,
-    prelude::*,
-};
-
+use bevy::animation::AnimationTarget;
+use bevy::math::bounding::{Aabb3d, IntersectsVolume};
+use bevy::mesh::skinning::SkinnedMesh;
+use bevy::platform::collections::HashSet;
+use bevy::prelude::*;
 use league_core::{
     EnumVfxPrimitive, EnumVfxShape, Unk0xee39916f, VfxEmitterDefinitionData, VfxPrimitiveMesh,
     VfxPrimitivePlanarProjection, VfxShapeBox, VfxShapeCylinder, VfxShapeLegacy,

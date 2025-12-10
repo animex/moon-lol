@@ -1,7 +1,8 @@
-use binrw::BinRead;
-use league_file::LeagueTexture;
 use std::fs::File;
 use std::io::{BufReader, Cursor, Read};
+
+use binrw::BinRead;
+use league_file::LeagueTexture;
 
 fn main() {
     let path = "assets/ASSETS/Characters/Fiora/Skins/Base/Particles/Fiora_Base_Passive_color-rampdown32.tex";

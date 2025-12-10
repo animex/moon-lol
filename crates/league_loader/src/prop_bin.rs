@@ -1,7 +1,7 @@
 use std::io::Read;
 
-use binrw::{io::NoSeek, BinRead};
-
+use binrw::io::NoSeek;
+use binrw::BinRead;
 use league_file::LeagueTexture;
 use league_property::PropFile;
 use league_utils::hash_wad;

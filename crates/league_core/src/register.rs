@@ -1,10 +1,12 @@
-use std::{any::type_name, marker::PhantomData};
+use std::any::type_name;
+use std::marker::PhantomData;
 
-use bevy::{asset::LoadContext, platform::collections::HashMap, prelude::*};
-use serde::de::DeserializeOwned;
-
+use bevy::asset::LoadContext;
+use bevy::platform::collections::HashMap;
+use bevy::prelude::*;
 use league_property::{from_entry, EntryData};
 use league_utils::hash_bin;
+use serde::de::DeserializeOwned;
 
 #[derive(Resource, Default)]
 pub struct AssetLoaderRegistry {

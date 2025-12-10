@@ -10,10 +10,7 @@ pub struct ActionBuffSpawn {
     pub bundle: BundleSpawner,
 }
 
-pub fn on_action_buff_spawn(
-    trigger: On<BehaveTrigger<ActionBuffSpawn>>,
-    mut commands: Commands,
-) {
+pub fn on_action_buff_spawn(trigger: On<BehaveTrigger<ActionBuffSpawn>>, mut commands: Commands) {
     let ctx = trigger.ctx();
     let entity = ctx.target_entity();
     let event = trigger.inner();

@@ -1,9 +1,10 @@
-use std::{collections::HashMap, hash::Hasher};
+use std::collections::HashMap;
+use std::hash::Hasher;
 
-use heck::{ToPascalCase, ToSnakeCase};
-
-use bevy::{asset::uuid::Uuid, prelude::*};
+use bevy::asset::uuid::Uuid;
+use bevy::prelude::*;
 use binrw::binread;
+use heck::{ToPascalCase, ToSnakeCase};
 use serde::{Deserialize, Serialize};
 use twox_hash::XxHash64;
 
