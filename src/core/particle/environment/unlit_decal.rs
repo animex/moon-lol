@@ -86,7 +86,7 @@ impl Material for ParticleMaterialUnlitDecal {
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/unlit_decal.vert".into()
+        "shaders/environment/unlit_decal.vert".into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {

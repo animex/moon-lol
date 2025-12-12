@@ -51,25 +51,12 @@ heck = "0.5.0"
 serde = "1.0.219"
 thiserror = "2.0.12"
 tokio = { version = "1.0", features = ["full"] }
-rayon = "1.10"
 
 [dev-dependencies]
-anyhow = "1.0.100"
-autoagents = { version = "0.3.0", features = ["openrouter", "ollama", "openai"] }
-autoagents-derive = "0.3.0"
 crossbeam-channel = "0.5"
-glsl-lang = "0.8.0"
-glsl-lang-pp = { version = "0.8.0", features = ["full"] }
 image = { version = "0.25", features = ["jpeg", "png"] }
-preproc = "0.2.0"
-rayon.workspace = true
+rayon = "1.10"
 rocket = { version = "*", features = ["json"] }
 rocket_cors = "0.6"
 serde_json = "1.0.145"
-similar = "2"
-tungstenite = "0.23"
 walkdir = "2.5.0"
-chrono = "0.4"
-
-[build-dependencies]
-embed-resource = "2.4"

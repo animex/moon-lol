@@ -9,9 +9,21 @@
             rotation: (0.0, 0.0, 0.0, 1.0),
             scale: (1.0, 1.0, 1.0),
         ),
-        "lol_core::team::Team": Order,
-        "moon_lol::core::damage::Damage": (100.0),
         "moon_lol::entities::champions::riven::Riven": (),
+        "lol_core::team::Team": Order,
+    },
+    (
+        skin_path: "Characters/Fiora/Skins/Skin0",
+        character_record: "Characters/Fiora/CharacterRecords/Root",
+    ),
+    {
+        "bevy_transform::components::transform::Transform": (
+            translation: (8900.0, 0.0, 6300.0),
+            rotation: (0.0, 0.0, 0.0, 1.0),
+            scale: (1.0, 1.0, 1.0),
+        ),
+        "lol_core::team::Team": Order,
+        "moon_lol::entities::champions::fiora::Fiora": (),
         "moon_lol::core::controller::Controller": (),
         "moon_lol::core::camera::Focus": (),
     },
