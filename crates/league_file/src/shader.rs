@@ -6,7 +6,7 @@ use crate::SizedStringU32;
 #[binread]
 #[derive(Debug)]
 #[br(little)]
-pub struct LeagueShader {
+pub struct LeagueShaderToc {
     pub magic: SizedStringU32,
 
     pub shader_count: u32,
@@ -33,4 +33,25 @@ pub struct LeagueShader {
 pub struct ShaderMacroDefinition {
     pub name: SizedStringU32,
     pub value: SizedStringU32,
+}
+
+#[derive(Debug, Clone)]
+pub struct LeagueShaderChunk {
+    pub files: Vec<SizedStringU32>,
+}
+
+impl BinRead for LeagueShaderChunk {
+    type Args<'a> = ();
+
+    fn read_options<R: std::io::Read + std::io::Seek>(
+        reader: &mut R,
+        endian: binrw::Endian,
+        _args: Self::Args<'_>,
+    ) -> BinResult<Self> {
+        let mut files = Vec::new();
+        while let Ok(shader_file) = SizedStringU32::read_options(reader, endian, ()) {
+            files.push(shader_file);
+        }
+        Ok(LeagueShaderChunk { files })
+    }
 }

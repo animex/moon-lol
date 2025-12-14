@@ -9,6 +9,8 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 
+use crate::{get_shader_handle, MaterialPath};
+
 #[derive(Clone, ShaderType, Debug)]
 pub struct UniformsVertexSkinnedMeshParticle {
     pub fog_of_war_params: Vec4,
@@ -87,13 +89,18 @@ impl From<&ParticleMaterialSkinnedMeshParticle> for ParticleMaterialKeySkinnedMe
     }
 }
 
+impl MaterialPath for ParticleMaterialSkinnedMeshParticle {
+    const FRAG_PATH: &str = "assets/shaders/hlsl/skinnedmesh/particle_ps.ps.glsl";
+    const VERT_PATH: &str = "assets/shaders/hlsl/skinnedmesh/particle_vs.vs.glsl";
+}
+
 impl Material for ParticleMaterialSkinnedMeshParticle {
     fn fragment_shader() -> ShaderRef {
-        "shaders/skinned_mesh/particle.frag".into()
+        get_shader_handle(Self::FRAG_PATH, &vec![]).into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/skinned_mesh/particle.vert".into()
+        get_shader_handle(Self::VERT_PATH, &vec![]).into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {

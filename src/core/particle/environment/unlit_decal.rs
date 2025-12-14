@@ -9,6 +9,8 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 
+use crate::{get_shader_handle, MaterialPath};
+
 #[derive(Clone, ShaderType, Debug)]
 pub struct UniformsVertexUnlitDecal {
     pub fog_of_war_params: Vec4,
@@ -71,6 +73,11 @@ pub struct ParticleMaterialKeyUnlitDecal {
     blend_mode: u8,
 }
 
+impl MaterialPath for ParticleMaterialUnlitDecal {
+    const FRAG_PATH: &str = "assets/shaders/hlsl/environment/unlit_decal_ps.ps.glsl";
+    const VERT_PATH: &str = "assets/shaders/hlsl/environment/unlit_decal_vs.vs.glsl";
+}
+
 // 2. 为 Key 实现 From Trait
 impl From<&ParticleMaterialUnlitDecal> for ParticleMaterialKeyUnlitDecal {
     fn from(material: &ParticleMaterialUnlitDecal) -> Self {
@@ -82,11 +89,11 @@ impl From<&ParticleMaterialUnlitDecal> for ParticleMaterialKeyUnlitDecal {
 
 impl Material for ParticleMaterialUnlitDecal {
     fn fragment_shader() -> ShaderRef {
-        "shaders/unlit_decal.frag".into()
+        get_shader_handle(Self::FRAG_PATH, &vec![]).into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/environment/unlit_decal.vert".into()
+        get_shader_handle(Self::VERT_PATH, &vec![]).into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {

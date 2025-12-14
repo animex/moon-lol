@@ -6,7 +6,7 @@ mod utils;
 
 use bevy::mesh::{MeshVertexAttribute, VertexFormat};
 use bevy::platform::collections::HashMap;
-use bevy::prelude::*;use lol_config::LoadHashKeyTrait;
+use bevy::prelude::*;
 use bevy::transform::systems::{
     mark_dirty_trees, propagate_parent_transforms, sync_simple_transforms,
 };
@@ -17,7 +17,7 @@ use league_core::{
     VfxSystemDefinitionData,
 };
 use league_utils::hash_wad;
-use lol_config::{HashKey, LeagueProperties};
+use lol_config::{HashKey, LeagueProperties, LoadHashKeyTrait};
 pub use particle::*;
 pub use skinned_mesh::*;
 pub use utils::*;
@@ -135,7 +135,7 @@ fn on_command_particle_spawn(
     trigger: On<CommandParticleSpawn>,
     mut commands: Commands,
     res_assets_vfx_system_definition_data: Res<Assets<VfxSystemDefinitionData>>,
-        q_global_transform: Query<&GlobalTransform>,
+    q_global_transform: Query<&GlobalTransform>,
 ) {
     let entity = trigger.event_target();
 
@@ -146,9 +146,8 @@ fn on_command_particle_spawn(
         return;
     };
 
-    println!("{:x?}", trigger.hash);
-
-    let vfx_system_definition_data = res_assets_vfx_system_definition_data.load_hash( trigger.hash)
+    let vfx_system_definition_data = res_assets_vfx_system_definition_data
+        .load_hash(trigger.hash)
         .unwrap();
 
     // if !vfx_system_definition_data

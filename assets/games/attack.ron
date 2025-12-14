@@ -5,11 +5,12 @@
     ),
     {
         "bevy_transform::components::transform::Transform": (
-            translation: (8500.0, 0.0, 6300.0),
+            translation: (8800.0, 0.0, 6300.0),
             rotation: (0.0, 0.0, 0.0, 1.0),
             scale: (1.0, 1.0, 1.0),
         ),
         "moon_lol::entities::champions::riven::Riven": (),
+        "moon_lol::core::controller::Controller": (),
         "lol_core::team::Team": Order,
     },
     (
@@ -18,13 +19,12 @@
     ),
     {
         "bevy_transform::components::transform::Transform": (
-            translation: (8900.0, 0.0, 6300.0),
+            translation: (9200.0, 0.0, 6300.0),
             rotation: (0.0, 0.0, 0.0, 1.0),
             scale: (1.0, 1.0, 1.0),
         ),
         "lol_core::team::Team": Order,
         "moon_lol::entities::champions::fiora::Fiora": (),
-        "moon_lol::core::controller::Controller": (),
         "moon_lol::core::camera::Focus": (),
     },
     (
@@ -33,7 +33,7 @@
     ),
     {
         "bevy_transform::components::transform::Transform": (
-            translation: (8700.0, 0.0, 6300.0),
+            translation: (9000.0, 0.0, 6300.0),
             rotation: (0.0, 0.0, 0.0, 1.0),
             scale: (1.0, 1.0, 1.0),
         ),

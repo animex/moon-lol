@@ -91,11 +91,17 @@ impl<T: Asset> From<HashKey<T>> for UntypedHandle {
 
 pub trait LoadHashKeyTrait<T: Asset> {
     fn load_hash(&self, hash: impl Into<HashKey<T>>) -> Option<&T>;
+
+    fn add_hash(&mut self, hash: impl Into<HashKey<T>>, asset: T);
 }
 
 impl<T: Asset> LoadHashKeyTrait<T> for Assets<T> {
     fn load_hash(&self, hash: impl Into<HashKey<T>>) -> Option<&T> {
         self.get(AssetId::from(hash.into()))
+    }
+
+    fn add_hash(&mut self, hash: impl Into<HashKey<T>>, asset: T) {
+        self.insert(AssetId::from(hash.into()), asset).unwrap();
     }
 }
 

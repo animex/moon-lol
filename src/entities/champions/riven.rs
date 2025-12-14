@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_behave::{behave, Behave};
 use league_core::CharacterRecord;
 use league_utils::hash_bin;
-use lol_config::{LeagueProperties, LoadHashKeyTrait};
+use lol_config::LoadHashKeyTrait;
 
 use crate::core::{
     ActionAnimationPlay, ActionAttackReset, ActionBuffSpawn, ActionCommand, ActionDamage,
@@ -19,7 +19,7 @@ pub struct PluginRiven;
 
 impl Plugin for PluginRiven {
     fn build(&self, app: &mut App) {
-        // app.add_systems(Startup, startup_load_assets);
+        app.add_systems(Startup, startup_load_assets);
         app.add_systems(FixedUpdate, add_skills);
     }
 }
@@ -29,12 +29,8 @@ impl Plugin for PluginRiven {
 #[reflect(Component)]
 pub struct Riven;
 
-fn startup_load_assets(
-    mut res_assets_skill_effect: ResMut<Assets<SkillEffect>>,
-    mut res_league_properties: ResMut<LeagueProperties>,
-) {
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+fn startup_load_assets(mut res_assets_skill_effect: ResMut<Assets<SkillEffect>>) {
+    res_assets_skill_effect.add_hash(
         "Characters/Riven/Spells/RivenTriCleaveAbility/RivenTriCleave",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -56,8 +52,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Riven/Spells/RivenMartyrAbility/RivenMartyr",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -83,8 +78,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Riven/Spells/RivenFeintAbility/RivenFeint",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -102,8 +96,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Riven/Spells/RivenFengShuiEngineAbility/RivenFengShuiEngine",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -128,7 +121,7 @@ fn add_skills(
     mut commands: Commands,
     q_riven: Query<Entity, (With<Riven>, Without<Skills>)>,
     res_assets_character_record: Res<Assets<CharacterRecord>>,
-    ) {
+) {
     for entity in q_riven.iter() {
         let Some(character_record) =
             res_assets_character_record.load_hash("Characters/Riven/CharacterRecords/Root")

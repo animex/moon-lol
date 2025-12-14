@@ -1,21 +1,62 @@
+use std::collections::HashSet;
+
 use bevy::prelude::*;
+use league_utils::hash_shader_spec;
+use lol_config::ResourceShaderPackage;
 
-#[derive(Asset, TypePath)]
-pub struct ResourceShaderPackage {}
+use crate::{
+    get_shader_handle_by_hash, MaterialPath, ParticleMaterialQuad, ParticleMaterialQuadSlice,
+    ParticleMaterialUnlitDecal,
+};
 
-#[derive(Resource)]
-pub struct ResourceShaderHandles(pub Handle<ResourceShaderPackage>);
+#[derive(Resource, Default)]
+pub struct ResourceShaderHandles(pub Vec<(String, Handle<ResourceShaderPackage>)>);
 
 pub fn startup_load_shaders(
-    _asset_server: Res<AssetServer>,
-    _res_assets_shader: ResMut<Assets<Shader>>,
+    asset_server: Res<AssetServer>,
+    res_assets_shader: ResMut<Assets<Shader>>,
+    mut res_resource_shader_handles: ResMut<ResourceShaderHandles>,
 ) {
-    let _paths = vec![
-        "assets/shaders/hlsl/environment/unlit_decal_ps.ps.glsl",
-        "assets/shaders/hlsl/environment/unlit_decal_vs.vs.glsl",
-    ];
+    let paths = HashSet::from([
+        ParticleMaterialQuadSlice::FRAG_PATH,
+        ParticleMaterialQuadSlice::VERT_PATH,
+        ParticleMaterialQuad::FRAG_PATH,
+        ParticleMaterialQuad::VERT_PATH,
+        ParticleMaterialUnlitDecal::FRAG_PATH,
+        ParticleMaterialUnlitDecal::VERT_PATH,
+    ]);
 
-    // for path in paths {
-    //     let shader = asset_server.load(path);
-    // }
+    for path in paths {
+        let handle = asset_server.load::<ResourceShaderPackage>(path);
+        res_resource_shader_handles
+            .0
+            .push((path.to_string(), handle));
+    }
+}
+
+pub fn update_shaders(
+    mut res_resource_shader_handles: ResMut<ResourceShaderHandles>,
+    res_assets_shader_package: ResMut<Assets<ResourceShaderPackage>>,
+    mut res_assets_shader: ResMut<Assets<Shader>>,
+) {
+    let hash = hash_shader_spec(&vec![]);
+    res_resource_shader_handles.0.retain(|(path, handle)| {
+        let Some(shader_package) = res_assets_shader_package.get(handle) else {
+            return true;
+        };
+
+        for (&u64_hash, handle) in shader_package.handles.iter() {
+            let shader = res_assets_shader.get(handle).unwrap().clone();
+            if hash == u64_hash {
+                info!("path: {}", path);
+                info!("{:?}", shader.source);
+            }
+
+            res_assets_shader
+                .insert(get_shader_handle_by_hash(&path, u64_hash).id(), shader)
+                .unwrap();
+        }
+        // true
+        false
+    });
 }

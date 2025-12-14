@@ -6,7 +6,10 @@ use bevy::render::render_resource::{
 };
 use bevy::shader::ShaderRef;
 
-use crate::{UniformsVertexQuad, ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_WORLD_POSITION};
+use crate::{
+    get_shader_handle, MaterialPath, UniformsVertexQuad, ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME,
+    ATTRIBUTE_WORLD_POSITION,
+};
 
 #[derive(Clone, ShaderType, Default)]
 pub struct UniformsPixelQuadSlice {
@@ -36,13 +39,18 @@ pub struct ParticleMaterialQuadSlice {
     pub blend_mode: u8,
 }
 
+impl MaterialPath for ParticleMaterialQuadSlice {
+    const FRAG_PATH: &str = "assets/shaders/hlsl/particlesystem/quad_ps_slice.ps.glsl";
+    const VERT_PATH: &str = "assets/shaders/hlsl/particlesystem/quad_vs.vs.glsl";
+}
+
 impl Material for ParticleMaterialQuadSlice {
     fn fragment_shader() -> ShaderRef {
-        "shaders/quad_slice.frag".into()
+        get_shader_handle(Self::FRAG_PATH, &vec![]).into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/quad.vert".into()
+        get_shader_handle(Self::VERT_PATH, &vec![]).into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {

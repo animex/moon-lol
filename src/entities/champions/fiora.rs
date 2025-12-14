@@ -4,7 +4,7 @@ use bevy::prelude::*;
 use bevy_behave::{behave, Behave};
 use league_core::CharacterRecord;
 use league_utils::hash_bin;
-use lol_config::{LeagueProperties, LoadHashKeyTrait};
+use lol_config::LoadHashKeyTrait;
 
 use crate::abilities::{AbilityFioraPassive, BuffFioraE, BuffFioraR};
 use crate::core::{
@@ -20,7 +20,7 @@ pub struct PluginFiora;
 
 impl Plugin for PluginFiora {
     fn build(&self, app: &mut App) {
-        // app.add_systems(Startup, startup_load_assets);
+        app.add_systems(Startup, startup_load_assets);
         app.add_systems(FixedUpdate, add_skills);
     }
 }
@@ -30,12 +30,8 @@ impl Plugin for PluginFiora {
 #[reflect(Component)]
 pub struct Fiora;
 
-fn startup_load_assets(
-    mut res_assets_skill_effect: ResMut<Assets<SkillEffect>>,
-    mut res_league_properties: ResMut<LeagueProperties>,
-) {
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+fn startup_load_assets(mut res_assets_skill_effect: ResMut<Assets<SkillEffect>>) {
+    res_assets_skill_effect.add_hash(
         "Characters/Fiora/Spells/FioraQAbility/FioraQ",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -57,8 +53,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Fiora/Spells/FioraWAbility/FioraW",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -84,8 +79,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Fiora/Spells/FioraEAbility/FioraE",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -106,8 +100,7 @@ fn startup_load_assets(
         }),
     );
 
-    res_league_properties.add(
-        &mut res_assets_skill_effect,
+    res_assets_skill_effect.add_hash(
         "Characters/Fiora/Spells/FioraRAbility/FioraR",
         SkillEffect(behave! {
             Behave::Sequence => {
@@ -133,7 +126,7 @@ fn add_skills(
     mut commands: Commands,
     q_fiora: Query<Entity, (With<Fiora>, Without<Skills>)>,
     res_assets_character_record: Res<Assets<CharacterRecord>>,
-    ) {
+) {
     for entity in q_fiora.iter() {
         let Some(character_record) =
             res_assets_character_record.load_hash("Characters/Fiora/CharacterRecords/Root")

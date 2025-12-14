@@ -9,20 +9,21 @@ use bevy::image::ImageSampler;
 use bevy::math::bounding::Aabb3d;
 use bevy::prelude::*;
 use bevy::render::render_resource::{
-    Extent3d, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
+    Extent3d, ShaderStage, TextureDescriptor, TextureDimension, TextureFormat, TextureUsages,
 };
+use bevy::shader::{ShaderImport, Source, ValidateShader};
 use binrw::BinRead;
 use league_core::EnvironmentVisibility;
 use league_file::{
-    AnimationFile, LeagueMapGeo, LeagueMeshStatic, LeagueSkeleton, LeagueSkinnedMesh,
-    LeagueTexture, LeagueTextureFormat,
+    AnimationFile, LeagueMapGeo, LeagueMeshStatic, LeagueShaderChunk, LeagueShaderToc,
+    LeagueSkeleton, LeagueSkinnedMesh, LeagueTexture, LeagueTextureFormat,
 };
 use league_property::PropFile;
 use league_to_lol::{
-    load_animation_file, mesh_static_to_bevy_mesh, parse_vertex_data, skinned_mesh_to_intermediate,
-    submesh_to_intermediate,
+    convert_frag, convert_vert, load_animation_file, mesh_static_to_bevy_mesh, parse_vertex_data,
+    skinned_mesh_to_intermediate, submesh_to_intermediate,
 };
-use lol_config::{ConfigMapGeo, LeagueProperties, ASSET_LOADER_REGISTRY};
+use lol_config::{ConfigMapGeo, LeagueProperties, ResourceShaderPackage, ASSET_LOADER_REGISTRY};
 use lol_core::LeagueSkinMesh;
 use thiserror::Error;
 
@@ -86,26 +87,6 @@ impl AssetLoader for LeagueLoaderProperty {
 
     fn extensions(&self) -> &[&str] {
         &["bin"]
-    }
-}
-
-#[derive(Default)]
-pub struct LeagueLoaderAny;
-
-impl AssetLoader for LeagueLoaderAny {
-    type Asset = ();
-
-    type Settings = ();
-
-    type Error = Error;
-
-    async fn load(
-        &self,
-        _reader: &mut dyn bevy::asset::io::Reader,
-        _settings: &Self::Settings,
-        _load_context: &mut LoadContext<'_>,
-    ) -> Result<Self::Asset, Self::Error> {
-        Ok(())
     }
 }
 
@@ -412,5 +393,82 @@ impl AssetLoader for LeagueLoaderAnimationClip {
 
     fn extensions(&self) -> &[&str] {
         &["anm"]
+    }
+}
+
+#[derive(Default)]
+pub struct LeagueLoaderShaderToc;
+
+impl AssetLoader for LeagueLoaderShaderToc {
+    type Asset = ResourceShaderPackage;
+
+    type Settings = ();
+
+    type Error = Error;
+
+    async fn load(
+        &self,
+        reader: &mut dyn bevy::asset::io::Reader,
+        _settings: &Self::Settings,
+        load_context: &mut LoadContext<'_>,
+    ) -> Result<Self::Asset, Self::Error> {
+        let mut buf = Vec::new();
+        reader.read_to_end(&mut buf).await?;
+        let mut reader = Cursor::new(buf);
+        let shader_toc = LeagueShaderToc::read(&mut reader)?;
+
+        let path = load_context.asset_path().to_string();
+
+        let path_no_extension = path.replace(".glsl", "");
+        let shader_type = path_no_extension.split(".").last().unwrap();
+
+        let mut handles = HashMap::new();
+
+        let &max_id = shader_toc.shader_ids.iter().max().unwrap();
+        let mut chunks = Vec::new();
+
+        for i in 0..((max_id as f32 / 100.0).ceil() as usize) {
+            let chunk_path = format!("{}_{}", path, i * 100);
+
+            let chunk = load_context
+                .read_asset_bytes(&chunk_path)
+                .await
+                .unwrap_or(Vec::new());
+
+            let shader_chunk = LeagueShaderChunk::read_le(&mut Cursor::new(chunk))?;
+
+            for (shader_index, shader_file) in shader_chunk.files.iter().enumerate() {
+                let content = shader_file.text.clone();
+                let source = if shader_type == "vs" {
+                    Source::Glsl(convert_vert(&content).into(), ShaderStage::Vertex)
+                } else {
+                    Source::Glsl(convert_frag(&content).into(), ShaderStage::Fragment)
+                };
+                let shader = Shader {
+                    path: path.clone(),
+                    imports: Default::default(),
+                    import_path: ShaderImport::Custom(path.clone()),
+                    source,
+                    additional_imports: Default::default(),
+                    shader_defs: Default::default(),
+                    file_dependencies: Default::default(),
+                    validate_shader: ValidateShader::Disabled,
+                };
+                chunks.push(
+                    load_context.add_labeled_asset((i * 100 + shader_index).to_string(), shader),
+                );
+            }
+        }
+
+        for (shader_index, shader_hash) in shader_toc.shader_hashes.into_iter().enumerate() {
+            let shader_id = shader_toc.shader_ids[shader_index];
+            handles.insert(shader_hash, chunks[shader_id as usize].clone());
+        }
+
+        Ok(ResourceShaderPackage { handles })
+    }
+
+    fn extensions(&self) -> &[&str] {
+        &["glsl"]
     }
 }

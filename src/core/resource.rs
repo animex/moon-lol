@@ -14,12 +14,13 @@ use league_file::LeagueSkeleton;
 use league_to_lol::{get_struct_from_file, CONFIG_PATH_MAP_NAV_GRID};
 use lol_config::{
     init_league_asset, CharacterConfigsDeserializer, ConfigGame, ConfigMapGeo,
-    ConfigNavigationGrid, LeagueProperties, ASSET_LOADER_REGISTRY,
+    ConfigNavigationGrid, LeagueProperties, ResourceShaderChunk, ResourceShaderPackage,
+    ASSET_LOADER_REGISTRY,
 };
 use lol_core::LeagueSkinMesh;
 use lol_loader::{
-    LeagueLoaderAnimationClip, LeagueLoaderAny, LeagueLoaderImage, LeagueLoaderMapgeo,
-    LeagueLoaderMesh, LeagueLoaderMeshStatic, LeagueLoaderProperty, LeagueLoaderSkeleton,
+    LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMapgeo, LeagueLoaderMesh,
+    LeagueLoaderMeshStatic, LeagueLoaderProperty, LeagueLoaderShaderToc, LeagueLoaderSkeleton,
 };
 use serde::de::DeserializeSeed;
 pub use shader::*;
@@ -37,10 +38,11 @@ impl Plugin for PluginResource {
         app.init_asset::<LeagueSkeleton>();
         app.init_asset::<LeagueProperties>();
         app.init_asset::<LeagueSkinMesh>();
+        app.init_asset::<ResourceShaderPackage>();
+        app.init_asset::<ResourceShaderChunk>();
 
         init_league_asset(app);
 
-        app.init_asset_loader::<LeagueLoaderAny>();
         app.init_asset_loader::<LeagueLoaderProperty>();
         app.init_asset_loader::<LeagueLoaderImage>();
         app.init_asset_loader::<LeagueLoaderMesh>();
@@ -48,12 +50,15 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderMapgeo>();
         app.init_asset_loader::<LeagueLoaderMeshStatic>();
         app.init_asset_loader::<LeagueLoaderAnimationClip>();
+        app.init_asset_loader::<LeagueLoaderShaderToc>();
 
+        app.init_resource::<ResourceShaderHandles>();
         app.init_resource::<LeagueProperties>();
         app.init_resource::<LeaguePropertyFiles>();
 
         app.add_systems(Startup, startup_load_shaders);
         app.add_systems(Update, update_collect_properties);
+        app.add_systems(Update, update_shaders);
 
         register_loading::<CharacterSpawn>(app);
         register_loading::<SkinAnimationSpawn>(app);
@@ -271,11 +276,14 @@ fn update_collect_properties(
             false
         });
 
+    if res_league_properties.0.is_empty() {
+        return;
+    }
+
     commands.queue(insert_props);
 }
 
 fn insert_props(world: &mut World) {
-    let start = std::time::Instant::now();
     let res_league_properties = world.resource::<LeagueProperties>();
 
     let collect = res_league_properties
@@ -289,16 +297,10 @@ fn insert_props(world: &mut World) {
 
     for (type_hash, prop_hash, mut handle) in collect {
         let (_, loader) = ASSET_LOADER_REGISTRY.loaders.get(&type_hash).unwrap();
-        let _new_handle = loader.load(world, prop_hash, &mut handle);
-        let mut res_league_properties = world.resource_mut::<LeagueProperties>();
-        res_league_properties
-            .0
-            .get_mut(&type_hash)
-            .unwrap()
-            .remove(&prop_hash);
+        loader.load(world, prop_hash, &mut handle);
     }
-
-    println!("insert props time: {:?}", start.elapsed());
+    let mut res_league_properties = world.resource_mut::<LeagueProperties>();
+    res_league_properties.0.clear();
 }
 
 pub trait LoadingTrait {

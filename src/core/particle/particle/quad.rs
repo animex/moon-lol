@@ -11,7 +11,7 @@ use bevy::render::render_resource::{
     ShaderType, SpecializedMeshPipelineError,
 };
 use bevy::shader::ShaderRef;
-use league_utils::hash_shader_spec;
+use league_utils::{hash_shader, hash_shader_spec};
 
 use crate::{ATTRIBUTE_LIFETIME, ATTRIBUTE_UV_FRAME, ATTRIBUTE_UV_MULT, ATTRIBUTE_WORLD_POSITION};
 
@@ -20,10 +20,10 @@ pub struct UniformsVertexQuad {
     pub fog_of_war_params: Vec4,
     pub fog_of_war_always_below_y: Vec4,
     pub fow_height_fade: Vec4,
-    pub nav_grid_xform: Vec4,
+    // pub nav_grid_xform: Vec4,
     pub particle_depth_push_pull: f32,
     pub texture_info: Vec4,
-    pub texture_info_2: Vec4,
+    // pub texture_info_2: Vec4,
 }
 
 impl Default for UniformsVertexQuad {
@@ -32,10 +32,10 @@ impl Default for UniformsVertexQuad {
             fog_of_war_params: Vec4::ZERO,
             fog_of_war_always_below_y: Vec4::ZERO,
             fow_height_fade: Vec4::ZERO,
-            nav_grid_xform: Vec4::ZERO,
+            // nav_grid_xform: Vec4::ZERO,
             particle_depth_push_pull: 0.0,
             texture_info: Vec4::ONE,
-            texture_info_2: Vec4::ONE,
+            // texture_info_2: Vec4::ONE,
         }
     }
 }
@@ -126,18 +126,28 @@ impl From<&ParticleMaterialQuad> for ConditionalMaterialKey {
 
         Self {
             blend_mode: material.blend_mode,
-            shader_frag: get_shader_handle(&shader_frag_defs),
+            shader_frag: get_shader_handle(ParticleMaterialQuad::FRAG_PATH, &shader_frag_defs),
         }
     }
 }
 
+pub trait MaterialPath {
+    const FRAG_PATH: &str;
+    const VERT_PATH: &str;
+}
+
+impl MaterialPath for ParticleMaterialQuad {
+    const FRAG_PATH: &str = "assets/shaders/hlsl/particlesystem/quad_ps.ps.glsl";
+    const VERT_PATH: &str = "assets/shaders/hlsl/particlesystem/quad_vs.vs.glsl";
+}
+
 impl Material for ParticleMaterialQuad {
     fn fragment_shader() -> ShaderRef {
-        "shaders/quad.frag".into()
+        get_shader_handle(Self::FRAG_PATH, &vec![]).into()
     }
 
     fn vertex_shader() -> ShaderRef {
-        "shaders/quad.vert".into()
+        get_shader_handle(Self::VERT_PATH, &vec![]).into()
     }
 
     fn alpha_mode(&self) -> AlphaMode {
@@ -181,7 +191,8 @@ impl Material for ParticleMaterialQuad {
             });
         }
 
-        fragment.shader = key.bind_group_data.shader_frag;
+        println!("{:?}", fragment.shader);
+        // fragment.shader = key.bind_group_data.shader_frag;
 
         let vertex_layout = layout.0.get_layout(&[
             ATTRIBUTE_WORLD_POSITION.at_shader_location(0),
@@ -197,6 +208,13 @@ impl Material for ParticleMaterialQuad {
     }
 }
 
-pub fn get_shader_handle(defs: &Vec<String>) -> Handle<Shader> {
-    Handle::Uuid(Uuid::from_u128(hash_shader_spec(defs) as u128), PhantomData)
+pub fn get_shader_handle_by_hash(path: &str, hash: u64) -> Handle<Shader> {
+    Handle::Uuid(
+        Uuid::from_u128(hash_shader(&format!("{path}#{hash}")) as u128),
+        PhantomData,
+    )
+}
+
+pub fn get_shader_handle(path: &str, defs: &Vec<String>) -> Handle<Shader> {
+    get_shader_handle_by_hash(path, hash_shader_spec(defs))
 }

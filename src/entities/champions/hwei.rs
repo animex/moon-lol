@@ -13,7 +13,7 @@ pub struct PluginHwei;
 
 impl Plugin for PluginHwei {
     fn build(&self, app: &mut App) {
-        // app.add_systems(Startup, startup_load_assets);
+        app.add_systems(Startup, startup_load_assets);
         app.add_systems(FixedUpdate, add_skills);
     }
 }
@@ -90,7 +90,7 @@ fn add_skills(
     mut commands: Commands,
     q_hwei: Query<Entity, (With<Hwei>, Without<Skills>)>,
     res_assets_character_record: Res<Assets<CharacterRecord>>,
-    ) {
+) {
     for entity in q_hwei.iter() {
         commands.entity(entity).with_related::<PassiveSkillOf>((
             Skill {
