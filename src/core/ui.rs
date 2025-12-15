@@ -44,9 +44,9 @@ impl Plugin for PluginUI {
                 update_player_health_fade,
                 update_damage_numbers,
                 update_player_ability_resource,
-                update_skill_icon,
                 update_skill_level_up_button.run_if(in_state(UIState::Loaded)),
-                update_player_icon.run_if(in_state(UIState::Loaded).and(run_once)),
+                (update_player_skill_icon, update_player_icon)
+                    .run_if(in_state(UIState::Loaded).and(run_once)),
                 update_ui_animation,
                 update_ui_element,
                 update_on_add_ui_element,

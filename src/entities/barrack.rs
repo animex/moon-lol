@@ -24,7 +24,7 @@ impl Plugin for PluginBarrack {
         app.add_systems(
             Update,
             (
-                startup_spawn_barrack.run_if(in_state(MapState::Loaded).and(run_once)),
+                update_spawn_barrack.run_if(in_state(MapState::Loaded).and(run_once)),
                 is_character_loaded.run_if(in_state(BarrackState::Loading)),
             ),
         );
@@ -69,7 +69,7 @@ pub enum BarrackState {
     Loaded,
 }
 
-fn startup_spawn_barrack(
+fn update_spawn_barrack(
     mut commands: Commands,
     mut res_minion_path: ResMut<MinionPath>,
     map_name: Res<MapName>,

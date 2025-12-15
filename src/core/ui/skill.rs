@@ -1,12 +1,13 @@
-use bevy::prelude::*;use lol_config::LoadHashKeyTrait;
+use bevy::prelude::*;
 use league_core::SpellObject;
+use lol_config::LoadHashKeyTrait;
 
 use crate::{
-    CommandDespawnButton, CommandSkillLevelUp, CommandSpawnButton, Controller, Level,
+    CommandDespawnButton, CommandSkillLevelUp, CommandSpawnButton, Controller, Level, PassiveSkill,
     ResourceCache, Skill, SkillPoints, Skills, UIElementEntity,
 };
 
-pub fn update_skill_icon(
+pub fn update_player_skill_icon(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     mut q_image_node: Query<&mut ImageNode>,
@@ -14,15 +15,21 @@ pub fn update_skill_icon(
     q_children: Query<&Children>,
     q_skill: Query<&Skill>,
     q_skills: Query<&Skills, With<Controller>>,
+    q_passive_skill: Query<&PassiveSkill, With<Controller>>,
     res_assets_spell_object: Res<Assets<SpellObject>>,
-        res_ui_element_entity: Res<UIElementEntity>,
+    res_ui_element_entity: Res<UIElementEntity>,
 ) {
-    let Some(skills) = q_skills.iter().next() else {
+    let Ok(passive_skill) = q_passive_skill.single() else {
+        debug!("未找到控制器的被动技能");
+        return;
+    };
+
+    let Ok(skills) = q_skills.single() else {
         debug!("未找到控制器的技能列表");
         return;
     };
 
-    for (index, skill) in skills.iter().enumerate() {
+    for (index, skill) in passive_skill.iter().chain(skills.iter()).enumerate() {
         let key = if index == 0 {
             "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/PlayerSpells/Passive/Passive_IconLoc".to_string()
         } else {
@@ -37,6 +44,7 @@ pub fn update_skill_icon(
         let Ok(children) = q_children.get(entity) else {
             continue;
         };
+
         let &child = children.get(0).unwrap();
         let mut image_node = q_image_node.get_mut(child).unwrap();
         if image_node.rect.is_none() {
@@ -49,7 +57,8 @@ pub fn update_skill_icon(
             continue;
         };
 
-        let spell = res_assets_spell_object.load_hash( skill.key_spell_object)
+        let spell = res_assets_spell_object
+            .load_hash(skill.key_spell_object)
             .unwrap();
 
         let icon_name = spell
