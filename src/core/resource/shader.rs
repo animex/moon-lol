@@ -26,7 +26,7 @@ pub fn startup_load_shaders(
     ]);
 
     for path in paths {
-        let handle = asset_server.load_league::<ResourceShaderPackage>(path);
+        let handle = asset_server.load_league_with_settings::<ResourceShaderPackage>(path);
         res_resource_shader_handles
             .0
             .push((path.to_string(), handle));

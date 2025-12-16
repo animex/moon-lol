@@ -6,7 +6,7 @@ use binrw::prelude::*;
 use binrw::{binread, BinRead, Endian};
 use league_utils::{parse_quat, parse_vec3};
 
-const FORMAT_TOKEN: u32 = 0x22FD4FC3;
+pub const FORMAT_TOKEN: u32 = 0x22FD4FC3;
 
 #[binread]
 #[derive(Debug, Asset, TypePath)]

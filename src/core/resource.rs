@@ -18,9 +18,9 @@ use lol_config::{
 };
 use lol_core::LeagueSkinMesh;
 use lol_loader::{
-    ImageSettings, LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMapgeo,
-    LeagueLoaderMesh, LeagueLoaderMeshStatic, LeagueLoaderProperty, LeagueLoaderShaderToc,
-    LeagueLoaderSkeleton,
+    LeagueLoaderAnimationClip, LeagueLoaderImage, LeagueLoaderMapgeo, LeagueLoaderMesh,
+    LeagueLoaderMeshStatic, LeagueLoaderProperty, LeagueLoaderShaderToc, LeagueLoaderSkeleton,
+    ShaderTocSettings,
 };
 use serde::de::DeserializeSeed;
 pub use shader::*;

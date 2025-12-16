@@ -3,7 +3,7 @@ use std::f32::consts::PI;
 use bevy::asset::meta::Settings;
 use bevy::prelude::*;
 use league_utils::hash_wad;
-use lol_loader::ImageSettings;
+use lol_loader::ShaderTocSettings;
 
 pub fn rotate_to_direction(transform: &mut Transform, direction: Vec2) {
     transform.rotation = Quat::from_rotation_y(direction_to_angle(direction));
@@ -87,14 +87,39 @@ pub trait AssetServerLoadLeague {
     fn load_league<A: Asset>(&self, path: &str) -> Handle<A>;
 
     fn load_league_labeled<'a, A: Asset>(&self, path: &str, label: &str) -> Handle<A>;
+
+    fn load_league_with_settings<'a, A: Asset>(&self, path: &str) -> Handle<A>;
 }
 
 impl AssetServerLoadLeague for AssetServer {
     fn load_league<A: Asset>(&self, path: &str) -> Handle<A> {
-        self.load(format!("data/{:x}.lol", HashPath::from(path).0))
+        let extension = path.split(".").last().unwrap();
+        let extension = if extension == "tex" || extension == "dds" {
+            extension
+        } else {
+            "lol"
+        };
+        self.load(format!("data/{:x}.{extension}", HashPath::from(path).0))
     }
 
     fn load_league_labeled<'a, A: Asset>(&self, path: &str, label: &str) -> Handle<A> {
-        self.load(format!("data/{:x}.lol#{label}", HashPath::from(path).0))
+        let extension = path.split(".").last().unwrap();
+        let extension = if extension == "tex" || extension == "dds" {
+            extension
+        } else {
+            "lol"
+        };
+        self.load(format!(
+            "data/{:x}.{extension}#{label}",
+            HashPath::from(path).0
+        ))
+    }
+
+    fn load_league_with_settings<'a, A: Asset>(&self, path: &str) -> Handle<A> {
+        let original_path = path.to_string();
+        self.load_with_settings(
+            format!("data/{:x}.lol", HashPath::from(path).0),
+            move |settings: &mut ShaderTocSettings| settings.0 = original_path.clone(),
+        )
     }
 }
