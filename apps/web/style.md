@@ -102,7 +102,7 @@ function GPRTable({ teams }) {
     <Table>
       <TableHeader>
         <TableRow>
-          <TableHead className="w-[80px]">Rank</TableHead>
+          <TableHead className="w-20">Rank</TableHead>
           <TableHead>Team</TableHead>
           <TableHead className="text-right">Points</TableHead>
         </TableRow>

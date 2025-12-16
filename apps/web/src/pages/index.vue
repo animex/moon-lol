@@ -69,6 +69,8 @@ onMounted(() => {
     observer.observe(el);
   });
 });
+
+const startSize = { x: 100, y: 100 };
 </script>
 
 <template>
@@ -86,12 +88,30 @@ onMounted(() => {
       ></div>
 
       <!-- Pixel Stars -->
-      <div class="text-acid-yellow animate-spin-slow absolute top-[15%] right-[20%] text-4xl">✦</div>
-      <div
-        class="text-acid-blue animate-spin-slow absolute bottom-[20%] left-[20%] text-2xl"
-        style="animation-direction: reverse"
-      >
-        ✦
+      <div class="absolute top-[15%] right-[20%]">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          :viewBox="`0 -${startSize.y} ${startSize.x * 2} ${startSize.y}`"
+          class="text-acid-yellow h-32 w-16"
+          fill="currentColor"
+        >
+          <path
+            :d="`M0 0 C${startSize.x} 0 ${startSize.x} 0 ${startSize.x} ${startSize.y} C${startSize.x} 0 ${startSize.x} 0 ${startSize.x * 2} 0 C${startSize.x} 0 ${startSize.x} 0 ${startSize.x} ${-startSize.y} C${startSize.x} 0 ${startSize.x} 0 0 0`"
+          />
+        </svg>
+      </div>
+
+      <div class="absolute bottom-[20%] left-[20%]">
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          :viewBox="`0 -${startSize.y} ${startSize.x * 2} ${startSize.y}`"
+          class="text-acid-blue h-8 w-8"
+          fill="currentColor"
+        >
+          <path
+            :d="`M0 0 C${startSize.x} 0 ${startSize.x} 0 ${startSize.x} ${startSize.y} C${startSize.x} 0 ${startSize.x} 0 ${startSize.x * 2} 0 C${startSize.x} 0 ${startSize.x} 0 ${startSize.x} ${-startSize.y} C${startSize.x} 0 ${startSize.x} 0 0 0`"
+          />
+        </svg>
       </div>
     </div>
 
@@ -227,7 +247,7 @@ onMounted(() => {
         <button
           class="glass-y2k hover:bg-acid-blue group relative overflow-hidden rounded-full px-8 py-3 font-mono font-bold text-white transition-all hover:scale-105 hover:text-black hover:shadow-[0_0_20px_var(--color-acid-blue)]"
         >
-          <span class="relative z-10">开始模拟 -></span>
+          <span class="relative z-10">开始逗蛐蛐 -></span>
         </button>
       </div>
     </div>
@@ -296,23 +316,21 @@ onMounted(() => {
             class="text-acid-blue mb-4 flex items-center gap-2 text-2xl font-bold transition-colors group-hover:text-white"
           >
             <span class="text-xl opacity-50">01.</span>
-            引擎
+            Rust 语言
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">
-            基于 Bevy 构建，Rust 编写的数据驱动游戏引擎。
-          </p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">追求极致的性能</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              Bevy 0.15
+              低内存占用
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              WGPU 渲染
+              高性能
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              跨平台
+              稳定性
             </li>
           </ul>
         </div>
@@ -324,23 +342,21 @@ onMounted(() => {
             class="text-acid-pink mb-4 flex items-center gap-2 text-2xl font-bold transition-colors group-hover:text-white"
           >
             <span class="text-xl opacity-50">02.</span>
-            架构
+            Bevy 引擎
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">
-            采用 Entity Component System (ECS) 架构。
-          </p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">Rust 编写的 ECS 游戏引擎</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
-              高并发
+              Bevy 0.17
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
-              内存友好
+              ECS 架构
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
-              模块化插件
+              WGPU 跨平台渲染
             </li>
           </ul>
         </div>
@@ -354,15 +370,11 @@ onMounted(() => {
             <span class="text-xl opacity-50">03.</span>
             可视化
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">实时可视化和调试工具。</p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">AI 游戏过程实时可视化</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-yellow h-1.5 w-1.5 rounded-full"></span>
               Vue 3 前端
-            </li>
-            <li class="flex items-center gap-2">
-              <span class="bg-acid-yellow h-1.5 w-1.5 rounded-full"></span>
-              WebSockets
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-yellow h-1.5 w-1.5 rounded-full"></span>

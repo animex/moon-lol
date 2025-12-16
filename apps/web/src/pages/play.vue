@@ -22,13 +22,7 @@
               <Button @click="clientStore.step" variant="acid" class="h-8 text-xs" :disabled="clientStore.playing">
                 单步执行
               </Button>
-              <Button
-                @click="clientStore.observe"
-                variant="outline"
-                class="border-acid-pink text-acid-pink hover:bg-acid-pink h-8 text-xs hover:text-black"
-              >
-                观察
-              </Button>
+              <Button @click="clientStore.observe" variant="ghost" class="h-8 text-xs">观察</Button>
             </div>
 
             <div class="flex items-center gap-3">
@@ -217,7 +211,7 @@
             </div>
 
             <!-- Refresh Button -->
-            <Button @click="clientStore.updateImg">刷新</Button>
+            <Button @click="clientStore.updateImg" variant="ghost">刷新</Button>
           </div>
         </div>
       </div>

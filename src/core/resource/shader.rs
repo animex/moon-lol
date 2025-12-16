@@ -1,7 +1,6 @@
 use std::collections::HashSet;
 
 use bevy::prelude::*;
-use league_utils::hash_shader_spec;
 use lol_config::ResourceShaderPackage;
 
 use crate::{
