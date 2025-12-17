@@ -141,6 +141,32 @@ impl MovementState {
     }
 }
 
+fn calculate_and_set_exclude_cells(grid: &mut ConfigNavigationGrid, entity_pos: Vec2, radius: f32) {
+    let entity_grid_pos = world_pos_to_grid_xy(grid, entity_pos);
+    let mut exclude_cells = HashSet::new();
+
+    let radius_in_cells = (radius / grid.cell_size).floor() as i32;
+    for dx in -radius_in_cells..=radius_in_cells {
+        for dy in -radius_in_cells..=radius_in_cells {
+            let new_x = entity_grid_pos.0 as i32 + dx;
+            let new_y = entity_grid_pos.1 as i32 + dy;
+
+            if new_x < 0 || new_y < 0 {
+                continue;
+            }
+
+            let new_pos = (new_x as usize, new_y as usize);
+            if new_pos.0 >= grid.x_len || new_pos.1 >= grid.y_len {
+                continue;
+            }
+
+            exclude_cells.insert(new_pos);
+        }
+    }
+
+    grid.exclude_cells = exclude_cells;
+}
+
 fn update_path_movement(
     mut commands: Commands,
     mut query: Query<(Entity, &Movement, &mut MovementState), Without<MovementBlock>>,
@@ -322,27 +348,11 @@ fn apply_final_movement_decision(
                         let start = Instant::now();
 
                         if let Some(bounding) = bounding {
-                            let entity_pos = transform.translation.xz();
-                            let entity_grid_pos = world_pos_to_grid_xy(&grid, entity_pos);
-                            let mut exclude_cells = HashSet::new();
-
-                            // 计算当前实体占据的格子（根据 Bounding 组件的半径）
-                            let radius_in_cells = (bounding.radius / grid.cell_size).floor() as i32;
-                            for dx in -radius_in_cells..=radius_in_cells {
-                                for dy in -radius_in_cells..=radius_in_cells {
-                                    let new_x = entity_grid_pos.0 as i32 + dx;
-                                    let new_y = entity_grid_pos.1 as i32 + dy;
-
-                                    if new_x >= 0 && new_y >= 0 {
-                                        let new_pos = (new_x as usize, new_y as usize);
-                                        if new_pos.0 < grid.x_len && new_pos.1 < grid.y_len {
-                                            exclude_cells.insert(new_pos);
-                                        }
-                                    }
-                                }
-                            }
-
-                            grid.exclude_cells = exclude_cells;
+                            calculate_and_set_exclude_cells(
+                                &mut grid,
+                                transform.translation.xz(),
+                                bounding.radius,
+                            );
                         };
 
                         stats.exclude_time += start.elapsed();
