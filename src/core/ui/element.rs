@@ -7,15 +7,16 @@ use league_utils::hash_bin;
 
 use crate::{AssetServerLoadLeague, CommandLoadPropBin};
 
+#[derive(States, Default, Debug, Hash, Eq, Clone, PartialEq)]
+pub enum UIState {
+    #[default]
+    Loading,
+    Loaded,
+}
+
 #[derive(Resource, Default)]
 pub struct UIElementEntity {
     pub map: HashMap<u32, Entity>,
-}
-
-impl UIElementEntity {
-    pub fn get_by_string(&self, key: &str) -> Option<&Entity> {
-        self.map.get(&hash_bin(key))
-    }
 }
 
 #[derive(Component)]
@@ -25,11 +26,30 @@ pub struct UIElement {
     pub update_child: bool,
 }
 
-#[derive(States, Default, Debug, Hash, Eq, Clone, PartialEq)]
-pub enum UIState {
-    #[default]
-    Loading,
-    Loaded,
+#[derive(EntityEvent, Debug)]
+pub struct CommandUpdateUIElement {
+    pub entity: Entity,
+    pub size_type: SizeType,
+    pub value: f32,
+    pub node_type: NodeType,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+pub enum SizeType {
+    Width,
+    Height,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Reflect)]
+pub enum NodeType {
+    Parent,
+    Child,
+}
+
+impl UIElementEntity {
+    pub fn get_by_string(&self, key: &str) -> Option<&Entity> {
+        self.map.get(&hash_bin(key))
+    }
 }
 
 pub fn startup_load_ui(mut commands: Commands) {
@@ -267,5 +287,77 @@ pub fn update_ui_element(
         for (entity, ui_element) in q_element.iter_mut() {
             update_element_layout(entity, ui_element, window_size, &mut q_node, &q_children);
         }
+    }
+}
+
+pub fn on_command_update_ui_element(
+    trigger: On<CommandUpdateUIElement>,
+    q_children: Query<&Children>,
+    mut q_node: Query<&mut Node>,
+) {
+    let entity = trigger.entity;
+    let size_type = trigger.size_type;
+    let value = trigger.value;
+    let node_type = trigger.node_type;
+
+    let Ok(children) = q_children.get(entity) else {
+        return;
+    };
+
+    let Ok(child_node) = q_node.get(children[0]) else {
+        return;
+    };
+
+    let (target_entity, standard_size) = match node_type {
+        NodeType::Parent => {
+            let size = match size_type {
+                SizeType::Width => {
+                    if let Val::Px(width) = child_node.width {
+                        width
+                    } else {
+                        return;
+                    }
+                }
+                SizeType::Height => {
+                    if let Val::Px(height) = child_node.height {
+                        height
+                    } else {
+                        return;
+                    }
+                }
+            };
+            (entity, size)
+        }
+        NodeType::Child => {
+            let Ok(parent_node) = q_node.get(entity) else {
+                return;
+            };
+            let size = match size_type {
+                SizeType::Width => {
+                    if let Val::Px(width) = parent_node.width {
+                        width
+                    } else {
+                        return;
+                    }
+                }
+                SizeType::Height => {
+                    if let Val::Px(height) = parent_node.height {
+                        height
+                    } else {
+                        return;
+                    }
+                }
+            };
+            (children[0], size)
+        }
+    };
+
+    let Ok(mut target_node) = q_node.get_mut(target_entity) else {
+        return;
+    };
+
+    match size_type {
+        SizeType::Width => target_node.width = Val::Px(standard_size * value),
+        SizeType::Height => target_node.height = Val::Px(standard_size * value),
     }
 }
