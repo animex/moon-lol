@@ -1,11 +1,12 @@
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::time::{Duration, Instant};
 
+use bevy::color::palettes;
 use bevy::prelude::*;
 use bevy::render::render_resource::Face;
 use lol_config::{ConfigNavigationGrid, CELL_COST_IMPASSABLE};
 
-use crate::{find_grid_path_with_result, system_debug, Bounding, Character};
+use crate::{find_grid_path_with_result, Bounding, Character};
 
 #[derive(Default)]
 pub struct PluginNavigaton;
@@ -107,7 +108,7 @@ pub fn get_nav_path_with_debug(
         let start_time = Instant::now();
         if let Some(new_start_grid_pos) = find_nearest_walkable_cell(grid, start_grid_pos) {
             debug!(
-                "get_nav_path: Start position ({}, {}) is not walkable, using nearest walkable cell ({}, {})",
+                "寻路: 起点 ({}, {}) 不可行走，使用最近的可行走格子 ({}, {})",
                 start_grid_pos.0, start_grid_pos.1, new_start_grid_pos.0, new_start_grid_pos.1
             );
             {
@@ -116,7 +117,7 @@ pub fn get_nav_path_with_debug(
             }
             grid.get_cell_center_position_by_xy(new_start_grid_pos).xz()
         } else {
-            warn!("get_nav_path: No walkable cell found near start position");
+            warn!("寻路: 起点附近未找到可行走格子");
             return None;
         }
     } else {
@@ -129,7 +130,7 @@ pub fn get_nav_path_with_debug(
         let start_time = Instant::now();
         if let Some(new_end_grid_pos) = find_nearest_walkable_cell(grid, end_grid_pos) {
             debug!(
-                "get_nav_path: End position ({}, {}) is not walkable, using nearest walkable cell ({}, {})",
+                "寻路: 终点 ({}, {}) 不可行走，使用最近的可行走格子 ({}, {})",
                 end_grid_pos.0, end_grid_pos.1, new_end_grid_pos.0, new_end_grid_pos.1
             );
             {
@@ -138,7 +139,7 @@ pub fn get_nav_path_with_debug(
             }
             grid.get_cell_center_position_by_xy(new_end_grid_pos).xz()
         } else {
-            warn!("get_nav_path: No walkable cell found near end position");
+            warn!("寻路: 终点附近未找到可行走格子");
             return None;
         }
     } else {
@@ -150,11 +151,7 @@ pub fn get_nav_path_with_debug(
     let adjusted_end_grid_pos = (adjusted_end_pos - grid.min_position) / grid.cell_size;
 
     if has_line_of_sight(&grid, adjusted_start_grid_pos, adjusted_end_grid_pos) {
-        system_debug!(
-            "command_movement_move_to",
-            "Direct path found in {:.6}ms",
-            start.elapsed().as_millis()
-        );
+        debug!("直接路径找到，耗时 {:.6}ms", start.elapsed().as_millis());
         {
             stats.get_nav_path_count += 1;
             stats.get_nav_path_time += start.elapsed();
@@ -174,11 +171,7 @@ pub fn get_nav_path_with_debug(
     // 如果不可直达，则使用A*算法规划路径（包含 debug 信息）
     let result = find_path_with_result(&grid, &adjusted_start_pos, &adjusted_end_pos);
 
-    system_debug!(
-        "command_movement_move_to",
-        "A* path found in {:.6}ms",
-        start.elapsed().as_millis()
-    );
+    debug!("A* 路径找到，耗时 {:.6}ms", start.elapsed().as_millis());
 
     {
         stats.get_nav_path_count += 1;
@@ -491,12 +484,8 @@ pub fn calculate_occupied_grid_cells(
     entities_with_bounding: &Query<(Entity, &GlobalTransform, &Bounding)>,
     exclude_entities: &[Entity],
 ) -> HashMap<(usize, usize), f32> {
-    use std::collections::HashMap;
-
-    use lol_config::CELL_COST_IMPASSABLE;
-
     let mut occupied_cells: HashMap<(usize, usize), f32> = HashMap::new();
-    let exclude_set: std::collections::HashSet<Entity> = exclude_entities.iter().copied().collect();
+    let exclude_set: HashSet<Entity> = exclude_entities.iter().copied().collect();
 
     for (entity, transform, bounding) in entities_with_bounding.iter() {
         if exclude_set.contains(&entity) {
@@ -507,46 +496,51 @@ pub fn calculate_occupied_grid_cells(
         let entity_grid_pos = world_pos_to_grid_xy(grid, entity_pos);
         let radius_in_cells = (bounding.radius / grid.cell_size).ceil() as i32;
 
-        for dx in -radius_in_cells..=radius_in_cells {
-            for dy in -radius_in_cells..=radius_in_cells {
-                let new_x = entity_grid_pos.0 as i32 + dx;
-                let new_y = entity_grid_pos.1 as i32 + dy;
-
-                if new_x < 0 || new_y < 0 {
-                    continue;
-                }
-
-                let new_pos = (new_x as usize, new_y as usize);
-                if new_pos.0 >= grid.x_len || new_pos.1 >= grid.y_len {
-                    continue;
-                }
-
-                // 计算格子中心到实体中心的距离（以格子为单位）
-                let distance = ((dx * dx + dy * dy) as f32).sqrt();
-
-                // 在半径内的格子视为不可通行，边缘格子给予较高成本
-                let cost = if distance <= radius_in_cells as f32 * 0.7 {
-                    // 核心区域：不可通行
-                    CELL_COST_IMPASSABLE
-                } else {
-                    // 边缘区域：基于距离的成本衰减
-                    let t =
-                        (distance - radius_in_cells as f32 * 0.7) / (radius_in_cells as f32 * 0.3);
-                    let t = t.clamp(0.0, 1.0);
-                    // 从高成本衰减到较低成本
-                    (1.0 - t) * 100.0 + 10.0
-                };
-
-                // 多个实体重叠时保留最高成本
-                occupied_cells
-                    .entry(new_pos)
-                    .and_modify(|c| *c = c.max(cost))
-                    .or_insert(cost);
-            }
-        }
+        process_entity_cells(&mut occupied_cells, grid, entity_grid_pos, radius_in_cells);
     }
 
     occupied_cells
+}
+
+fn process_entity_cells(
+    occupied_cells: &mut HashMap<(usize, usize), f32>,
+    grid: &ConfigNavigationGrid,
+    entity_grid_pos: (usize, usize),
+    radius_in_cells: i32,
+) {
+    for dx in -radius_in_cells..=radius_in_cells {
+        for dy in -radius_in_cells..=radius_in_cells {
+            let new_x = entity_grid_pos.0 as i32 + dx;
+            let new_y = entity_grid_pos.1 as i32 + dy;
+
+            if new_x < 0 || new_y < 0 {
+                continue;
+            }
+
+            let new_pos = (new_x as usize, new_y as usize);
+            if new_pos.0 >= grid.x_len || new_pos.1 >= grid.y_len {
+                continue;
+            }
+
+            let distance = ((dx * dx + dy * dy) as f32).sqrt();
+            let cost = calculate_cell_cost(distance, radius_in_cells);
+
+            occupied_cells
+                .entry(new_pos)
+                .and_modify(|c| *c = c.max(cost))
+                .or_insert(cost);
+        }
+    }
+}
+
+fn calculate_cell_cost(distance: f32, radius_in_cells: i32) -> f32 {
+    if distance <= radius_in_cells as f32 * 0.7 {
+        return CELL_COST_IMPASSABLE;
+    }
+
+    let t = (distance - radius_in_cells as f32 * 0.7) / (radius_in_cells as f32 * 0.3);
+    let t = t.clamp(0.0, 1.0);
+    (1.0 - t) * 100.0 + 10.0
 }
 
 fn update_visualization_astar(
@@ -670,8 +664,6 @@ fn update_visualization_move_path(
     mut gizmos: Gizmos,
     nav_debug: Res<NavigationDebug>,
 ) {
-    use bevy::color::palettes;
-
     if !nav_debug.enabled {
         return;
     }
