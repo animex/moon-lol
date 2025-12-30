@@ -1,13 +1,13 @@
-mod abilities;
+mod buffs;
 mod core;
 mod entities;
 mod server;
 
 pub use core::*;
 
-pub use abilities::*;
 use bevy::app::{plugin_group, App};
 use bevy::DefaultPlugins;
+pub use buffs::*;
 pub use entities::*;
 pub use server::*;
 

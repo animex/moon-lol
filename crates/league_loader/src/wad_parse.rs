@@ -84,7 +84,7 @@ fn parse_wad_data_format(format: u8) -> WadDataFormat {
 #[binread]
 #[derive(Debug)]
 #[br(little)]
-#[br(import { count: u32 })]
+#[br(import(count: u32))]
 pub struct LeagueWadSubchunk {
     #[br(count = count)]
     pub chunks: Vec<LeagueWadSubchunkItem>,

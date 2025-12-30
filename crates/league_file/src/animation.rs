@@ -206,20 +206,32 @@ fn parse_jump_caches<R: Read + Seek>(
 pub struct UncompressedAnimationAsset {
     pub version: u32,
 
-    #[br(args { version })]
+    #[br(parse_with = parse_uncompressed_data, args(version))]
     pub data: UncompressedData,
 }
 
-#[binread]
 #[derive(Debug, Clone)]
-#[br(little, import { version: u32 })]
 pub enum UncompressedData {
-    #[br(pre_assert(version == 3))]
-    V3(#[br(parse_with = parse_uncompressed_data_v3)] UncompressedDataV3),
-    #[br(pre_assert(version == 4))]
+    V3(UncompressedDataV3),
     V4(UncompressedDataV4),
-    #[br(pre_assert(version == 5))]
     V5(UncompressedDataV5),
+}
+
+fn parse_uncompressed_data<R: Read + Seek>(
+    reader: &mut R,
+    endian: Endian,
+    args: (u32,),
+) -> BinResult<UncompressedData> {
+    let version = args.0;
+    match version {
+        3 => parse_uncompressed_data_v3(reader, endian, ()).map(UncompressedData::V3),
+        4 => UncompressedDataV4::read_options(reader, endian, ()).map(UncompressedData::V4),
+        5 => UncompressedDataV5::read_options(reader, endian, ()).map(UncompressedData::V5),
+        _ => Err(binrw::Error::AssertFail {
+            pos: reader.stream_position().unwrap_or(0),
+            message: format!("未知的动画版本: {}", version),
+        }),
+    }
 }
 
 #[binread]
@@ -342,7 +354,7 @@ fn group_v4_frames(frames: Vec<UncompressedFrameV4>) -> HashMap<u32, Vec<Uncompr
 
 #[binread]
 #[derive(Debug, Clone)]
-#[br(little, import { frame_count: i32 })]
+#[br(little, import(frame_count: i32))]
 struct RawTrackV3 {
     track_name_bytes: [u8; 32],
     _flags: u32,
@@ -379,7 +391,7 @@ struct RawDataV3 {
     track_count: i32,
     frame_count: i32,
     fps: i32,
-    #[br(count = track_count, args { inner: RawTrackV3BinReadArgs { frame_count } })]
+    #[br(count = track_count, args { inner: (frame_count,) })]
     tracks: Vec<RawTrackV3>,
 }
 

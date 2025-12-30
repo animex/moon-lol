@@ -1,20 +1,25 @@
-mod abilities;
+mod buffs;
 mod core;
 mod entities;
 mod server;
 
 pub use core::*;
 
-pub use abilities::*;
 use bevy::app::plugin_group;
+pub use buffs::*;
 pub use entities::*;
 pub use server::*;
 
 plugin_group! {
     pub struct PluginCore {
+        :PluginDamageReduction,
         :PluginFioraPassive,
         :PluginFioraE,
         :PluginFioraR,
+        :PluginRivenPassive,
+        :PluginRivenQ,
+        :PluginShieldWhite,
+        :PluginShieldMagic,
 
         :PluginBarrack,
         :PluginChampion,

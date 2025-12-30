@@ -52,7 +52,7 @@ impl LeagueWadLoader {
         Ok(LeagueWadSubchunk::read_options(
             &mut NoSeek::new(reader),
             Endian::Little,
-            args! { count: entry.target_size / 16 },
+            args! { inner: (entry.target_size / 16,) },
         )?)
     }
 

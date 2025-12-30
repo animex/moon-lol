@@ -159,7 +159,9 @@ fn on_skill_cast(
         );
     }
 
-    if let Some(effect) = res_assets_skill_effect.load_hash(skill.key_skill_effect) {
+    let effect_key = skill.key_skill_effect;
+
+    if let Some(effect) = res_assets_skill_effect.load_hash(effect_key) {
         debug!("{} 技能 {} 开始执行行为树", entity, trigger.index);
         commands.entity(entity).with_child((
             BehaveTree::new(effect.0.clone()),

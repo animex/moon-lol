@@ -59,6 +59,7 @@ impl Plugin for PluginResource {
         app.init_resource::<ResourceShaderHandles>();
         app.init_resource::<LeagueProperties>();
         app.init_resource::<LeaguePropertyFiles>();
+        app.init_resource::<ResourceCache>();
 
         app.add_systems(Startup, startup_load_shaders);
         app.add_systems(Update, update_collect_properties);
@@ -71,8 +72,6 @@ impl Plugin for PluginResource {
         register_loading::<SkinSpawn>(app);
 
         app.add_observer(on_command_load_prop_bin);
-
-        let resource_cache = ResourceCache::default();
 
         let mut file = File::open(format!("assets/{}", &self.game_config_path)).unwrap();
         let mut data = Vec::new();
@@ -135,20 +134,6 @@ impl Plugin for PluginResource {
         }
 
         app.insert_resource(ConfigGame { legends });
-
-        // for (_, ui_element) in &resource_cache.ui_elements {
-        //     if let Some(texture_data) = ui_element.texture_data.as_ref() {
-        //         if let EnumData::AtlasData(atlas_data) = texture_data
-        //         {
-        //             // if atlas_data.m_texture_name.contains("Clarity_HUDAtlas") {
-        //             if ui_element.name.contains("PlayerFrame") {
-        //                 println!("{:?}", ui_element.name);
-        //                 println!("{:?}", atlas_data.m_texture_uv);
-        //             }
-        //         }
-        //     }
-        // }
-        app.insert_resource(resource_cache);
     }
 }
 
