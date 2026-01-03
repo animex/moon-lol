@@ -1,7 +1,7 @@
 use std::collections::HashMap;
 use std::io::{self};
 
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::multi::count;
 use nom::number::complete::{le_u16, le_u32, le_u64, le_u8};
 use nom::{IResult, Parser};
@@ -17,7 +17,7 @@ pub struct LeagueWad {
 
 impl LeagueWad {
     pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (i, _) = take(2usize)(input)?; // magic: RW
+        let (i, _) = tag(&b"RW"[..])(input)?;
         let (i, major) = le_u8(i)?;
         let (i, minor) = le_u8(i)?;
         let (i, _) = take(0x108usize)(i)?;

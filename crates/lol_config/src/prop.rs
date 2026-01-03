@@ -8,59 +8,59 @@ use bevy::ecs::resource::Resource;
 use bevy::reflect::TypePath;
 use league_utils::{hash_bin, type_name_to_hash};
 
-pub struct HashKey<T>((u32, PhantomData<T>));
+pub struct HashKey<T: TypePath>((u32, PhantomData<T>));
 
-impl<T> Debug for HashKey<T> {
+impl<T: TypePath> Debug for HashKey<T> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.write_str(&format!("{:x}", self.0 .0))
+        f.write_str(&format!("{:x}: {}", self.0 .0, T::short_type_path()))
     }
 }
 
-impl<T> From<&u32> for HashKey<T> {
+impl<T: TypePath> From<&u32> for HashKey<T> {
     fn from(value: &u32) -> Self {
         Self((*value, PhantomData))
     }
 }
 
-impl<T> From<u32> for HashKey<T> {
+impl<T: TypePath> From<u32> for HashKey<T> {
     fn from(value: u32) -> Self {
         Self((value, PhantomData))
     }
 }
 
-impl<T> From<&str> for HashKey<T> {
+impl<T: TypePath> From<&str> for HashKey<T> {
     fn from(value: &str) -> Self {
         Self((hash_bin(value), PhantomData))
     }
 }
 
-impl<T> From<&String> for HashKey<T> {
+impl<T: TypePath> From<&String> for HashKey<T> {
     fn from(value: &String) -> Self {
         Self((hash_bin(value), PhantomData))
     }
 }
 
-impl<T> From<String> for HashKey<T> {
+impl<T: TypePath> From<String> for HashKey<T> {
     fn from(value: String) -> Self {
         Self((hash_bin(&value), PhantomData))
     }
 }
 
-impl<T> From<&HashKey<T>> for HashKey<T> {
+impl<T: TypePath> From<&HashKey<T>> for HashKey<T> {
     fn from(value: &HashKey<T>) -> Self {
         Self((value.0 .0, PhantomData))
     }
 }
 
-impl<T> Clone for HashKey<T> {
+impl<T: TypePath> Clone for HashKey<T> {
     fn clone(&self) -> Self {
         *self
     }
 }
 
-impl<T> Copy for HashKey<T> {}
+impl<T: TypePath> Copy for HashKey<T> {}
 
-impl<T> PartialEq for HashKey<T> {
+impl<T: TypePath> PartialEq for HashKey<T> {
     fn eq(&self, other: &Self) -> bool {
         self.0 .0 == other.0 .0
     }

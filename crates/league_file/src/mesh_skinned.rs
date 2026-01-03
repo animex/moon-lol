@@ -1,6 +1,6 @@
 use bevy::prelude::*;
 use league_utils::BoundingBox;
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::multi::count;
 use nom::number::complete::{le_f32, le_u16, le_u32};
 use nom::{IResult, Parser};
@@ -97,7 +97,7 @@ pub struct LeagueSkinnedMesh {
 
 impl LeagueSkinnedMesh {
     pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (i, _) = take(4usize)(input)?; // magic: \x33\x22\x11\x00
+        let (i, _) = tag(&[0x33, 0x22, 0x11, 0x00][..])(input)?;
         let (i, major) = le_u16(i)?;
         let (i, minor) = le_u16(i)?;
 

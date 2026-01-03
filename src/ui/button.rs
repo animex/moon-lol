@@ -57,9 +57,10 @@ pub fn on_command_spawn_button(
     res_ui_region: Res<Assets<UiElementRegionData>>,
 ) {
     let key = trigger.key;
-    let ui_element_group_button_data = res_assets_ui_element_group_button_data
-        .load_hash(key)
-        .unwrap();
+    let Some(ui_element_group_button_data) = res_assets_ui_element_group_button_data.load_hash(key)
+    else {
+        return;
+    };
 
     let hit_region = res_ui_region
         .load_hash(ui_element_group_button_data.hit_region_element)

@@ -10,7 +10,7 @@ use lol_core::{Lane, Team};
 
 use crate::{
     get_standard, Action, AssetServerLoadLeague, CommandAction, CommandCharacterSpawn,
-    CommandLoadPropBin, Controller, Loading, Turret,
+    CommandLoadPropBin, Controller, Loading, PropPath, Turret,
 };
 
 pub const MAP_WIDTH: f32 = 14400.0;
@@ -89,7 +89,10 @@ fn startup_load_map_geometry(
         "data/maps/shipping/map11/map11.bin".to_string(),
     ];
 
-    commands.trigger(CommandLoadPropBin { paths });
+    commands.trigger(CommandLoadPropBin {
+        path: PropPath::Path(paths),
+        label: "Map".to_string(),
+    });
 
     commands.insert_resource(Loading::new(res_asset_server.load_league::<ConfigMapGeo>(
         &format!("data/{}.mapgeo", &res_map_name.get_materials_path()),

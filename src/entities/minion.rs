@@ -5,8 +5,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{
     Aggro, AttackAuto, CommandAttackAutoStart, CommandAttackAutoStop, CommandMovement,
-    EventAggroTargetFound, EventDead, HealthBar, HealthBarType, MinionPath, MovementAction,
-    MovementWay, State,
+    EventAggroTargetFound, EventDead, MinionPath, MovementAction, MovementWay, State,
 };
 
 #[derive(Default)]
@@ -22,12 +21,7 @@ impl Plugin for PluginMinion {
 }
 
 #[derive(Component, Debug, Clone, Copy, PartialEq, Serialize, Deserialize)]
-#[require(
-    MinionState,
-    Aggro = Aggro { range: 1000.0 },
-    State,
-    HealthBar = HealthBar { bar_type: HealthBarType::Minion }
-)]
+#[require(MinionState, Aggro = Aggro { range: 1000.0 }, State)]
 pub enum Minion {
     Siege,
     Melee,

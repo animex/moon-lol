@@ -86,8 +86,6 @@ pub fn class_map_to_rust_code(
     let generated_enum_items = generate_enum_definitions(&merged_enums, class_map, hashes);
     all_generated_items.extend(generated_enum_items);
 
-    let mut init_code = "pub fn init_league_asset(app: &mut App, asset_loader_registry: &mut AssetLoaderRegistry) {".to_string();
-
     // 6. 生成结构体定义
     for (class_hash, class_data) in class_map.iter() {
         let class_name = hash_to_type_name(class_hash, hashes);
@@ -96,10 +94,6 @@ pub fn class_map_to_rust_code(
         if entry_hashes.contains(class_hash) {
             struct_def
                 .push_str("#[derive(Serialize, Deserialize, Debug, Clone, Asset, TypePath)]\n");
-            init_code.push_str(&format!(
-                "app.init_asset::<{}>();\nasset_loader_registry.register::<{}>();\n",
-                class_name, class_name
-            ));
         } else {
             struct_def.push_str("#[derive(Serialize, Deserialize, Debug, Clone)]\n");
         }
@@ -151,9 +145,41 @@ pub fn class_map_to_rust_code(
         all_definitions.push_str(&item.code);
     }
 
-    init_code.push_str("}\n");
+    let mut entry_hashes = entry_hashes
+        .iter()
+        .map(|h| hash_to_type_name(h, hashes))
+        .collect::<Vec<_>>();
 
-    Ok((all_definitions, init_code))
+    entry_hashes.sort();
+
+    let init_code = entry_hashes
+        .iter()
+        .map(|v| format!("app.init_asset::<{}>();", v))
+        .collect::<Vec<_>>();
+    let reg_code = entry_hashes
+        .iter()
+        .map(|v| format!("registry.register::<{}>();", v))
+        .collect::<Vec<_>>();
+
+    let res = format!(
+        "use league_core::{{
+    {}
+}};
+
+pub fn init_league_asset(app: &mut App) {{
+{}
+}}
+pub static ASSET_LOADER_REGISTRY: LazyLock<AssetLoaderRegistry> = LazyLock::new(|| {{
+    let mut registry = AssetLoaderRegistry::default();
+    {}
+    registry
+}});",
+        entry_hashes.join(","),
+        init_code.join("\n"),
+        reg_code.join("\n")
+    );
+
+    Ok((all_definitions, res))
 }
 
 fn collect_enums(field_data: &ClassData, enums: &mut Vec<HashSet<u32>>) {

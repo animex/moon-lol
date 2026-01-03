@@ -10,6 +10,8 @@ use bevy::prelude::*;
 pub use button::*;
 pub use damage::*;
 pub use element::*;
+use league_core::{FloatingInfoBarViewController, HeroFloatingInfoBarData, UiElementIconData};
+use lol_config::LoadHashKeyTrait;
 pub use player::*;
 pub use skill::*;
 
@@ -36,8 +38,7 @@ impl Plugin for PluginUI {
         app.add_systems(
             Update,
             (
-                update_spawn_ui_element.run_if(in_state(UIState::Loading)),
-                init_health_bar,
+                init_health_bar.run_if(in_state(UIState::Loaded)),
                 update_ui_bind,
                 update_health,
                 update_level,
@@ -51,9 +52,13 @@ impl Plugin for PluginUI {
                 update_ui_animation,
                 update_ui_element,
                 update_on_add_ui_element,
-                update_button,
+                update_button.run_if(in_state(UIState::Loaded)),
             ),
         );
+
+        // element
+        app.add_observer(on_event_load_prop_end_ui_gameplay);
+        app.add_observer(on_event_load_prop_end_ui);
 
         app.add_observer(on_event_damage_create);
         app.add_observer(on_command_update_ui_element);
@@ -76,24 +81,25 @@ pub struct HealthBind(pub Entity);
 #[derive(Component, Reflect, Debug, Clone, Copy, Default)]
 #[reflect(Component)]
 pub struct HealthBar {
-    pub bar_type: HealthBarType,
-}
-
-#[derive(Reflect, Debug, Clone, Copy, PartialEq, Eq, Default)]
-pub enum HealthBarType {
-    #[default]
-    Minion,
-    Champion,
-    Turret,
+    pub bar_type: u8,
 }
 
 fn init_health_bar(
     mut commands: Commands,
-    res_asset_server: Res<AssetServer>,
     q_added_health_bar: Query<(Entity, &HealthBar, &Bounding), Added<Bounding>>,
+    res_assets_floating_info_bar_view_controller: Res<Assets<FloatingInfoBarViewController>>,
+    res_assets_hero_floating_info_bar_data: Res<Assets<HeroFloatingInfoBarData>>,
+    res_assets_ui_element_icon_data: Res<Assets<UiElementIconData>>,
+    res_asset_server: Res<AssetServer>,
 ) {
+    let controller = res_assets_floating_info_bar_view_controller
+        .iter()
+        .next()
+        .unwrap()
+        .1;
+
     for (entity, health_bar, bounding) in q_added_health_bar.iter() {
-        commands
+        let health_bar_entity = commands
             .spawn((
                 Node {
                     position_type: PositionType::Absolute,
@@ -105,140 +111,36 @@ fn init_health_bar(
                     offset: Vec2::ZERO,
                 },
             ))
-            .with_children(|parent| match health_bar.bar_type {
-                HealthBarType::Minion => {
-                    parent
-                        .spawn((
-                            Node {
-                                width: Val::Px(74.0),
-                                height: Val::Px(7.0),
-                                left: Val::Px(-37.0),
-                                top: Val::Px(-20.0),
-                                position_type: PositionType::Absolute,
-                                ..default()
-                            },
-                            ImageNode {
-                                image: res_asset_server.load("spotlighthealthbaratlas.tex#srgb"),
-                                rect: Some(Rect::new(2.0, 503.0, 68.0, 510.0)),
-                                color: Color::srgb(0.9, 0.9, 0.9),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|parent| {
-                            parent
-                                .spawn((Node {
-                                    width: Val::Px(72.0),
-                                    height: Val::Px(5.0),
-                                    left: Val::Px(1.0),
-                                    top: Val::Px(1.0),
-                                    ..default()
-                                },))
-                                .with_child((
-                                    Node {
-                                        width: Val::Percent(100.0),
-                                        ..default()
-                                    },
-                                    ImageNode {
-                                        image: res_asset_server
-                                            .load("spotlighthealthbaratlas.tex#srgb"),
-                                        rect: Some(Rect::new(147.0, 4.0, 258.0, 15.0)),
-                                        color: Color::srgb(0.9, 0.9, 0.9),
-                                        image_mode: NodeImageMode::Stretch,
-                                        ..default()
-                                    },
-                                    HealthBind(entity),
-                                ));
-                        });
+            .id();
+
+        let bar_controller = controller
+            .info_bar_style_source_map
+            .get(&health_bar.bar_type)
+            .unwrap();
+
+        match health_bar.bar_type {
+            12 => {
+                let bar_data = res_assets_hero_floating_info_bar_data
+                    .load_hash(bar_controller)
+                    .unwrap();
+
+                let ui_element_data = res_assets_ui_element_icon_data
+                    .load_hash(&bar_data.borders.default_border.border)
+                    .unwrap();
+
+                if let Some(ui_element_entity) =
+                    spawn_ui_element(&mut commands, &res_asset_server, ui_element_data)
+                {
+                    commands
+                        .entity(ui_element_entity)
+                        .insert(Visibility::Visible);
+                    commands
+                        .entity(health_bar_entity)
+                        .add_child(ui_element_entity);
                 }
-                HealthBarType::Champion => {
-                    parent
-                        .spawn((
-                            Node {
-                                width: Val::Px(136.0),
-                                height: Val::Px(29.0),
-                                left: Val::Px(-68.0),
-                                top: Val::Px(-60.0),
-                                position_type: PositionType::Absolute,
-                                ..default()
-                            },
-                            ImageNode {
-                                image: res_asset_server.load("spotlighthealthbaratlas.tex#srgb"),
-                                rect: Some(Rect::new(3.0, 2.0, 139.0, 31.0)),
-                                color: Color::srgb(0.9, 0.9, 0.9),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|parent| {
-                            parent
-                                .spawn((Node {
-                                    width: Val::Px(104.0),
-                                    height: Val::Px(11.0),
-                                    left: Val::Px(28.0),
-                                    top: Val::Px(7.0),
-                                    ..default()
-                                },))
-                                .with_child((
-                                    Node {
-                                        width: Val::Percent(100.0),
-                                        ..default()
-                                    },
-                                    ImageNode {
-                                        image: res_asset_server
-                                            .load("spotlighthealthbaratlas.tex#srgb"),
-                                        rect: Some(Rect::new(147.0, 4.0, 258.0, 15.0)),
-                                        color: Color::srgb(0.9, 0.9, 0.9),
-                                        image_mode: NodeImageMode::Stretch,
-                                        ..default()
-                                    },
-                                    HealthBind(entity),
-                                ));
-                        });
-                }
-                HealthBarType::Turret => {
-                    parent
-                        .spawn((
-                            Node {
-                                width: Val::Px(192.0),
-                                height: Val::Px(44.0),
-                                left: Val::Px(-96.0),
-                                top: Val::Px(-22.0),
-                                position_type: PositionType::Absolute,
-                                ..default()
-                            },
-                            ImageNode {
-                                image: res_asset_server.load("spotlighthealthbaratlas.tex#srgb"),
-                                rect: Some(Rect::new(6.0, 256.0, 198.0, 290.0)),
-                                color: Color::srgb(0.9, 0.9, 0.9),
-                                ..default()
-                            },
-                        ))
-                        .with_children(|parent| {
-                            parent
-                                .spawn((Node {
-                                    width: Val::Px(168.0),
-                                    height: Val::Px(13.0),
-                                    left: Val::Px(12.0),
-                                    top: Val::Px(7.0),
-                                    ..default()
-                                },))
-                                .with_child((
-                                    Node {
-                                        width: Val::Percent(100.0),
-                                        ..default()
-                                    },
-                                    ImageNode {
-                                        image: res_asset_server
-                                            .load("spotlighthealthbaratlas.tex#srgb"),
-                                        rect: Some(Rect::new(147.0, 4.0, 258.0, 15.0)),
-                                        color: Color::srgb(0.9, 0.9, 0.9),
-                                        image_mode: NodeImageMode::Stretch,
-                                        ..default()
-                                    },
-                                    HealthBind(entity),
-                                ));
-                        });
-                }
-            });
+            }
+            _ => {}
+        }
     }
 }
 
@@ -277,36 +179,35 @@ fn update_ui_bind(
 }
 
 fn update_health(
-    mut commands: Commands,
     mut q_health_bind: Query<(Entity, &mut Node, &HealthBind)>,
     q_health: Query<(&Health, &HealthBar)>,
 ) {
-    for (entity, mut node, health_bind) in q_health_bind.iter_mut() {
-        let Ok((health, health_bar)) = q_health.get(health_bind.0) else {
+    for (_entity, mut node, health_bind) in q_health_bind.iter_mut() {
+        let Ok((health, _health_bar)) = q_health.get(health_bind.0) else {
             continue;
         };
 
         node.width = Val::Percent(health.value / health.max * 100.0);
 
         // 英雄血条需要生成每 100 点血的标记
-        if health_bar.bar_type == HealthBarType::Champion {
-            commands.entity(entity).despawn_children();
-            commands.entity(entity).with_children(|parent| {
-                let health_indicator_num = (health.value / 100.0) as usize;
-                let health_bar_width = ((100.0 / health.max) * 104.0).floor();
-                for i in 0..health_indicator_num {
-                    parent.spawn((
-                        Node {
-                            width: Val::Px(1.0),
-                            height: Val::Px(6.0),
-                            left: Val::Px(health_bar_width * (i + 1) as f32),
-                            position_type: PositionType::Absolute,
-                            ..default()
-                        },
-                        BackgroundColor(Color::BLACK),
-                    ));
-                }
-            });
-        }
+        // if health_bar.bar_type == HealthBarType::Champion {
+        //     commands.entity(entity).despawn_children();
+        //     commands.entity(entity).with_children(|parent| {
+        //         let health_indicator_num = (health.value / 100.0) as usize;
+        //         let health_bar_width = ((100.0 / health.max) * 104.0).floor();
+        //         for i in 0..health_indicator_num {
+        //             parent.spawn((
+        //                 Node {
+        //                     width: Val::Px(1.0),
+        //                     height: Val::Px(6.0),
+        //                     left: Val::Px(health_bar_width * (i + 1) as f32),
+        //                     position_type: PositionType::Absolute,
+        //                     ..default()
+        //                 },
+        //                 BackgroundColor(Color::BLACK),
+        //             ));
+        //         }
+        //     });
+        // }
     }
 }

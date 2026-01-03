@@ -12,9 +12,6 @@ pub struct CommandSkinMeshSpawn {
     pub entity: Entity,
 }
 
-#[derive(TypePath)]
-pub struct SkinMeshSpawn(pub Handle<LeagueSkinMesh>, pub Handle<StandardMaterial>);
-
 pub fn on_command_skin_mesh_spawn(
     trigger: On<CommandSkinMeshSpawn>,
     asset_server: Res<AssetServer>,
@@ -41,8 +38,9 @@ pub fn on_command_skin_mesh_spawn(
         path: skin_mesh_properties.skeleton.clone().unwrap(),
     });
 
-    commands.entity(entity).insert(Loading::new(SkinMeshSpawn(
-        asset_server.load_league(&skin_mesh_properties.simple_skin.clone().unwrap()),
+    commands.entity(entity).insert(Loading::new((
+        asset_server
+            .load_league::<LeagueSkinMesh>(skin_mesh_properties.simple_skin.as_ref().unwrap()),
         get_standard(
             &mut res_assets_standard_material,
             &asset_server,
@@ -54,10 +52,14 @@ pub fn on_command_skin_mesh_spawn(
 pub fn update_skin_mesh_spawn(
     mut commands: Commands,
     res_assets_league_skinned_mesh: Res<Assets<LeagueSkinMesh>>,
-    q_loading_mesh: Query<(Entity, &Loading<SkinMeshSpawn>, Option<&SkinnedMesh>)>,
+    q_loading_mesh: Query<(
+        Entity,
+        &Loading<(Handle<LeagueSkinMesh>, Handle<StandardMaterial>)>,
+        Option<&SkinnedMesh>,
+    )>,
 ) {
     for (entity, loading, skinned_mesh) in q_loading_mesh.iter() {
-        let Some(league_skinned_mesh) = res_assets_league_skinned_mesh.get(&loading.0) else {
+        let Some(league_skinned_mesh) = res_assets_league_skinned_mesh.get(&loading.value.0) else {
             continue;
         };
 
@@ -69,12 +71,14 @@ pub fn update_skin_mesh_spawn(
             commands.entity(entity).with_child((
                 Transform::default(),
                 Mesh3d(mesh.clone()),
-                MeshMaterial3d(loading.1.clone()),
+                MeshMaterial3d(loading.value.1.clone()),
                 skinned_mesh.clone(),
             ));
         }
 
-        commands.entity(entity).remove::<Loading<SkinMeshSpawn>>();
+        commands
+            .entity(entity)
+            .remove::<Loading<(Handle<LeagueSkinMesh>, Handle<StandardMaterial>)>>();
     }
 }
 

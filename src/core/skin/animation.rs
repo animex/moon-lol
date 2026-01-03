@@ -19,9 +19,6 @@ pub struct CommandSkinAnimationSpawn {
     pub entity: Entity,
 }
 
-#[derive(TypePath)]
-pub struct SkinAnimationSpawn(pub HashKey<AnimationGraphData>);
-
 pub fn on_command_skin_animation_spawn(
     trigger: On<CommandSkinAnimationSpawn>,
     mut commands: Commands,
@@ -38,11 +35,10 @@ pub fn on_command_skin_animation_spawn(
 
     commands
         .entity(entity)
-        .insert(Loading::new(SkinAnimationSpawn(
+        .insert(Loading::new(HashKey::<AnimationGraphData>::from(
             skin_character_data_properties
                 .skin_animation_properties
-                .animation_graph_data
-                .into(),
+                .animation_graph_data,
         )));
 }
 
@@ -51,10 +47,10 @@ pub fn update_skin_animation_spawn(
     asset_server: Res<AssetServer>,
     mut res_animation_graph: ResMut<Assets<AnimationGraph>>,
     res_assets_animation_graph_data: Res<Assets<AnimationGraphData>>,
-    q_loading_animation: Query<(Entity, &Loading<SkinAnimationSpawn>)>,
+    q_loading_animation: Query<(Entity, &Loading<HashKey<AnimationGraphData>>)>,
 ) {
     for (entity, loading) in q_loading_animation.iter() {
-        let Some(animation_graph_data) = res_assets_animation_graph_data.load_hash(loading.0)
+        let Some(animation_graph_data) = res_assets_animation_graph_data.load_hash(loading.value)
         else {
             continue;
         };
@@ -84,7 +80,7 @@ pub fn update_skin_animation_spawn(
                     repeat: true,
                 },
             ))
-            .remove::<Loading<SkinAnimationSpawn>>();
+            .remove::<Loading<HashKey<AnimationGraphData>>>();
     }
 }
 

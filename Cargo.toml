@@ -50,6 +50,7 @@ regex = "1"
 serde = "1.0.219"
 thiserror = "2.0.12"
 tokio = { version = "1.0", features = ["full"] }
+ron = "0.8"
 
 [dev-dependencies]
 crossbeam-channel = "0.5"
@@ -59,3 +60,4 @@ rocket = { version = "*", features = ["json"] }
 rocket_cors = "0.6"
 serde_json = "1.0.145"
 walkdir = "2.5.0"
+ron = "0.8"

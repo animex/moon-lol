@@ -3,10 +3,13 @@ use std::sync::LazyLock;
 
 use bevy::prelude::*;
 use bevy::window::{PrimaryWindow, WindowResized};
-use league_core::{EnumAnchor, EnumData, EnumUiPosition, UiElementIconData};
+use league_core::{
+    EnumAnchor, EnumData, EnumUiPosition, UiElementIconData, UiPropertyLoadable, UiSceneData,
+};
 use league_utils::hash_bin;
+use lol_config::LoadHashKeyTrait;
 
-use crate::{AssetServerLoadLeague, CommandLoadPropBin};
+use crate::{AssetServerLoadLeague, CommandLoadPropBin, EventLoadPropEnd, PropPath};
 
 #[derive(States, Default, Debug, Hash, Eq, Clone, PartialEq)]
 pub enum UIState {
@@ -54,26 +57,68 @@ impl UIElementEntity {
 }
 
 pub fn startup_load_ui(mut commands: Commands) {
-    let paths = vec!["clientstates/gameplay/ux/lol/playerframe/uibase".to_string()];
-    let paths = vec!["gameplay.playerframe.bin".to_string()];
+    let paths = vec![
+        // "gameplay.playeraugments.bin".to_string(),
+        "gameplay.playerframe.bin".to_string(),
+        // "gameplay.playerinventory.bin".to_string(),
+        // "gameplay.playermute.bin".to_string(),
+        // "gameplay.playerperks.bin".to_string(),
+        // "gameplay.playerreport.bin".to_string(),
+        // "gameplay.playerstats.bin".to_string(),
+        // "gameplay.playerstatstones.bin".to_string(),
+        "gameplay.lolfloatinginfobars.bin".to_string(),
+    ];
 
-    commands.trigger(CommandLoadPropBin { paths });
+    info!("gameplay 系列配置文件开始加载");
+
+    commands.trigger(CommandLoadPropBin {
+        path: PropPath::Path(paths),
+        label: "gameplay 系列".to_string(),
+    });
 }
 
-static STRS: LazyLock<std::sync::Mutex<HashSet<String>>> = LazyLock::new(|| {
-    println!("初始化");
-    std::sync::Mutex::new(HashSet::new())
-});
+static STRS: LazyLock<std::sync::Mutex<HashSet<String>>> =
+    LazyLock::new(|| std::sync::Mutex::new(HashSet::new()));
 
-pub fn update_spawn_ui_element(
+pub fn on_event_load_prop_end_ui_gameplay(
+    event: On<EventLoadPropEnd>,
+    mut commands: Commands,
+    res_assets_ui_property_loadable: Res<Assets<UiPropertyLoadable>>,
+) {
+    if event.label != "gameplay 系列" {
+        return;
+    }
+
+    info!("gameplay 系列配置文件加载完成");
+
+    info!("ui 配置文件开始加载");
+
+    commands.trigger(CommandLoadPropBin {
+        path: PropPath::Hash(
+            res_assets_ui_property_loadable
+                .iter()
+                .map(|v| v.1.filepath_hash)
+                .collect(),
+        ),
+        label: "label_ui".to_string(),
+    });
+}
+
+pub fn on_event_load_prop_end_ui(
+    event: On<EventLoadPropEnd>,
     mut commands: Commands,
     mut res_ui_element_entity: ResMut<UIElementEntity>,
     res_asset_server: Res<AssetServer>,
     res_assets_ui_element_icon_data: Res<Assets<UiElementIconData>>,
+    res_assets_ui_scene_data: Res<Assets<UiSceneData>>,
 ) {
-    if res_assets_ui_element_icon_data.iter().count() == 0 {
+    if event.label != "label_ui" {
         return;
     }
+
+    info!("ui 配置文件加载完成");
+
+    info!("开始初始化 ui 元素");
 
     for (_, ui) in res_assets_ui_element_icon_data.iter() {
         if let Some(EnumData::AtlasData(atlas_data)) = &ui.texture_data {
@@ -82,32 +127,41 @@ pub fn update_spawn_ui_element(
                 continue;
             }
             strs.insert(atlas_data.m_texture_name.clone());
-            println!("{:?}", atlas_data.m_texture_name);
         }
     }
 
-    for (_, ui) in res_assets_ui_element_icon_data.iter().filter(|v| {
-        v.1.name
-            .contains("ClientStates/Gameplay/UX/LoL/PlayerFrame/")
-    }) {
+    for (_, ui) in res_assets_ui_element_icon_data.iter() {
         let Some(entity) = spawn_ui_element(&mut commands, &res_asset_server, ui) else {
             continue;
         };
 
         commands.entity(entity).insert(Visibility::Hidden);
 
-        if let Some(&enabled) = ui.enabled.as_ref() {
-            if enabled {
-                commands.entity(entity).insert(Visibility::Visible);
+        if let Some(scene_data) = res_assets_ui_scene_data.load_hash(&ui.scene) {
+            if let Some(&enabled) = scene_data.enabled.as_ref() {
+                if enabled {
+                    commands.entity(entity).insert(Visibility::Visible);
+                } else {
+                    commands.entity(entity).insert(Visibility::Hidden);
+                }
             }
         }
 
-        if ui.name.ends_with("_BorderAvailable") {
-            commands.entity(entity).insert(Visibility::Visible);
+        if let Some(&enabled) = ui.enabled.as_ref() {
+            if enabled {
+                commands.entity(entity).insert(Visibility::Visible);
+            } else {
+                commands.entity(entity).insert(Visibility::Hidden);
+            }
         }
 
         res_ui_element_entity.map.insert(hash_bin(&ui.name), entity);
     }
+
+    info!(
+        "ui 元素初始化完成，一共 {} 个元素",
+        res_ui_element_entity.map.len()
+    );
 
     // commands.trigger(CommandUiAnimationStart {
     //     key: "ClientStates/Gameplay/UX/LoL/PlayerFrame/UIBase/Player_Frame_Root/LevelUpFxIn/LevelUp0_ButtonIn".to_string(),
@@ -194,14 +248,10 @@ fn apply_rect_position(node: &mut Node, ui_element: &UIElement, window_size: Vec
         return None;
     };
 
-    let Some(anchors) = &position.anchors else {
-        return None;
+    let anchor = match &position.anchors {
+        Some(EnumAnchor::AnchorSingle(anchor)) => anchor.anchor,
+        _ => Vec2::ZERO,
     };
-
-    let EnumAnchor::AnchorSingle(anchor) = anchors else {
-        return None;
-    };
-    let anchor = anchor.anchor;
 
     let Some(position) = ui_rect.position else {
         return None;

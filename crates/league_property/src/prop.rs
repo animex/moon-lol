@@ -1,4 +1,4 @@
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::multi::count;
 use nom::number::complete::{le_u16, le_u32};
 use nom::{IResult, Parser};
@@ -12,7 +12,7 @@ pub struct PropFile {
 
 impl PropFile {
     pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (i, _) = take(4usize)(input)?; // magic: PROP
+        let (i, _) = tag(&b"PROP"[..])(input)?;
         let (i, version) = le_u32(i)?;
         let (i, link_count) = le_u32(i)?;
         let (i, links) = count(SizedStringU16::parse, link_count as usize).parse(i)?;

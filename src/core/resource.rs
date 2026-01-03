@@ -1,8 +1,10 @@
+mod loading;
+mod prop_bin;
 mod shader;
+
 use std::collections::HashMap;
 use std::fs::File;
 use std::io::Read;
-use std::ops::Deref;
 
 use bevy::ecs::component::ComponentCloneBehavior;
 use bevy::ecs::entity::{EntityHashMap, SceneEntityMapper};
@@ -10,10 +12,10 @@ use bevy::ecs::relationship::RelationshipHookMode;
 use bevy::prelude::*;
 use bevy::scene::ron::{self};
 use league_file::LeagueSkeleton;
+pub use loading::*;
 use lol_config::{
     init_league_asset, CharacterConfigsDeserializer, ConfigGame, ConfigMapGeo,
-    ConfigNavigationGrid, LeagueProperties, ResourceShaderChunk, ResourceShaderPackage,
-    ASSET_LOADER_REGISTRY,
+    ConfigNavigationGrid, ResourceShaderChunk, ResourceShaderPackage,
 };
 use lol_core::LeagueSkinMesh;
 use lol_loader::{
@@ -21,13 +23,11 @@ use lol_loader::{
     LeagueLoaderMeshStatic, LeagueLoaderNavGrid, LeagueLoaderProperty, LeagueLoaderShaderToc,
     LeagueLoaderSkeleton,
 };
+pub use prop_bin::*;
 use serde::de::DeserializeSeed;
 pub use shader::*;
 
-use crate::{
-    AssetServerLoadLeague, CharacterSpawn, SkinAnimationSpawn, SkinMeshSpawn, SkinSkeletonSpawn,
-    SkinSpawn,
-};
+use crate::AssetServerLoadLeague;
 
 #[derive(Default)]
 pub struct PluginResource {
@@ -38,13 +38,10 @@ impl Plugin for PluginResource {
     fn build(&self, app: &mut App) {
         app.init_asset::<ConfigMapGeo>();
         app.init_asset::<LeagueSkeleton>();
-        app.init_asset::<LeagueProperties>();
         app.init_asset::<LeagueSkinMesh>();
         app.init_asset::<ResourceShaderPackage>();
         app.init_asset::<ResourceShaderChunk>();
         app.init_asset::<ConfigNavigationGrid>();
-
-        init_league_asset(app);
 
         app.init_asset_loader::<LeagueLoaderProperty>();
         app.init_asset_loader::<LeagueLoaderImage>();
@@ -56,22 +53,16 @@ impl Plugin for PluginResource {
         app.init_asset_loader::<LeagueLoaderShaderToc>();
         app.init_asset_loader::<LeagueLoaderNavGrid>();
 
+        init_league_asset(app);
+
         app.init_resource::<ResourceShaderHandles>();
-        app.init_resource::<LeagueProperties>();
-        app.init_resource::<LeaguePropertyFiles>();
         app.init_resource::<ResourceCache>();
 
+        app.add_plugins(PluginResourceLoading);
+        app.add_plugins(PluginResourcePropBin);
+
         app.add_systems(Startup, startup_load_shaders);
-        app.add_systems(Update, update_collect_properties);
         app.add_systems(Update, update_shaders);
-
-        register_loading::<CharacterSpawn>(app);
-        register_loading::<SkinAnimationSpawn>(app);
-        register_loading::<SkinMeshSpawn>(app);
-        register_loading::<SkinSkeletonSpawn>(app);
-        register_loading::<SkinSpawn>(app);
-
-        app.add_observer(on_command_load_prop_bin);
 
         let mut file = File::open(format!("assets/{}", &self.game_config_path)).unwrap();
         let mut data = Vec::new();
@@ -138,55 +129,9 @@ impl Plugin for PluginResource {
 }
 
 #[derive(Resource, Default)]
-pub struct LeaguePropertyFiles {
-    pub unload: Vec<(String, Handle<LeagueProperties>)>,
-    pub loaded: Vec<String>,
-}
-
-#[derive(Resource, Default)]
 pub struct ResourceCache {
     image: HashMap<String, Handle<Image>>,
     mesh: HashMap<String, Handle<Mesh>>,
-}
-
-#[derive(Event)]
-pub struct CommandLoadPropBin {
-    pub paths: Vec<String>,
-}
-
-#[derive(Component, Resource)]
-pub struct Loading<F> {
-    pub timer: Timer,
-    pub value: F,
-}
-
-impl<F> Loading<F> {
-    pub fn new(value: F) -> Self {
-        Self {
-            timer: Timer::from_seconds(10.0, TimerMode::Once),
-            value,
-        }
-    }
-
-    pub fn is_timeout(&self) -> bool {
-        self.timer.is_finished()
-    }
-
-    pub fn update(&mut self, time: &Time) {
-        self.timer.tick(time.delta());
-    }
-
-    pub fn set(&mut self, value: F) {
-        self.value = value;
-    }
-}
-
-impl<T> Deref for Loading<T> {
-    type Target = T;
-
-    fn deref(&self) -> &Self::Target {
-        &self.value
-    }
 }
 
 impl ResourceCache {
@@ -220,104 +165,6 @@ impl ResourceCache {
                 self.mesh.insert(path.to_string(), handle.clone());
                 handle
             }
-        }
-    }
-}
-
-fn on_command_load_prop_bin(
-    event: On<CommandLoadPropBin>,
-    res_asset_server: Res<AssetServer>,
-    mut res_league_property_files: ResMut<LeaguePropertyFiles>,
-) {
-    for path in &event.paths {
-        let lower = path.to_lowercase();
-        if res_league_property_files.loaded.contains(&lower) {
-            continue;
-        }
-
-        res_league_property_files
-            .unload
-            .push((lower.clone(), res_asset_server.load_league(&lower)));
-
-        res_league_property_files.loaded.push(lower);
-    }
-}
-
-fn update_collect_properties(
-    mut commands: Commands,
-    mut res_assets_league_properties: ResMut<Assets<LeagueProperties>>,
-    mut res_league_property_files: ResMut<LeaguePropertyFiles>,
-    mut res_league_properties: ResMut<LeagueProperties>,
-) {
-    if res_league_property_files.unload.is_empty() {
-        return;
-    }
-
-    res_league_property_files
-        .unload
-        .retain(|(_path, handle_league_properties)| {
-            let Some(league_properties) =
-                res_assets_league_properties.get_mut(handle_league_properties)
-            else {
-                return true;
-            };
-
-            res_league_properties.merge(league_properties);
-
-            commands.trigger(CommandLoadPropBin {
-                paths: league_properties.1.clone(),
-            });
-
-            false
-        });
-
-    if res_league_properties.0.is_empty() {
-        return;
-    }
-
-    commands.queue(insert_props);
-}
-
-fn insert_props(world: &mut World) {
-    let res_league_properties = world.resource::<LeagueProperties>();
-
-    let collect = res_league_properties
-        .0
-        .iter()
-        .flat_map(|(type_hash, v)| {
-            v.iter()
-                .map(|(prop_hash, v)| (type_hash.clone(), prop_hash.clone(), v.clone()))
-        })
-        .collect::<Vec<_>>();
-
-    for (type_hash, prop_hash, mut handle) in collect {
-        let (_, loader) = ASSET_LOADER_REGISTRY.loaders.get(&type_hash).unwrap();
-        loader.load(world, prop_hash, &mut handle);
-    }
-
-    let mut res_league_properties = world.resource_mut::<LeagueProperties>();
-    res_league_properties.0.clear();
-}
-
-pub trait LoadingTrait {
-    fn is_timeout(&self) -> bool;
-}
-
-fn register_loading<T: TypePath + Send + Sync + 'static>(app: &mut App) {
-    app.add_systems(Update, update_loading::<T>);
-}
-
-fn update_loading<T: TypePath + Send + Sync + 'static>(
-    mut commands: Commands,
-    mut q_loading: Query<(Entity, &mut Loading<T>)>,
-    time: Res<Time>,
-) {
-    for (entity, mut loading) in q_loading.iter_mut() {
-        loading.update(&time);
-
-        if loading.is_timeout() {
-            // println!("加载超时 {}", T::type_path());
-            commands.entity(entity).remove::<Loading<T>>();
         }
     }
 }

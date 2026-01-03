@@ -1,7 +1,7 @@
 use bevy::math::Vec3;
 use bitflags::bitflags;
 use league_utils::BoundingBox;
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::multi::count;
 use nom::number::complete::{le_f32, le_i32, le_u16, le_u32, le_u8};
 use nom::{IResult, Parser};
@@ -39,7 +39,7 @@ pub struct LeagueMeshStatic {
 
 impl LeagueMeshStatic {
     pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (i, _) = take(8usize)(input)?; // magic: r3d2Mesh
+        let (i, _) = tag(&b"r3d2Mesh"[..])(input)?;
         let (i, major) = le_u16(i)?;
         let (i, minor) = le_u16(i)?;
 

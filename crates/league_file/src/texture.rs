@@ -1,5 +1,5 @@
 use bitflags::bitflags;
-use nom::bytes::complete::take;
+use nom::bytes::complete::{tag, take};
 use nom::number::complete::{le_u16, le_u8};
 use nom::{IResult, Parser};
 
@@ -16,7 +16,7 @@ pub struct LeagueTexture {
 
 impl LeagueTexture {
     pub fn parse(input: &[u8]) -> IResult<&[u8], Self> {
-        let (i, _) = take(4usize)(input)?; // magic: TEX\0
+        let (i, _) = tag(&b"TEX\0"[..])(input)?;
         let (i, width) = le_u16(i)?;
         let (i, height) = le_u16(i)?;
         let (i, _is_extended_format_maybe) = le_u8(i)?;
