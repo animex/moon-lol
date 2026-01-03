@@ -64,7 +64,7 @@ fn on_command_character_load(trigger: On<CommandCharacterLoad>, mut commands: Co
 
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Path(paths),
-        label: "Character".to_string(),
+        label: None,
     });
 }
 

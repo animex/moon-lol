@@ -46,7 +46,7 @@ pub enum PropPath {
 #[derive(Event, Debug, Clone)]
 pub struct CommandLoadPropBin {
     pub path: PropPath,
-    pub label: String,
+    pub label: Option<String>,
 }
 
 impl PropPath {
@@ -64,11 +64,9 @@ fn on_command_load_prop_bin(
     mut res_league_property_files: ResMut<LeaguePropertyFiles>,
     mut res_active_prop_loads: ResMut<ActivePropLoads>,
 ) {
-    debug!(
-        "{} 配置文件开始加载，一共 {} 个",
-        event.label,
-        event.path.len()
-    );
+    if let Some(label) = &event.label {
+        info!("{} 配置文件开始加载，一共 {} 个", label, event.path.len());
+    }
 
     let mut handles = Vec::new();
     let mut load = |hash_path: HashPath| {
@@ -97,11 +95,13 @@ fn on_command_load_prop_bin(
     }
 
     if !handles.is_empty() {
-        res_active_prop_loads
-            .map
-            .entry(event.label.clone())
-            .or_default()
-            .extend(handles);
+        if let Some(label) = &event.label {
+            res_active_prop_loads
+                .map
+                .entry(label.clone())
+                .or_default()
+                .extend(handles);
+        }
     } else {
         // 如果没有新资源加载，可能已经加载完成，或者本来就是空的
         // 这里我们不直接触发 EventLoadPropEnd，因为可能还有正在加载的资源
@@ -138,7 +138,7 @@ fn update_collect_properties(
             // 如果递归加载的资源也需要通知完成，我们需要在 ActivePropLoads 中跟踪
             commands.trigger(CommandLoadPropBin {
                 path: PropPath::Path(league_properties.1.clone()),
-                label: "link".to_string(), // 暂时留空，或者需要一种方式传递 label
+                label: None,
             });
 
             false
@@ -156,7 +156,7 @@ fn update_collect_properties(
     for label in finished_labels {
         res_active_prop_loads.map.remove(&label);
         if !label.is_empty() {
-            debug!("{} 配置文件加载完成", label);
+            info!("{} 配置文件加载完成", label);
             commands.trigger(EventLoadPropEnd { label });
         }
     }

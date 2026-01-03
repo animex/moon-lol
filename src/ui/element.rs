@@ -69,11 +69,9 @@ pub fn startup_load_ui(mut commands: Commands) {
         "gameplay.lolfloatinginfobars.bin".to_string(),
     ];
 
-    info!("gameplay 系列配置文件开始加载");
-
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Path(paths),
-        label: "gameplay 系列".to_string(),
+        label: Some("gameplay 系列".to_string()),
     });
 }
 
@@ -89,10 +87,6 @@ pub fn on_event_load_prop_end_ui_gameplay(
         return;
     }
 
-    info!("gameplay 系列配置文件加载完成");
-
-    info!("ui 配置文件开始加载");
-
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Hash(
             res_assets_ui_property_loadable
@@ -100,7 +94,7 @@ pub fn on_event_load_prop_end_ui_gameplay(
                 .map(|v| v.1.filepath_hash)
                 .collect(),
         ),
-        label: "label_ui".to_string(),
+        label: Some("ui 系列".to_string()),
     });
 }
 
@@ -112,11 +106,9 @@ pub fn on_event_load_prop_end_ui(
     res_assets_ui_element_icon_data: Res<Assets<UiElementIconData>>,
     res_assets_ui_scene_data: Res<Assets<UiSceneData>>,
 ) {
-    if event.label != "label_ui" {
+    if event.label != "ui 系列" {
         return;
     }
-
-    info!("ui 配置文件加载完成");
 
     info!("开始初始化 ui 元素");
 

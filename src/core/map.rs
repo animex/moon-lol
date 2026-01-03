@@ -91,7 +91,7 @@ fn startup_load_map_geometry(
 
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Path(paths),
-        label: "Map".to_string(),
+        label: None,
     });
 
     commands.insert_resource(Loading::new(res_asset_server.load_league::<ConfigMapGeo>(

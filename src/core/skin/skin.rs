@@ -32,7 +32,7 @@ pub fn on_command_skin_spawn(trigger: On<CommandSkinSpawn>, mut commands: Comman
 
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Path(paths),
-        label: "Skin".to_string(),
+        label: None,
     });
 
     commands
