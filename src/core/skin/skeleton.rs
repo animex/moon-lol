@@ -4,7 +4,6 @@ use bevy::mesh::skinning::{SkinnedMesh, SkinnedMeshInverseBindposes};
 use bevy::prelude::*;
 use league_file::LeagueSkeleton;
 use league_utils::hash_joint;
-use lol_config::{HashKey, LoadHashKeyTrait};
 
 use crate::{AssetServerLoadLeague, Loading};
 

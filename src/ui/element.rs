@@ -147,6 +147,11 @@ pub fn on_event_load_prop_end_ui(
             }
         }
 
+        // 应该根据技能是否可释放来显示，暂时全部显示为可用
+        if ui.name.contains("_BorderAvailable") {
+            commands.entity(entity).insert(Visibility::Visible);
+        }
+
         res_ui_element_entity.map.insert(hash_bin(&ui.name), entity);
     }
 

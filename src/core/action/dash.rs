@@ -2,12 +2,13 @@ use std::collections::HashSet;
 
 use bevy::prelude::*;
 use bevy_behave::prelude::{BehaveCtx, BehaveTrigger};
+use lol_config::ConfigNavigationGrid;
 use lol_core::Team;
 
 use super::{TargetDamage, TargetFilter};
 use crate::{
     Champion, CommandDamageCreate, CommandMovement, EventMovementEnd, Minion, MovementAction,
-    MovementWay, SkillEffectContext,
+    MovementWay, ResourceGrid, SkillEffectContext,
 };
 
 #[derive(Debug, Clone)]
@@ -45,6 +46,8 @@ pub fn on_action_dash(
     mut commands: Commands,
     q_transform: Query<&Transform>,
     q_skill_effect_ctx: Query<&SkillEffectContext>,
+    res_grid: Res<ResourceGrid>,
+    assets_grid: Res<Assets<ConfigNavigationGrid>>,
 ) {
     let ctx = trigger.ctx();
     let entity = ctx.target_entity();
@@ -73,6 +76,19 @@ pub fn on_action_dash(
                 transform.translation.xz() + direction * max
             }
         }
+    };
+
+    let destination = if let Some(grid) = assets_grid.get(&res_grid.0) {
+        let grid_pos = grid.get_cell_xy_by_position(&destination);
+        if let Some(new_grid_pos) =
+            crate::core::navigation::find_nearest_walkable_cell(grid, grid_pos)
+        {
+            grid.get_cell_center_position_by_xy(new_grid_pos).xz()
+        } else {
+            destination
+        }
+    } else {
+        destination
     };
 
     if let Some(damage) = &event.damage {
