@@ -17,7 +17,17 @@ pub struct CommandUiAnimationStart {
     pub key: String,
 }
 
-pub fn on_command_ui_animation_start(
+#[derive(Default)]
+pub struct PluginUIAnimation;
+
+impl Plugin for PluginUIAnimation {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, update_ui_animation);
+        app.add_observer(on_command_ui_animation_start);
+    }
+}
+
+fn on_command_ui_animation_start(
     event: On<CommandUiAnimationStart>,
     mut commands: Commands,
     res_asset_server: Res<AssetServer>,
@@ -45,7 +55,7 @@ pub fn on_command_ui_animation_start(
     ));
 }
 
-pub fn update_ui_animation(
+fn update_ui_animation(
     mut commands: Commands,
     mut q_ui_animation_state: Query<(Entity, &mut UiAnimationState)>,
     res_ui_animation: Res<Assets<UiElementEffectAnimationData>>,

@@ -1,14 +1,19 @@
-use std::collections::HashMap;
-
 use bevy::prelude::*;
 use league_core::{UiElementGroupButtonData, UiElementRegionData};
 use lol_config::{HashKey, LoadHashKeyTrait};
 
-use crate::{UIElement, UIElementEntity};
+use crate::{UIElement, UIElementEntity, UIState};
 
-#[derive(Resource, Default)]
-pub struct UIButtonEntity {
-    pub map: HashMap<u32, Entity>,
+#[derive(Default)]
+pub struct PluginUIButton;
+
+impl Plugin for PluginUIButton {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Startup, startup_spawn_buttons);
+        app.add_systems(Update, update_button.run_if(in_state(UIState::Loaded)));
+        app.add_observer(on_command_spawn_button);
+        app.add_observer(on_command_despawn_button);
+    }
 }
 
 #[derive(Component)]
@@ -28,7 +33,7 @@ pub struct CommandDespawnButton {
     pub entity: Entity,
 }
 
-pub fn startup_spawn_buttons(
+fn startup_spawn_buttons(
     mut commands: Commands,
     res_assets_ui_element_group_button_data: Res<Assets<UiElementGroupButtonData>>,
 ) {
@@ -50,7 +55,7 @@ pub fn startup_spawn_buttons(
     }
 }
 
-pub fn on_command_spawn_button(
+fn on_command_spawn_button(
     trigger: On<CommandSpawnButton>,
     mut commands: Commands,
     res_assets_ui_element_group_button_data: Res<Assets<UiElementGroupButtonData>>,
@@ -82,7 +87,7 @@ pub fn on_command_spawn_button(
     }
 }
 
-pub fn on_command_despawn_button(
+fn on_command_despawn_button(
     trigger: On<CommandDespawnButton>,
     mut commands: Commands,
     q_ui_button: Query<&UIButton>,
@@ -107,7 +112,7 @@ pub fn on_command_despawn_button(
     }
 }
 
-pub fn update_button(
+fn update_button(
     mut commands: Commands,
     mut interaction_query: Query<(&Interaction, &UIButton), Changed<Interaction>>,
     res_assets_ui_element_group_button_data: Res<Assets<UiElementGroupButtonData>>,

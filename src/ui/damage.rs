@@ -3,6 +3,16 @@ use bevy::prelude::*;
 
 use crate::{DamageType, EventDamageCreate};
 
+#[derive(Default)]
+pub struct PluginUIDamage;
+
+impl Plugin for PluginUIDamage {
+    fn build(&self, app: &mut App) {
+        app.add_systems(Update, update_damage_numbers);
+        app.add_observer(on_event_damage_create);
+    }
+}
+
 /// 伤害数字组件 - 用于显示飘动的伤害数字
 #[derive(Component)]
 pub struct DamageNumber {
@@ -23,7 +33,7 @@ pub struct DamageNumber {
 }
 
 /// 监听伤害事件并创建伤害数字
-pub fn on_event_damage_create(
+fn on_event_damage_create(
     trigger: On<EventDamageCreate>,
     mut commands: Commands,
     global_transform: Query<&GlobalTransform>,
@@ -72,7 +82,7 @@ pub fn on_event_damage_create(
 }
 
 /// 更新伤害数字的动画效果
-pub fn update_damage_numbers(
+fn update_damage_numbers(
     mut commands: Commands,
     time: Res<Time>,
     camera_info: Single<(&Camera, &GlobalTransform), With<Camera3d>>,

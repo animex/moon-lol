@@ -4,7 +4,7 @@ use lol_config::LoadHashKeyTrait;
 
 use crate::{
     AbilityResource, AssetServerLoadLeague, CommandUpdateUIElement, Controller, Health, Level,
-    NodeType, SizeType, Skin, UIElementEntity,
+    NodeType, SizeType, Skin, UIElementEntity, UIState,
 };
 
 #[derive(Component, Reflect, Default)]
@@ -14,7 +14,25 @@ pub struct HealthFade {
     pub max: f32,
 }
 
-pub fn update_level(
+#[derive(Default)]
+pub struct PluginUIPlayer;
+
+impl Plugin for PluginUIPlayer {
+    fn build(&self, app: &mut App) {
+        app.add_systems(
+            Update,
+            (
+                update_level,
+                update_player_health,
+                update_player_health_fade,
+                update_player_ability_resource,
+                update_player_icon.run_if(in_state(UIState::Loaded).and(run_once)),
+            ),
+        );
+    }
+}
+
+fn update_level(
     mut commands: Commands,
     res_ui_element_entity: Res<UIElementEntity>,
     q_level: Query<&Level, With<Controller>>,
@@ -35,7 +53,7 @@ pub fn update_level(
     });
 }
 
-pub fn update_player_health(
+fn update_player_health(
     mut commands: Commands,
     res_ui_element_entity: Res<UIElementEntity>,
     q_health: Query<&Health, With<Controller>>,
@@ -60,7 +78,7 @@ pub fn update_player_health(
     });
 }
 
-pub fn update_player_health_fade(
+fn update_player_health_fade(
     mut commands: Commands,
     time: Res<Time>,
     res_ui_element_entity: Res<UIElementEntity>,
@@ -128,7 +146,7 @@ pub fn update_player_health_fade(
     });
 }
 
-pub fn update_player_ability_resource(
+fn update_player_ability_resource(
     mut commands: Commands,
     res_ui_element_entity: Res<UIElementEntity>,
     q_ability_resource: Query<&AbilityResource, With<Controller>>,
@@ -152,7 +170,7 @@ pub fn update_player_ability_resource(
     });
 }
 
-pub fn update_player_icon(
+fn update_player_icon(
     asset_server: Res<AssetServer>,
     mut commands: Commands,
     mut q_image_node: Query<&mut ImageNode>,
