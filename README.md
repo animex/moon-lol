@@ -6,6 +6,8 @@
 
 `moon-lol` is a League of Legends remake project developed using the Bevy engine. Leveraging the high performance of Rust and Bevy's modern ECS architecture, this project implements the parsing and loading of LoL resource files (WAD, PROP, TEX, etc.) and has initially built the combat system, skill system, and UI interface.
 
+![riven](docs/riven.gif)
+
 ## 快速开始 / Quick Start
 
 请按照以下步骤准备资源并运行游戏示例：
