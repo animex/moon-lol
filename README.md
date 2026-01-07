@@ -24,9 +24,9 @@ Before running the game, you need to extract resource files from your local Leag
 cargo run --example extract
 ```
 
-> **注意**：运行前请确保 `examples/extract.rs` 中的 `root_dir` 路径指向你本地的英雄联盟游戏目录（例如 `D:\WeGameApps\英雄联盟\Game`）。提取后的资源将存放在 `assets/data` 目录下。
+> **注意**：运行前请确保 `examples/extract.rs` 中的 `root_dir` 路径指向你本地的英雄联盟游戏目录（例如 `D:\WeGameApps\英雄联盟\Game`）。提取后的资源将存放在 `assets/data` 目录下。提取的资源文件较大（约 8GB），包含约 4.7 万个文件。
 >
-> **Note**: Before running, ensure that the `root_dir` path in `examples/extract.rs` points to your local League of Legends game directory (e.g., `D:\WeGameApps\League of Legends\Game`). The extracted resources will be stored in the `assets/data` directory.
+> **Note**: Before running, ensure that the `root_dir` path in `examples/extract.rs` points to your local League of Legends game directory (e.g., `D:\WeGameApps\League of Legends\Game`). The extracted resources will be stored in the `assets/data` directory. The extracted resource files are quite large (approx. 8GB) and contain about 47,000+ files.
 
 ### 2. 开始游戏 / Start Game
 
