@@ -11,7 +11,7 @@ use league_utils::hash_bin;
 use rayon::prelude::*;
 
 fn main() {
-    let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";
+    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
 
     let start = Instant::now();
 

@@ -25,7 +25,7 @@ fn get_hashes_u64(path: &str) -> HashMap<u64, String> {
 }
 
 fn main() {
-    let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";
+    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
     let output_base_dir = "assets/extract_prop_bins";
 
     if !Path::new(root_dir).exists() {

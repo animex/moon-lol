@@ -9,7 +9,7 @@ use league_utils::get_extension_by_bytes;
 use rayon::prelude::*;
 
 fn main() {
-    let root_dir = r"D:\Program Files\Riot Games\League of Legends\Game";
+    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
 
     let start = Instant::now();
 
@@ -17,7 +17,7 @@ fn main() {
         root_dir,
         vec![
             "DATA/FINAL/UI.wad.client",
-            "DATA/FINAL/UI.zh_MY.wad.client",
+            "DATA/FINAL/UI.zh_CN.wad.client",
             "DATA/FINAL/Maps/Shipping/Map11.wad.client",
             "DATA/FINAL/Champions/Riven.wad.client",
             "DATA/FINAL/Champions/Fiora.wad.client",
