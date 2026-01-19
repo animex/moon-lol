@@ -1,6 +1,6 @@
-# windows
+# Windows
 
-## rust 默认设置
+## Rust Default Settings
 
 cargo 1.90.0 (840b83a10 2025-07-30)
 
@@ -10,47 +10,47 @@ info: The currently active `rustc` version is `rustc 1.90.0 (1159e78c4 2025-09-1
 
 ### cargo check
 
-- 什么也不修改
+- No modifications
   0.38s
-- 修改 src 中的内容
+- Modify content in src
   1.87s
-- 修改 crates 中的内容
+- Modify content in crates
   2.61s
 
 ### cargo run
 
-- 修改 src 中的内容
+- Modify content in src
   13.27s
   13.22s
   13.34s
-- 修改 crates 中的内容
+- Modify content in crates
   11.35s
   11.57s
   11.43s
 
-## 开启编译优化
+## Enable Compilation Optimization
 
-- 开启 rust nightly
-- 开启 share-generics
-- 开启 threads
-- 使用 lld
+- Enable rust nightly
+- Enable share-generics
+- Enable threads
+- Use lld
 
 ### cargo check
 
-- 什么也不修改
+- No modifications
   0.43s
-- 修改 src 中的内容
+- Modify content in src
   1.98s
-- 修改 crates 中的内容
+- Modify content in crates
   2.61s
 
 ### cargo run
 
-- 修改 src 中的内容
+- Modify content in src
   14.06s
   14.10s
   14.07s
-- 修改 crates 中的内容
+- Modify content in crates
   11.57s
   11.69s
   11.62s

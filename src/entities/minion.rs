@@ -76,7 +76,7 @@ pub fn fixed_update(
             Vec3::new(p.x, transform.translation.y, p.y)
         };
 
-        debug!("{} 寻路到 {}", entity, path[closest_index]);
+        debug!("{} pathfinding to {}", entity, path[closest_index]);
         commands.trigger(CommandMovement {
             entity,
             priority: 0,
@@ -151,17 +151,17 @@ fn find_closest_point_index(path: &Vec<Vec2>, position: Vec2) -> Option<usize> {
         }
     }
 
-    // 确保不往回走，如果找到的最近点不是第一个点，检查是否应该选择下一个点
+    // Ensure not going backwards, if the closest point found is not the first point, check if we should select the next point
     if closest_index > 0 {
         let prev_point = path[closest_index - 1];
         let curr_point = path[closest_index];
 
-        // 计算从前一个点到当前点的方向向量
+        // Calculate direction vector from previous point to current point
         let path_direction = (curr_point - prev_point).normalize();
-        // 计算从前一个点到当前位置的向量
+        // Calculate vector from previous point to current position
         let position_direction = (position - prev_point).normalize();
 
-        // 如果当前位置在路径方向的前方，选择当前点；否则选择下一个点（如果存在）
+        // If current position is ahead in the path direction, select current point; otherwise select next point (if exists)
         if path_direction.dot(position_direction) > 0.0 && closest_index + 1 < path.len() {
             closest_index += 1;
         }

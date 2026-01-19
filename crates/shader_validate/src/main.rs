@@ -7,117 +7,117 @@ use std::fs;
 use glfw::{Context, OpenGlProfileHint, WindowHint};
 
 fn main() {
-    println!("正在初始化GLFW以获取OpenGL上下文...");
+    println!("Initializing GLFW to obtain OpenGL context...");
 
-    // 1. 初始化 GLFW
-    let mut glfw = glfw::init(glfw::fail_on_errors).expect("初始化GLFW失败");
+    // 1. Initialize GLFW
+    let mut glfw = glfw::init(glfw::fail_on_errors).expect("Failed to initialize GLFW");
 
-    // 2. 请求 OpenGL 3.2 Core Profile (GLSL 150 对应 OpenGL 3.2)
+    // 2. Request OpenGL 3.2 Core Profile (GLSL 150 corresponds to OpenGL 3.2)
     glfw.window_hint(WindowHint::ContextVersion(3, 2));
     glfw.window_hint(WindowHint::OpenGlProfile(OpenGlProfileHint::Core));
     glfw.window_hint(WindowHint::OpenGlForwardCompat(true));
 
-    // 3. 创建一个隐藏的窗口来承载上下文
+    // 3. Create a hidden window to host the context
     glfw.window_hint(WindowHint::Visible(false));
     let (mut window, _events) = glfw
         .create_window(100, 100, "Shader Compile Test", glfw::WindowMode::Windowed)
-        .expect("创建GLFW窗口失败");
+        .expect("Failed to create GLFW window");
 
-    // 4. 激活上下文并加载GL函数
+    // 4. Activate context and load GL functions
     window.make_current();
     gl::load_with(|symbol| window.get_proc_address(symbol) as *const _);
 
-    println!("OpenGL上下文已创建。");
+    println!("OpenGL context created.");
 
-    // --- 修改的部分 ---
+    // --- Modified section ---
 
-    // 5. 定义你的输入
+    // 5. Define your input
     let shader_path = "src/my_shader.frag";
 
-    // 6. 读取Shader源文件
+    // 6. Read Shader source file
     let shader_source_code = match fs::read_to_string(shader_path) {
         Ok(code) => code,
         Err(e) => {
-            eprintln!("错误: 无法读取Shader文件 '{}': {}", shader_path, e);
+            eprintln!("Error: Unable to read Shader file '{}': {}", shader_path, e);
             return;
         }
     };
 
-    // 7. 编译Shader
-    println!("正在编译 {}...", shader_path);
+    // 7. Compile Shader
+    println!("Compiling {}...", shader_path);
     //
-    // *** 关键修改点 1: 更新函数调用 ***
-    // 我们不再传入 version 和 macros
+    // *** Key modification 1: Update function call ***
+    // We no longer pass in version and macros
     //
     match compile_shader(
         gl::FRAGMENT_SHADER,
-        &shader_source_code, // 只传入从文件读取的完整源码
+        &shader_source_code, // Only pass in the complete source code read from file
     ) {
         Ok(shader_id) => {
             println!("\n===================================");
-            println!("✅ Shader编译成功！");
+            println!("Shader compilation successful!");
             println!("===================================");
-            // 别忘了清理
+            // Don't forget to clean up
             unsafe {
                 gl::DeleteShader(shader_id);
             }
         }
         Err(error_log) => {
             eprintln!("\n===================================");
-            eprintln!("❌ Shader编译失败！");
+            eprintln!("Shader compilation failed!");
             eprintln!("===================================");
-            eprintln!("错误日志:\n{}", error_log);
+            eprintln!("Error log:\n{}", error_log);
         }
     }
 }
 
 //
-// *** 关键修改点 2: 简化函数签名 ***
+// *** Key modification 2: Simplify function signature ***
 //
-/// 编译一个Shader并返回其ID，或者返回错误日志
+/// Compile a Shader and return its ID, or return the error log
 fn compile_shader(
     shader_type: gl::types::GLenum,
-    source: &str, // 只接收一个完整的源码字符串
+    source: &str, // Only accepts a complete source code string
 ) -> Result<gl::types::GLuint, String> {
     unsafe {
         let shader = gl::CreateShader(shader_type);
 
-        // 8. 准备C字符串 (只需要一个)
+        // 8. Prepare C string (only need one)
         let c_str_source = match CString::new(source.as_bytes()) {
             Ok(c) => c,
-            Err(e) => return Err(format!("Shader源码中包含非法的NUL字符: {}", e)),
+            Err(e) => return Err(format!("Shader source contains illegal NUL character: {}", e)),
         };
 
-        // 9. 组合Shader源 (数组只有一个元素)
+        // 9. Combine Shader sources (array has only one element)
         //
-        // *** 关键修改点 3: sources 数组 ***
+        // *** Key modification 3: sources array ***
         //
         let sources = [c_str_source.as_ptr()];
 
-        // 10. 设置Shader源码
+        // 10. Set Shader source code
         gl::ShaderSource(
             shader,
-            sources.len() as i32, // 这里会传入 1
-            sources.as_ptr(),     // 指向这个单元素数组
+            sources.len() as i32, // This will pass in 1
+            sources.as_ptr(),     // Points to this single-element array
             std::ptr::null(),
         );
 
-        // 11. 编译!
+        // 11. Compile!
         gl::CompileShader(shader);
 
-        // 12. 检查编译状态 (这部分代码不变)
+        // 12. Check compilation status (this part of code remains unchanged)
         let mut success = gl::FALSE as gl::types::GLint;
         gl::GetShaderiv(shader, gl::COMPILE_STATUS, &mut success);
 
         if success == gl::TRUE as gl::types::GLint {
             Ok(shader)
         } else {
-            // 13. 获取错误日志 (这部分代码不变)
+            // 13. Get error log (this part of code remains unchanged)
             let mut len = 0;
             gl::GetShaderiv(shader, gl::INFO_LOG_LENGTH, &mut len);
 
             let mut buffer: Vec<u8> = Vec::with_capacity(len as usize);
-            // len包含null终止符，所以我们减1
+            // len includes null terminator, so we subtract 1
             buffer.set_len((len as usize).saturating_sub(1));
 
             gl::GetShaderInfoLog(
@@ -127,11 +127,11 @@ fn compile_shader(
                 buffer.as_mut_ptr() as *mut gl::types::GLchar,
             );
 
-            // 编译失败，删除这个shader对象
+            // Compilation failed, delete this shader object
             gl::DeleteShader(shader);
 
             Err(String::from_utf8(buffer)
-                .unwrap_or_else(|e| format!("无法解码Shader错误日志: {}", e)))
+                .unwrap_or_else(|e| format!("Unable to decode Shader error log: {}", e)))
         }
     }
 }

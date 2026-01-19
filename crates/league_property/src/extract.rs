@@ -34,7 +34,7 @@ pub fn class_map_to_rust_code(
     need_extract: &HashSet<u32>,
     need_defaults: &HashSet<u32>,
 ) -> Result<(String, String), Error> {
-    // 1. 收集所有枚举信息
+    // 1. Collect all enum information
     let mut enums = Vec::new();
     for (_, class_fields) in class_map.iter() {
         for (_, field_data) in class_fields.iter() {
@@ -42,7 +42,7 @@ pub fn class_map_to_rust_code(
         }
     }
 
-    // 2. 合并有交集的枚举
+    // 2. Merge enums with intersections
     let merged_enums = merge_enums(enums);
 
     let mut merged_enum_map: HashMap<u32, EnumInfo> = HashMap::new();
@@ -77,17 +77,17 @@ pub fn class_map_to_rust_code(
     }
     let merged_enums = merged_enum_map;
 
-    // 3. 检测循环类型
+    // 3. Detect cyclic types
     let cyclic_types = detect_cyclic_types(class_map, &merged_enums);
 
-    // 用于收集所有的定义，最后统一排序
+    // Used to collect all definitions, sort at the end
     let mut all_generated_items: Vec<GeneratedItem> = Vec::new();
 
-    // 4. 生成枚举定义
+    // 4. Generate enum definitions
     let generated_enum_items = generate_enum_definitions(&merged_enums, class_map, hashes);
     all_generated_items.extend(generated_enum_items);
 
-    // 6. 生成结构体定义
+    // 6. Generate struct definitions
     for (class_hash, class_data) in class_map.iter() {
         let class_name = hash_to_type_name(class_hash, hashes);
 
@@ -108,7 +108,7 @@ pub fn class_map_to_rust_code(
         struct_def.push_str("#[serde(rename_all = \"camelCase\")]\n");
         struct_def.push_str(&format!("pub struct {} {{\n", class_name));
 
-        // 对字段按名称排序
+        // Sort fields by name
         let mut sorted_fields: Vec<_> = class_data.iter().collect();
         sorted_fields.sort_by(|(h1, _), (h2, _)| {
             let name1 = hash_to_field_name(*h1, hashes);
@@ -144,10 +144,10 @@ pub fn class_map_to_rust_code(
         });
     }
 
-    // 7. 对所有生成的项（Enum 和 Struct）按名称排序
+    // 7. Sort all generated items (Enum and Struct) by name
     all_generated_items.sort_by(|a, b| a.name.cmp(&b.name));
 
-    // 8. 拼接结果
+    // 8. Concatenate results
     let mut all_definitions = String::new();
     for item in all_generated_items {
         all_definitions.push_str(&item.code);
@@ -213,7 +213,7 @@ fn merge_enums(enums: Vec<HashSet<u32>>) -> Vec<HashSet<u32>> {
     let mut merged_groups: Vec<HashSet<u32>> = Vec::new();
 
     for new_set in enums {
-        // 1. 找出所有与当前 new_set 有交集的组的索引
+        // 1. Find indices of all groups that intersect with current new_set
         let mut connected_indices: Vec<usize> = Vec::new();
         for (idx, group) in merged_groups.iter().enumerate() {
             if !group.is_disjoint(&new_set) {
@@ -222,33 +222,33 @@ fn merge_enums(enums: Vec<HashSet<u32>>) -> Vec<HashSet<u32>> {
         }
 
         if connected_indices.is_empty() {
-            // 没有交集，作为新组添加
+            // No intersection, add as new group
             merged_groups.push(new_set);
             continue;
         }
 
-        // 2. 有交集，需要将 new_set 和所有相关的组融合成一个
-        // 按索引从大到小排序，以便从后往前移除，防止索引失效
+        // 2. Has intersection, need to merge new_set with all related groups into one
+        // Sort indices from large to small, to remove from back to front, preventing index invalidation
         connected_indices.sort_by(|a, b| b.cmp(a));
 
-        // 取出这些索引中最小的一个作为“目标宿主”
+        // Take the smallest index as "target host"
         let target_idx = connected_indices.pop().unwrap();
 
-        // 先把 new_set 融合进宿主
+        // First merge new_set into host
         merged_groups[target_idx].extend(new_set);
 
-        // 把其他有交集的组全部吸收到 target_idx 中，并从列表中移除
+        // Absorb all other intersecting groups into target_idx and remove from list
         for remove_idx in connected_indices {
             let removed_group = merged_groups.remove(remove_idx);
             merged_groups[target_idx].extend(removed_group);
         }
     }
 
-    // 转换结果为 EnumInfo
+    // Convert result to EnumInfo
     merged_groups
 }
 
-// 提取出来的辅助函数，用于生成 EnumInfo，减少主函数缩进
+// Helper function extracted to generate EnumInfo, reducing main function indentation
 fn generate_enum_info(
     variants_set: HashSet<u32>,
     hashes: &HashMap<u32, String>,
@@ -259,7 +259,7 @@ fn generate_enum_info(
         .collect();
 
     let name = if variant_names.is_empty() {
-        // 如果没有名字，使用哈希值的十六进制表示兜底
+        // If no name, use hex representation of hash as fallback
         let mut unnamed: Vec<String> = variants_set
             .iter()
             .map(|v| hash_to_type_name(v, hashes))
@@ -268,7 +268,7 @@ fn generate_enum_info(
         unnamed.first().cloned().unwrap()
     } else {
         variant_names.sort();
-        // 尝试寻找公共子串作为枚举名
+        // Try to find common substring as enum name
         if let Some(name) = find_longest_common_capitalized_substring(variant_names.clone()) {
             if name.len() < 3 {
                 variant_names.first().unwrap().clone()
@@ -498,7 +498,7 @@ fn map_base_type(bin_type: &BinType) -> String {
         BinType::Hash => "u32".to_string(),
         BinType::Link => "u32".to_string(),
         BinType::Flag => "bool".to_string(),
-        _ => panic!("不是基础类型: {:?}", bin_type),
+        _ => panic!("Not a base type: {:?}", bin_type),
     }
 }
 

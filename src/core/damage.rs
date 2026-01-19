@@ -3,7 +3,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{BuffDamageReduction, BuffShieldMagic, BuffShieldWhite, Buffs, Health};
 
-/// 伤害系统插件
+/// Damage system plugin
 #[derive(Default)]
 pub struct PluginDamage;
 
@@ -20,26 +20,26 @@ pub struct Damage(pub f32);
 #[derive(Component, Clone, Serialize, Deserialize)]
 pub struct Armor(pub f32);
 
-/// 伤害类型枚举
+/// Damage type enum
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum DamageType {
-    /// 物理伤害
+    /// Physical damage
     Physical,
-    /// 魔法伤害
+    /// Magic damage
     Magic,
-    /// 真实伤害（无视所有防御）
+    /// True damage (ignores all defenses)
     True,
 }
 
-/// 伤害事件，包含伤害来源、目标、伤害类型和数值
+/// Damage event containing damage source, target, damage type and value
 #[derive(EntityEvent, Debug)]
 pub struct CommandDamageCreate {
     pub entity: Entity,
-    /// 伤害来源实体
+    /// Damage source entity
     pub source: Entity,
-    /// 伤害类型
+    /// Damage type
     pub damage_type: DamageType,
-    /// 伤害数值
+    /// Damage value
     pub amount: f32,
 }
 
@@ -51,24 +51,24 @@ pub struct EventDamageCreate {
     pub damage_result: DamageResult,
 }
 
-/// 伤害计算结果
+/// Damage calculation result
 #[derive(Debug)]
 pub struct DamageResult {
-    /// 最终造成的伤害
+    /// Final damage dealt
     pub final_damage: f32,
-    /// 被白色护盾吸收的伤害
+    /// Damage absorbed by white shield
     pub white_shield_absorbed: f32,
-    /// 被魔法护盾吸收的伤害
+    /// Damage absorbed by magic shield
     pub magic_shield_absorbed: f32,
-    /// 被减免的伤害
+    /// Damage reduced
     pub reduced_damage: f32,
-    /// 被护甲减免的伤害
+    /// Damage reduced by armor
     pub armor_reduced_damage: f32,
-    /// 原始伤害
+    /// Original damage
     pub original_damage: f32,
 }
 
-/// 伤害系统 - 处理伤害事件
+/// Damage system - handles damage events
 pub fn on_command_damage_create(
     trigger: On<CommandDamageCreate>,
     mut commands: Commands,
@@ -78,15 +78,15 @@ pub fn on_command_damage_create(
     q_damage_reduction: Query<&BuffDamageReduction>,
 ) {
     debug!(
-        "{:?} 对 {:?} 造成 {:.1} 点 {:?} 伤害",
+        "{:?} dealt {:.1} {:?} damage to {:?}",
         trigger.source,
-        trigger.event_target(),
         trigger.amount,
         trigger.damage_type,
+        trigger.event_target(),
     );
 
     let Ok((mut health, armor, buffs)) = query.get_mut(trigger.event_target()) else {
-        debug!("未找到伤害目标实体 {:?}", trigger.event_target());
+        debug!("Damage target entity not found {:?}", trigger.event_target());
         return;
     };
 
@@ -99,11 +99,11 @@ pub fn on_command_damage_create(
     let mut reduced_damage = 0.0;
     let mut armor_reduced_damage = 0.0;
 
-    // 真实伤害无视所有防御机制
+    // True damage ignores all defense mechanisms
     if trigger.damage_type == DamageType::True {
         health.value -= remaining_damage;
     } else {
-        // 对物理伤害应用护甲减伤
+        // Apply armor reduction to physical damage
         if trigger.damage_type == DamageType::Physical {
             if let Some(armor_val) = armor_value {
                 if armor_val > 0.0 {
@@ -114,13 +114,13 @@ pub fn on_command_damage_create(
             }
         }
 
-        // 应用伤害减免buff
+        // Apply damage reduction buffs
         if let Some(target_buffs) = buffs {
             let mut total_reduction = 0.0;
             for buff_entity in target_buffs.iter() {
                 if let Ok(reduction) = q_damage_reduction.get(buff_entity) {
                     if reduction.applies_to(trigger.damage_type) {
-                        // 使用乘法叠加公式：总减免 = 1 - (1 - r1) * (1 - r2) * ...
+                        // Use multiplicative stacking formula: total reduction = 1 - (1 - r1) * (1 - r2) * ...
                         total_reduction =
                             1.0 - (1.0 - total_reduction) * (1.0 - reduction.percentage);
                     }
@@ -133,7 +133,7 @@ pub fn on_command_damage_create(
             }
         }
 
-        // 应用护盾（白色护盾优先）
+        // Apply shields (white shield takes priority)
         if let Some(target_buffs) = buffs {
             for buff_entity in target_buffs.iter() {
                 if let Ok(mut shield) = q_shield_white.get_mut(buff_entity) {
@@ -147,7 +147,7 @@ pub fn on_command_damage_create(
             }
         }
 
-        // 如果是魔法伤害且还有剩余伤害，应用魔法护盾
+        // If magic damage and there's remaining damage, apply magic shield
         if trigger.damage_type == DamageType::Magic && remaining_damage > 0.0 {
             if let Some(target_buffs) = buffs {
                 for buff_entity in target_buffs.iter() {
@@ -176,7 +176,7 @@ pub fn on_command_damage_create(
     };
 
     debug!(
-        "伤害已应用 {:?} -> {:?} 类型 {:?} 原始伤害 {:.1} 最终伤害 {:.1} 生命值 {:.1} -> {:.1} 护甲减免 {:.1} 白盾吸收 {:.1} 魔盾吸收 {:.1} 减伤 {:.1}",
+        "Damage applied {:?} -> {:?} type {:?} original {:.1} final {:.1} health {:.1} -> {:.1} armor reduced {:.1} white shield {:.1} magic shield {:.1} reduced {:.1}",
         trigger.source,
         trigger.event_target(),
         trigger.damage_type,
@@ -199,7 +199,7 @@ pub fn on_command_damage_create(
 
     if health.value <= 0.0 {
         debug!(
-            "{:?} 生命值降至 {:.1} 已达到死亡阈值",
+            "{:?} health dropped to {:.1}, death threshold reached",
             trigger.event_target(),
             health.value
         );

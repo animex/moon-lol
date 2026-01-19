@@ -1,48 +1,48 @@
-# 资源管理方案
+# Asset Management Solutions
 
-## 全部直接从 wad 文件中读取
+## Read Directly from WAD Files
 
-### 优点
+### Advantages
 
-1. 硬盘上没有冗余的资源文件
-2. 不需要提取
+1. No redundant resource files on disk
+2. No extraction needed
 
-### 缺点
+### Disadvantages
 
-1. 加载可能会慢（未验证）
-2. 无法利用 bevy asset 系统
-3. 当 wad 结构更新，而游戏没有更新，就无法打开旧版游戏
+1. Loading may be slow (unverified)
+2. Cannot utilize bevy asset system
+3. When WAD structure updates but game hasn't updated, cannot open old game version
 
-## 按需从 wad 提取资源到 assets
+## Extract Resources from WAD to Assets On-Demand
 
-### 优点
+### Advantages
 
-1. 可能加载更快（未验证）
-2. 利用 bevy asset 系统
-3. wad 更新不影响提取出的文件，可以继续使用
-4. 没用到的资源文件不会被提取
-5. 可以转换为自定义格式，从而脱离英雄联盟的资源格式，并获得更高的加载性能
+1. May load faster (unverified)
+2. Utilize bevy asset system
+3. WAD updates don't affect extracted files, can continue using
+4. Unused resource files won't be extracted
+5. Can convert to custom format, decoupling from League of Legends resource format and achieving higher loading performance
 
-### 缺点
+### Disadvantages
 
-1. 需要从 wad 提取文件
-2. 硬盘上有冗余资源
-3. 按需提取和转换的代码实现复杂
+1. Need to extract files from WAD
+2. Redundant resources on disk
+3. On-demand extraction and conversion code is complex to implement
 
-## 将 wad 完全提取到 assets
+## Fully Extract WAD to Assets
 
-### 优点
+### Advantages
 
-1. 可能加载更快（未验证）
-2. 利用 bevy asset 系统
-3. wad 更新不影响提取出的文件，可以继续使用
-4. 没用到的资源文件不会被提取
-5. 提取代码实现简单
+1. May load faster (unverified)
+2. Utilize bevy asset system
+3. WAD updates don't affect extracted files, can continue using
+4. Unused resource files won't be extracted
+5. Extraction code is simple to implement
 
-### 缺点
+### Disadvantages
 
-1. 需要从 wad 提取文件
-2. 硬盘上有大量冗余资源
-3. 提取时间过长
-4. 没用到的资源文件也会被提取
-5. 只能完全使用英雄联盟的资源格式
+1. Need to extract files from WAD
+2. Large amount of redundant resources on disk
+3. Extraction takes too long
+4. Unused resource files will also be extracted
+5. Can only use League of Legends resource format completely

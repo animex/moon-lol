@@ -1,7 +1,7 @@
-不同条件下的 shader 有不同的 struct 和 uniform in out
+Shaders under different conditions have different struct and uniform in out
 
 1. struct
 
-使用字符最长的 struct
+Use the struct with the longest characters
 
 2. uniform

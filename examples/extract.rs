@@ -9,7 +9,7 @@ use league_utils::get_extension_by_bytes;
 use rayon::prelude::*;
 
 fn main() {
-    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
+    let root_dir = r"D:\WeGameApps\League of Legends\Game";
 
     let start = Instant::now();
 
@@ -25,7 +25,7 @@ fn main() {
         ],
     );
 
-    println!("加载 wad 耗时: {:?}", start.elapsed());
+    println!("Loading wad took: {:?}", start.elapsed());
 
     let dir = Path::new("assets/data");
     if !dir.exists() {
@@ -34,7 +34,7 @@ fn main() {
 
     let start = Instant::now();
 
-    // 收集所有 (wad_index, entry_hash) 任务
+    // Collect all (wad_index, entry_hash) tasks
     let tasks: Vec<_> = loader
         .wads
         .iter()
@@ -54,10 +54,10 @@ fn main() {
     tasks.par_iter().for_each(|(wad_index, hash)| {
         let wad = &loader.wads[*wad_index];
 
-        // 无论成功与否都增加计数
+        // Increment count regardless of success or failure
         let current = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
         if current % 10000 == 0 || current == total_tasks {
-            println!("已处理 {} / {} 个 entry", current, total_tasks);
+            println!("Processed {} / {} entries", current, total_tasks);
         }
 
         let Ok(buffer) = wad.get_wad_entry_buffer_by_hash(*hash) else {
@@ -73,5 +73,5 @@ fn main() {
         }
     });
 
-    println!("耗时: {:?}", start.elapsed());
+    println!("Time elapsed: {:?}", start.elapsed());
 }

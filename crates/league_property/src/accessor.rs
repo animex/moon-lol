@@ -65,7 +65,7 @@ impl<'de> SeqAccess<'de> for SeqDerReader<'de> {
 
         seed.deserialize(&mut BinDeserializer::from_bytes(value, self.vtype))
             .map(Some)
-            .map_err(|e| e.with_context(format!("列表[{}]", index)))
+            .map_err(|e| e.with_context(format!("list[{}]", index)))
     }
 }
 
@@ -111,7 +111,7 @@ impl<'de> MapAccess<'de> for MapReader<'de> {
         let mut value_de = BinDeserializer::from_bytes(value_slice, vtype);
 
         seed.deserialize(&mut value_de)
-            .map_err(|e| e.with_context(format!("字段 \"{}\" (类型: {:?})", field_name, vtype)))
+            .map_err(|e| e.with_context(format!("field \"{}\" (type: {:?})", field_name, vtype)))
     }
 }
 
@@ -134,7 +134,7 @@ impl<'de> MapAccess<'de> for HashMapReader<'de> {
 
         seed.deserialize(&mut BinDeserializer::from_bytes(key, self.ktype))
             .map(Some)
-            .map_err(|e| e.with_context("Map 键"))
+            .map_err(|e| e.with_context("Map key"))
     }
 
     fn next_value_seed<V: de::DeserializeSeed<'de>>(
@@ -144,7 +144,7 @@ impl<'de> MapAccess<'de> for HashMapReader<'de> {
         let (_, value) = self.map.pop_front().unwrap();
 
         seed.deserialize(&mut BinDeserializer::from_bytes(value, self.vtype))
-            .map_err(|e| e.with_context("Map 值"))
+            .map_err(|e| e.with_context("Map value"))
     }
 }
 
@@ -202,6 +202,6 @@ impl<'de, 'a> VariantAccess<'de> for VariantReader<'a, 'de> {
     where
         V: Visitor<'de>,
     {
-        Err(Error::Message("不支持 Tuple 变体".into()))
+        Err(Error::Message("Tuple variant not supported".into()))
     }
 }

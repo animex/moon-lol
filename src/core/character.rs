@@ -84,7 +84,7 @@ fn update_character_spawn(
 
         if let Some(primary_ability_resource) = &character_record.primary_ability_resource {
             // info!(
-            //     "{} 的 primary_ability_resource: {:#?}",
+            //     "{}'s primary_ability_resource: {:#?}",
             //     character_record.m_character_name, primary_ability_resource.ar_type
             // );
             let ar_type = AbilityResourceType::from(primary_ability_resource.ar_type);
@@ -101,7 +101,7 @@ fn update_character_spawn(
 
             commands.entity(entity).insert(ar);
         }
-        // 根据 character_record 创建组件
+        // Create components based on character_record
         let health = Health::new(character_record.base_hp.unwrap_or(0.0));
         let damage = Damage(character_record.base_damage.unwrap_or(0.0));
         let armor = Armor(character_record.base_armor.unwrap_or(0.0));

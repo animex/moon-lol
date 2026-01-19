@@ -2,5 +2,5 @@
 trigger: always_on
 ---
 
-1. 使用 cargo check 检查代码能否通过编译。
-2. 在用户没有要求的情况下，不要编写单元测试或集成测试。
+1. Use `cargo check` to verify the code compiles.
+2. Do not write unit tests or integration tests unless the user explicitly requests them.

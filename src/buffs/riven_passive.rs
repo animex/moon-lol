@@ -2,7 +2,7 @@ use bevy::prelude::*;
 
 use crate::{Buff, Buffs, CommandDamageCreate, Damage, DamageType, EventAttackEnd, Riven};
 
-/// 锐雯被动额外伤害倍率
+/// Riven passive bonus damage ratio
 const RIVEN_PASSIVE_BONUS_RATIO: f32 = 0.2;
 
 #[derive(Default)]
@@ -18,7 +18,7 @@ impl Plugin for PluginRivenPassive {
 #[require(Buff = Buff { name: "RivenPassive" })]
 pub struct BuffRivenPassive;
 
-/// 当锐雯造成伤害时，如果有被动层数，触发额外伤害并消耗一层
+/// When Riven deals damage, if she has passive stacks, trigger bonus damage and consume one stack
 fn on_damage_create_trigger_bonus(
     trigger: On<EventAttackEnd>,
     mut commands: Commands,
@@ -28,7 +28,7 @@ fn on_damage_create_trigger_bonus(
 ) {
     let source = trigger.entity;
 
-    // 只处理锐雯造成的伤害
+    // Only process damage dealt by Riven
     let Ok(damage) = q_riven.get(source) else {
         return;
     };
@@ -37,7 +37,7 @@ fn on_damage_create_trigger_bonus(
         return;
     };
 
-    // 查找被动buff
+    // Find passive buff
     for buff in buffs.iter() {
         if q_buff_riven_passive.get(buff).is_err() {
             continue;
@@ -45,7 +45,7 @@ fn on_damage_create_trigger_bonus(
 
         let bonus_damage = damage.0 * RIVEN_PASSIVE_BONUS_RATIO;
 
-        // 触发额外伤害
+        // Trigger bonus damage
         commands.trigger(CommandDamageCreate {
             entity: trigger.target,
             source,
@@ -54,7 +54,7 @@ fn on_damage_create_trigger_bonus(
         });
 
         commands.entity(buff).despawn();
-        info!("{:?} 锐雯被动触发，额外伤害: {:.1}", source, bonus_damage);
+        info!("{:?} Riven passive triggered, bonus damage: {:.1}", source, bonus_damage);
 
         return;
     }

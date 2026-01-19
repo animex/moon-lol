@@ -448,7 +448,7 @@ impl AssetLoader for LeagueLoaderShaderToc {
 
                 // content.matches("struct")
 
-                let re = Regex::new(r"struct[\w\W]*?\}").unwrap(); // 匹配 YYYY-MM-DD 日期格式
+                let re = Regex::new(r"struct[\w\W]*?\}").unwrap(); // Match struct definitions
                 let matches = re.find_iter(&content);
 
                 for mat in matches {
@@ -474,7 +474,7 @@ impl AssetLoader for LeagueLoaderShaderToc {
         for i in 0..shader_toc.bundled_shader_count {
             let mut content = chunks[i as usize].clone();
 
-            let re = Regex::new(r"struct[\w\W]*?\}").unwrap(); // 匹配 YYYY-MM-DD 日期格式
+            let re = Regex::new(r"struct[\w\W]*?\}").unwrap(); // Match struct definitions
             let matches = re.find_iter(&content);
 
             let ranges = matches.map(|mat| mat.range()).collect::<Vec<_>>();

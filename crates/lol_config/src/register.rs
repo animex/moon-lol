@@ -18,7 +18,7 @@ pub struct AssetLoaderRegistry {
 }
 
 impl AssetLoaderRegistry {
-    /// 注册类型的辅助函数
+    /// Helper function to register types
     pub fn register<T: Asset + DeserializeOwned + Serialize + TypePath + Send + Sync + 'static>(
         &mut self,
     ) {
@@ -53,7 +53,7 @@ where
             Ok(asset) => load_context
                 .add_labeled_asset(entry.hash.to_string(), asset)
                 .untyped(),
-            Err(e) => panic!("反序列化 [{}] 失败: {}", type_name::<T>(), e),
+            Err(e) => panic!("Deserialization of [{}] failed: {}", type_name::<T>(), e),
         }
     }
 

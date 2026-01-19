@@ -28,7 +28,7 @@ impl Lifetime {
         let timer = if duration > 0.0 {
             Some(Timer::from_seconds(duration, TimerMode::Once))
         } else {
-            None // duration <= 0.0 意味着无限生命周期
+            None // duration <= 0.0 means infinite lifetime
         };
         Self { timer, mode }
     }
@@ -37,7 +37,7 @@ impl Lifetime {
         let timer = if duration > 0.0 {
             Some(Timer::from_seconds(duration, TimerMode::Once))
         } else {
-            None // duration <= 0.0 意味着无限生命周期
+            None // duration <= 0.0 means infinite lifetime
         };
         Self {
             timer,
@@ -45,35 +45,35 @@ impl Lifetime {
         }
     }
 
-    /// 检查生命周期是否结束。
-    /// 如果 timer 是 None (无限生命周期), 永远返回 false。
+    /// Check if lifetime has ended.
+    /// If timer is None (infinite lifetime), always returns false.
     pub fn is_dead(self: &Self) -> bool {
         self.timer.as_ref().map_or(false, |t| t.is_finished())
     }
 
-    /// 检查生命周期是否仍在进行中。
-    /// 如果 timer 是 None (无限生命周期), 永远返回 true。
+    /// Check if lifetime is still ongoing.
+    /// If timer is None (infinite lifetime), always returns true.
     pub fn is_alive(self: &Self) -> bool {
         !self.is_dead()
     }
 
-    /// 返回生命周期的进度 (0.0 到 1.0)。
-    /// 如果是无限生命周期 (duration <= 0.0)，永远返回 0.0。
+    /// Return lifetime progress (0.0 to 1.0).
+    /// If infinite lifetime (duration <= 0.0), always returns 0.0.
     pub fn progress(&self) -> f32 {
         self.timer.as_ref().map_or(0.0, |t| {
-            // 构造函数保证了 duration > 0.0
+            // Constructor guarantees duration > 0.0
             (t.elapsed_secs() / t.duration().as_secs_f32()).clamp(0.0, 1.0)
         })
     }
 
-    /// 返回已经过的时间。
-    /// 如果是无限生命周期，返回 0.0。
+    /// Return elapsed time.
+    /// If infinite lifetime, returns 0.0.
     pub fn elapsed_secs(&self) -> f32 {
         self.timer.as_ref().map_or(0.0, |t| t.elapsed_secs())
     }
 
-    /// 立即结束生命周期。
-    /// 对无限生命周期的实体无效。
+    /// Immediately end the lifetime.
+    /// Has no effect on entities with infinite lifetime.
     pub fn dead(&mut self) {
         if let Some(timer) = self.timer.as_mut() {
             timer.tick(timer.duration());
@@ -89,16 +89,16 @@ fn update(
 ) {
     for (entity, mut lifetime) in q_lifetime.iter_mut() {
         if lifetime.is_alive() {
-            // 如果 timer 存在 (即非无限生命周期)，则推进它
+            // If timer exists (i.e., not infinite lifetime), advance it
             if let Some(timer) = lifetime.timer.as_mut() {
                 timer.tick(time.delta());
             }
-            // 无论是无限生命周期 (None) 还是仍在计时的 (Some)，都继续
+            // Whether infinite lifetime (None) or still timing (Some), continue
             continue;
         }
 
-        // 如果执行到这里，意味着 is_alive() 为 false，即 is_dead() 为 true
-        // 这只可能在 timer 是 Some(finished_timer) 时发生
+        // If we reach here, is_alive() is false, meaning is_dead() is true
+        // This can only happen when timer is Some(finished_timer)
         match lifetime.mode {
             LifetimeMode::Timer => commands.entity(entity).despawn(),
             LifetimeMode::TimerAndNoChildren => {

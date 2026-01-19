@@ -1,24 +1,24 @@
 ---
 name: create-buff
-description: 创建一个新的 Buff 并实现功能
+description: Create a new Buff and implement its functionality
 ---
 
-# 创建 Buff
+# Create Buff
 
-创建一个 Buff 组件来实现游戏的功能
+Create a Buff component to implement game functionality
 
-## 例子
+## Example
 
-以创建 Fiora 的 E 技能为例
+Using Fiora's E ability as an example
 
-### 1. 创建 Buff 文件
+### 1. Create Buff File
 
-在 `src/buffs` 目录下创建一个新的 .rs 文件，文件名以英雄名加技能名命名，此例中文件名为 `fiora_e.rs`。
-如果是通用的 buff 则以功能名命名，名词在前，动词在后，例如 `attack_speed_up.rs`。
+Create a new .rs file in the `src/buffs` directory. Name the file using champion name + ability name. In this example, the file name is `fiora_e.rs`.
+For generic buffs, name them by function with noun first then verb, e.g. `attack_speed_up.rs`.
 
-### 2. 编写 Buff 文件
+### 2. Write Buff File
 
-在 `src/buffs/fiora_e.rs` 文件中添加插件和 Buff 组件的定义：
+Add the plugin and Buff component definition in `src/buffs/fiora_e.rs`:
 
 ```rs
 use bevy::prelude::*;
@@ -45,34 +45,34 @@ impl Default for BuffFioraE {
 }
 ```
 
-如果 Buff 永远存在，则不需要 require Lifetime 组件
+If the Buff lasts forever, you don't need to require the Lifetime component
 
-### 3. 注册 Buff 模块和 Buff 插件
+### 3. Register Buff Module and Plugin
 
-在 `src/buffs.rs` 文件中添加 Buff 模块
+Add the Buff module in `src/buffs.rs`:
 
 ```rs
-// ...其它 mod
+// ...other mods
 mod fiora_e;
 
-// ...其它 use
+// ...other uses
 pub use fiora_e::*;
 ```
 
-在 `src/lib.rs` 文件中注册 Buff 插件
+Register the Buff plugin in `src/lib.rs`:
 
 ```rs
 plugin_group! {
     pub struct PluginCore {
-        // ...其它 Buff 插件
+        // ...other Buff plugins
         :PluginFioraE,
     }
 }
 ```
 
-### 4. 实现 Buff 的逻辑
+### 4. Implement Buff Logic
 
-实现 Buff 的逻辑，例如 Fiora 的 E 技能会在每次攻击结束时减少一次，当次数为 0 时移除 Buff。
+Implement the Buff logic. For example, Fiora's E ability decreases by one on each attack end, and removes the Buff when the count reaches 0.
 
 ```rs
 fn on_event_attack_end(
@@ -100,7 +100,7 @@ fn on_event_attack_end(
 }
 ```
 
-在插件添加 observer
+Add the observer in the plugin:
 
 ```rs
 impl Plugin for PluginFioraE {
@@ -110,9 +110,9 @@ impl Plugin for PluginFioraE {
 }
 ```
 
-### 5. 添加 Buff
+### 5. Add Buff
 
-在技能效果中添加 Buff
+Add the Buff in the ability effect:
 
 ```rs
                 Behave::trigger(ActionBuffSpawn::new((
@@ -123,4 +123,4 @@ impl Plugin for PluginFioraE {
                 ))),
 ```
 
-由于 Fiora 的 E 技能是伴随着攻速增加的，因此将两个 Buff 组合在一起挂载到同一个 Buff 实体上，BuffFioraE 负责管理次数，BuffAttack 负责管理攻速，从而实现了 Buff 效果的组合。
+Since Fiora's E ability comes with attack speed increase, the two Buffs are combined and attached to the same Buff entity. BuffFioraE manages the count, BuffAttack manages the attack speed, thus achieving Buff effect composition.

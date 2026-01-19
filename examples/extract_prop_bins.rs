@@ -25,11 +25,11 @@ fn get_hashes_u64(path: &str) -> HashMap<u64, String> {
 }
 
 fn main() {
-    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
+    let root_dir = r"D:\WeGameApps\League of Legends\Game";
     let output_base_dir = "assets/extract_prop_bins";
 
     if !Path::new(root_dir).exists() {
-        println!("未找到游戏目录: {}", root_dir);
+        println!("Game directory not found: {}", root_dir);
         return;
     }
 
@@ -37,10 +37,10 @@ fn main() {
 
     let start = Instant::now();
     let loader = LeagueLoader::full(root_dir).unwrap();
-    println!("加载 wad 耗时: {:?}", start.elapsed());
+    println!("Loading wad took: {:?}", start.elapsed());
 
     let hashes = get_hashes_u64("assets/hashes/hashes.game.txt");
-    println!("加载 hash 映射耗时: {:?}", start.elapsed());
+    println!("Loading hash mapping took: {:?}", start.elapsed());
 
     let tasks: Vec<_> = loader
         .wads
@@ -59,26 +59,26 @@ fn main() {
     let processed_count = AtomicUsize::new(0);
     let extracted_count = AtomicUsize::new(0);
 
-    println!("开始处理 {} 个 entry...", total_tasks);
+    println!("Starting to process {} entries...", total_tasks);
 
     tasks.par_iter().for_each(|&(wad_index, hash)| {
         let wad = &loader.wads[wad_index];
 
         let current = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
         if current % 10000 == 0 || current == total_tasks {
-            println!("已处理 {} / {} 个 entry", current, total_tasks);
+            println!("Processed {} / {} entries", current, total_tasks);
         }
 
         let Ok(buffer) = wad.get_wad_entry_buffer_by_hash(hash) else {
             return;
         };
 
-        // 检查魔数 "PROP"
+        // Check magic number "PROP"
         if buffer.len() < 4 || &buffer[0..4] != b"PROP" {
             return;
         }
 
-        // 尝试解析为 PropFile
+        // Try to parse as PropFile
         let Ok((_, prop_file)) = PropFile::parse(&buffer) else {
             return;
         };
@@ -100,7 +100,7 @@ fn main() {
             return;
         }
 
-        // 确定文件路径和原路径注释
+        // Determine file path and original path comment
         let hex_name = format!("{:016x}", hash);
         let (rel_path, original_path) = if let Some(path) = hashes.get(&hash) {
             let path_obj = Path::new(path);
@@ -113,13 +113,13 @@ fn main() {
         let target_dir = Path::new(output_base_dir).join(rel_path);
         let file_path = target_dir.join(format!("{}.ron", hex_name));
 
-        // 创建深层文件夹
+        // Create nested directories
         if let Err(e) = create_dir_all(&target_dir) {
-            eprintln!("无法创建目录 {:?}: {}", target_dir, e);
+            eprintln!("Unable to create directory {:?}: {}", target_dir, e);
             return;
         }
 
-        // 构建最终的 RON 字符串
+        // Build final RON string
         let mut ron_output = String::new();
         if let Some(path) = original_path {
             ron_output.push_str(&format!("// {}\n", path));
@@ -147,15 +147,15 @@ fn main() {
         ron_output.push_str("}");
 
         if let Err(e) = write(&file_path, ron_output) {
-            eprintln!("无法写入文件 {:?}: {}", file_path, e);
+            eprintln!("Unable to write file {:?}: {}", file_path, e);
         } else {
             extracted_count.fetch_add(1, Ordering::Relaxed);
         }
     });
 
     println!(
-        "提取完成！共提取 {} 个 prop bin 文件并保存为 .ron",
+        "Extraction complete! Extracted {} prop bin files and saved as .ron",
         extracted_count.load(Ordering::Relaxed)
     );
-    println!("总耗时: {:?}", start.elapsed());
+    println!("Total time: {:?}", start.elapsed());
 }

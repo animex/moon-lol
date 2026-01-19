@@ -17,7 +17,7 @@ impl<'de> BinParser<'de> {
     pub fn read_bytes(&mut self, len: usize) -> BinDeserializerResult<&'de [u8]> {
         if self.input.len() < len {
             return Err(Error::Message(format!(
-                "读取字节失败，长度不足: {} < {}",
+                "Failed to read bytes, insufficient length: {} < {}",
                 self.input.len(),
                 len
             )));
@@ -195,18 +195,18 @@ impl<'de> BinParser<'de> {
     }
 
     pub fn skip_value(&mut self, vtype: BinType) -> BinDeserializerResult<&'de [u8]> {
-        // 核心逻辑：先计算总长度，再一次性切片
+        // Core logic: calculate total length first, then slice at once
         let total_len = Self::calculate_value_len(self.input, vtype).unwrap();
         self.read_bytes(total_len)
     }
 
     pub fn calculate_value_len(input: &[u8], vtype: BinType) -> BinDeserializerResult<usize> {
-        // 检查切片长度的辅助宏
+        // Helper macro to check slice length
         macro_rules! ensure_len {
             ($len:expr) => {
                 if input.len() < $len {
                     return Err(Error::Message(format!(
-                        "计算长度失败，类型 {:?} 需要 {} 字节，但只剩下 {}",
+                        "Failed to calculate length, type {:?} requires {} bytes, but only {} remaining",
                         vtype,
                         $len,
                         input.len()
@@ -215,11 +215,11 @@ impl<'de> BinParser<'de> {
             };
         }
 
-        // 将切片安全转换为数组的辅助函数
+        // Helper function to safely convert slice to array
         fn slice_to_array<const N: usize>(slice: &[u8]) -> BinDeserializerResult<[u8; N]> {
             slice.try_into().map_err(|_| {
                 Error::Message(format!(
-                    "无法将长度为 {} 的切片转换为数组 [u8; {}]",
+                    "Unable to convert slice of length {} to array [u8; {}]",
                     slice.len(),
                     N
                 ))
@@ -227,7 +227,7 @@ impl<'de> BinParser<'de> {
         }
 
         match vtype {
-            // --- 固定长度类型 ---
+            // --- Fixed length types ---
             BinType::None => Ok(6),
             BinType::Bool | BinType::S8 | BinType::U8 | BinType::Flag => Ok(1),
             BinType::S16 | BinType::U16 => Ok(2),
@@ -239,7 +239,7 @@ impl<'de> BinParser<'de> {
             BinType::Color => Ok(4),
             BinType::Matrix => Ok(size_of::<f32>() * 16),
 
-            // --- 动态长度类型 ---
+            // --- Dynamic length types ---
             BinType::String => {
                 ensure_len!(2);
                 let len_bytes = slice_to_array(&input[..2]).unwrap();
@@ -248,7 +248,7 @@ impl<'de> BinParser<'de> {
                 Ok(2 + data_len)
             }
             BinType::List | BinType::List2 => {
-                // 结构: [type: 1] + [count: 4] + [data: count]
+                // Structure: [type: 1] + [count: 4] + [data: count]
                 ensure_len!(5);
                 let len_bytes = slice_to_array(&input[1..5]).unwrap();
                 let data_len = u32::from_le_bytes(len_bytes) as usize;
@@ -256,7 +256,7 @@ impl<'de> BinParser<'de> {
                 Ok(1 + 4 + data_len)
             }
             BinType::Struct | BinType::Embed => {
-                // 结构: [hash: 4] + (如果 hash != 0 => [count: 4] + [data: count])
+                // Structure: [hash: 4] + (if hash != 0 => [count: 4] + [data: count])
                 ensure_len!(4);
                 let hash_bytes = slice_to_array(&input[..4]).unwrap();
                 let class_hash = u32::from_le_bytes(hash_bytes);
@@ -272,25 +272,25 @@ impl<'de> BinParser<'de> {
                 }
             }
 
-            // --- 递归/嵌套类型 ---
+            // --- Recursive/nested types ---
             BinType::Option => {
-                // 结构: [inner_type: 1] + [is_some: 1] + (如果 is_some != 0 => [data])
+                // Structure: [inner_type: 1] + [is_some: 1] + (if is_some != 0 => [data])
                 ensure_len!(2);
                 let vtype_byte = input[0];
                 let some_byte = input[1];
 
                 if some_byte == 0 {
-                    Ok(2) // None, 只有两个字节
+                    Ok(2) // None, only two bytes
                 } else {
                     let inner_vtype = BinType::try_from(vtype_byte).unwrap();
-                    // 在剩余的 input 上递归计算内部值的长度
+                    // Recursively calculate inner value length on remaining input
                     let inner_len = Self::calculate_value_len(&input[2..], inner_vtype).unwrap();
 
                     Ok(2 + inner_len)
                 }
             }
             BinType::Map => {
-                // 结构: [key_type: 1] + [value_type: 1] + [count: 4] + [data: count]
+                // Structure: [key_type: 1] + [value_type: 1] + [count: 4] + [data: count]
                 ensure_len!(6);
                 let len_bytes = slice_to_array(&input[2..6]).unwrap();
                 let data_len = u32::from_le_bytes(len_bytes) as usize;
@@ -298,7 +298,7 @@ impl<'de> BinParser<'de> {
                 Ok(1 + 1 + 4 + data_len)
             }
 
-            // Entry 不应在流中独立存在
+            // Entry should not exist independently in stream
             BinType::Entry => unreachable!(),
         }
     }

@@ -42,10 +42,10 @@
         <nav class="hidden h-full items-center gap-2 md:flex">
           <a
             v-for="item in [
-              { name: '首页', path: '/' },
-              { name: '模拟', path: '/play' },
-              { name: '特性', path: '/#stack' },
-              { name: '日志', path: '/#logs' },
+              { name: 'Home', path: '/' },
+              { name: 'Simulation', path: '/play' },
+              { name: 'Features', path: '/#stack' },
+              { name: 'Logs', path: '/#logs' },
             ]"
             :key="item.path"
             :href="item.path"
@@ -88,7 +88,7 @@
               MOON LOL
             </h2>
             <p class="font-mono text-sm leading-relaxed text-gray-300">
-              基于 Rust Bevy 引擎的高性能 MOBA 游戏环境。
+              A high-performance MOBA game environment built on Rust Bevy engine.
               <br />
               <span class="text-acid-pink">Y2K RUSH EDITION</span>
             </p>
@@ -96,24 +96,24 @@
 
           <!-- Navigation -->
           <div class="col-span-1">
-            <h3 class="font-glitch text-acid-pink text-glow-pink mb-6 text-xl">导航</h3>
+            <h3 class="font-glitch text-acid-pink text-glow-pink mb-6 text-xl">Navigation</h3>
             <ul class="space-y-3 font-mono text-sm text-gray-400">
               <li>
                 <router-link to="/" class="hover:text-acid-blue inline-block transition-all hover:translate-x-2">
-                  首页
+                  Home
                 </router-link>
               </li>
               <li>
                 <a href="/#logs" class="hover:text-acid-blue inline-block transition-all hover:translate-x-2">
-                  开发日志
+                  Dev Logs
                 </a>
               </li>
               <li>
-                <a href="/#stack" class="hover:text-acid-blue inline-block transition-all hover:translate-x-2">特性</a>
+                <a href="/#stack" class="hover:text-acid-blue inline-block transition-all hover:translate-x-2">Features</a>
               </li>
               <li>
                 <a href="/#stack" class="hover:text-acid-blue inline-block transition-all hover:translate-x-2">
-                  技术栈
+                  Tech Stack
                 </a>
               </li>
             </ul>
@@ -121,7 +121,7 @@
 
           <!-- Resources -->
           <div class="col-span-1">
-            <h3 class="font-glitch text-acid-yellow text-outline mb-6 text-xl">资源</h3>
+            <h3 class="font-glitch text-acid-yellow text-outline mb-6 text-xl">Resources</h3>
             <ul class="space-y-3 font-mono text-sm text-gray-400">
               <li>
                 <a
@@ -129,35 +129,35 @@
                   target="_blank"
                   class="hover:text-acid-yellow inline-block transition-all hover:translate-x-2"
                 >
-                  GITHUB 仓库
+                  GITHUB Repo
                 </a>
               </li>
               <li>
-                <span class="cursor-not-allowed opacity-50">文档 (WIP)</span>
+                <span class="cursor-not-allowed opacity-50">Docs (WIP)</span>
               </li>
               <li>
-                <span class="cursor-not-allowed opacity-50">API 参考 (WIP)</span>
+                <span class="cursor-not-allowed opacity-50">API Reference (WIP)</span>
               </li>
             </ul>
           </div>
 
           <!-- Status -->
           <div class="col-span-1">
-            <h3 class="font-glitch text-outline mb-6 text-xl text-white">系统状态</h3>
+            <h3 class="font-glitch text-outline mb-6 text-xl text-white">System Status</h3>
             <div
               class="glass-y2k hover:border-acid-green/50 space-y-4 rounded-xl p-4 font-mono text-xs transition-colors"
             >
               <div class="flex justify-between">
-                <span class="text-gray-400">版本</span>
+                <span class="text-gray-400">Version</span>
                 <span class="text-acid-green font-bold">v0.1.0-alpha</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-400">核心</span>
+                <span class="text-gray-400">Core</span>
                 <span class="text-acid-pink font-bold">Rust/Bevy</span>
               </div>
               <div class="flex justify-between">
-                <span class="text-gray-400">状态</span>
-                <span class="text-acid-blue animate-pulse font-bold">● 在线</span>
+                <span class="text-gray-400">Status</span>
+                <span class="text-acid-blue animate-pulse font-bold">● Online</span>
               </div>
             </div>
           </div>

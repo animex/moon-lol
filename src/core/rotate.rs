@@ -5,7 +5,7 @@ use crate::{
     LastDecision, MovementPipeline, PipelineStages, RequestBuffer,
 };
 
-// 默认角速度：每秒3弧度（约172度/秒）
+// Default angular velocity: 20 radians per second
 const DEFAULT_ANGULAR_VELOCITY: f32 = 20.0;
 
 #[derive(Default)]
@@ -32,9 +32,9 @@ impl Plugin for PluginRotate {
 #[derive(Component, Reflect)]
 #[reflect(Component)]
 pub struct Rotate {
-    pub angular_velocity: f32, // 角速度，单位：弧度/秒
-    pub current_angle: f32,    // 当前角度
-    pub target_angle: f32,     // 目标角度
+    pub angular_velocity: f32, // Angular velocity, unit: radians/second
+    pub current_angle: f32,    // Current angle
+    pub target_angle: f32,     // Target angle
 }
 
 #[derive(EntityEvent, Debug, Clone)]
@@ -72,7 +72,7 @@ fn fixed_update(mut query: Query<(&mut Rotate, &mut Transform)>, time: Res<Time<
     for (mut rotate, mut transform) in query.iter_mut() {
         let delta_time = time.delta_secs();
 
-        // 使用角速度进行平滑旋转
+        // Use angular velocity for smooth rotation
         let new_angle = lerp_angle_with_velocity(
             rotate.current_angle,
             rotate.target_angle,
@@ -80,10 +80,10 @@ fn fixed_update(mut query: Query<(&mut Rotate, &mut Transform)>, time: Res<Time<
             delta_time,
         );
 
-        // 更新当前角度
+        // Update current angle
         rotate.current_angle = new_angle;
 
-        // 应用旋转到Transform
+        // Apply rotation to Transform
         transform.rotation = Quat::from_rotation_y(new_angle);
     }
 }
@@ -147,11 +147,11 @@ fn apply_final_rotate_decision(
     for (entity, final_decision) in query.iter() {
         let command = &final_decision.0;
 
-        // 计算目标角度
+        // Calculate target angle
         let target_angle = direction_to_angle(command.direction);
         let angular_velocity = command.angular_velocity.unwrap_or(DEFAULT_ANGULAR_VELOCITY);
 
-        // 获取当前角度（如果实体已有Transform组件）
+        // Get current angle (if entity already has Transform component)
         let current_angle = if let Ok(transform) = transform_query.get(entity) {
             transform.rotation.to_euler(EulerRot::YZX).0
         } else {

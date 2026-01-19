@@ -89,7 +89,7 @@ fn startup_load_ui(mut commands: Commands) {
 
     commands.trigger(CommandLoadPropBin {
         path: PropPath::Path(paths),
-        label: Some("gameplay 系列".to_string()),
+        label: Some("gameplay series".to_string()),
     });
 }
 
@@ -98,7 +98,7 @@ fn on_event_load_prop_end_ui_gameplay(
     mut commands: Commands,
     res_assets_ui_property_loadable: Res<Assets<UiPropertyLoadable>>,
 ) {
-    if event.label != "gameplay 系列" {
+    if event.label != "gameplay series" {
         return;
     }
 
@@ -109,7 +109,7 @@ fn on_event_load_prop_end_ui_gameplay(
                 .map(|v| v.1.filepath_hash)
                 .collect(),
         ),
-        label: Some("ui 系列".to_string()),
+        label: Some("ui series".to_string()),
     });
 }
 
@@ -121,11 +121,11 @@ fn on_event_load_prop_end_ui(
     res_assets_ui_element_icon_data: Res<Assets<UiElementIconData>>,
     res_assets_ui_scene_data: Res<Assets<UiSceneData>>,
 ) {
-    if event.label != "ui 系列" {
+    if event.label != "ui series" {
         return;
     }
 
-    info!("开始初始化 ui 元素");
+    info!("Starting UI element initialization");
 
     for (_, ui) in res_assets_ui_element_icon_data.iter() {
         let Some(entity) = spawn_ui_element(&mut commands, &res_asset_server, ui) else {
@@ -152,7 +152,7 @@ fn on_event_load_prop_end_ui(
             }
         }
 
-        // 应该根据技能是否可释放来显示，暂时全部显示为可用
+        // Should display based on whether skill is castable, temporarily showing all as available
         if ui.name.contains("_BorderAvailable") {
             commands.entity(entity).insert(Visibility::Visible);
         }
@@ -161,7 +161,7 @@ fn on_event_load_prop_end_ui(
     }
 
     info!(
-        "ui 元素初始化完成，一共 {} 个元素",
+        "UI element initialization complete, total {} elements",
         res_ui_element_entity.map.len()
     );
 
@@ -212,7 +212,7 @@ pub fn spawn_ui_atom(
         .observe(
             |event: On<Pointer<Click>>, q_ui_element: Query<&UIElement>| {
                 let ui_element = q_ui_element.get(event.entity).unwrap();
-                println!("点击了 {}", ui_element.key);
+                println!("Clicked {}", ui_element.key);
             },
         )
         .id();

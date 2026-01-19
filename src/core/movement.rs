@@ -225,14 +225,14 @@ fn update_path_movement(
                 let new_pos_xz = current_pos_xz + last_direction * remaining_distance_this_frame;
                 let new_y = transform.translation.y.lerp(target.y, move_fraction);
 
-                debug!("{} 移动一小步 {}", entity, remaining_distance_this_frame);
+                debug!("{} moving a small step {}", entity, remaining_distance_this_frame);
                 transform.translation.x = new_pos_xz.x;
                 transform.translation.z = new_pos_xz.y;
                 transform.translation.y = new_y;
 
                 remaining_distance_this_frame = 0.0;
             } else {
-                debug!("{} 移动最后一小步到达转折点 {}", entity, target);
+                debug!("{} moving the last small step to reach turning point {}", entity, target);
                 transform.translation.x = target.x;
                 transform.translation.z = target.z;
                 transform.translation.y = target.y;
@@ -365,14 +365,14 @@ fn apply_final_movement_decision(
                         stats.exclude_time += start.elapsed();
                         stats.exclude_count += 1;
 
-                        // 检查是否需要重新规划路径
+                        // Check if path replanning is needed
                         let need_replan = if let Some((last_target, _)) = movement_state.pathfind {
                             let start = Instant::now();
 
-                            // 目标位置发生变化
+                            // Target position changed
                             let target_changed =
                                 (target - last_target).xz().length() > f32::EPSILON;
-                            // 路径上有障碍物阻挡
+                            // Path is blocked by obstacles
                             let path_blocked = is_path_blocked(
                                 &grid,
                                 &movement_state.path,
@@ -380,10 +380,10 @@ fn apply_final_movement_decision(
                             );
 
                             if target_changed {
-                                debug!("{} 的目标位置发生变化: {}", entity, target_changed);
+                                debug!("{} target position changed: {}", entity, target_changed);
                             }
                             if path_blocked {
-                                debug!("{} 的路径上有障碍物阻挡: {}", entity, path_blocked);
+                                debug!("{} path is blocked by obstacles: {}", entity, path_blocked);
                             }
 
                             stats.check_path_count += 1;
@@ -391,17 +391,17 @@ fn apply_final_movement_decision(
 
                             target_changed || path_blocked
                         } else {
-                            // 第一次规划
-                            debug!("{} 第一次规划", entity);
+                            // First pathfinding
+                            debug!("{} first pathfinding", entity);
                             true
                         };
 
                         if !need_replan {
-                            debug!("{} 不需要重新规划，{:#?}", entity, movement_state);
+                            debug!("{} no replanning needed, {:#?}", entity, movement_state);
                             continue;
                         }
 
-                        debug!("{} 寻路到 {:?}", entity, target);
+                        debug!("{} pathfinding to {:?}", entity, target);
 
                         let debug_ref = if nav_debug.enabled {
                             Some(&mut *nav_debug)
@@ -431,17 +431,17 @@ fn apply_final_movement_decision(
                                 .reset_path(&path_3d, source)
                                 .with_pathfind((*target, time.elapsed_secs()));
                         } else {
-                            debug!("{} 寻路失败", entity);
+                            debug!("{} pathfinding failed", entity);
                         }
                     }
                     MovementWay::Path(path) => {
-                        debug!("{} 设置路径 {:?}", entity, path);
+                        debug!("{} setting path {:?}", entity, path);
                         movement_state.reset_path(path, source);
                     }
                 }
 
                 if let Some(speed) = speed {
-                    debug!("{} 设置速度 {:?}", entity, speed);
+                    debug!("{} setting speed {:?}", entity, speed);
                     movement_state.with_speed(*speed);
                 }
 

@@ -11,7 +11,7 @@ use league_utils::hash_bin;
 use rayon::prelude::*;
 
 fn main() {
-    let root_dir = r"D:\WeGameApps\英雄联盟\Game";
+    let root_dir = r"D:\WeGameApps\League of Legends\Game";
 
     let start = Instant::now();
 
@@ -196,7 +196,7 @@ fn main() {
         ],
     );
 
-    println!("加载 wad 耗时: {:?}", start.elapsed());
+    println!("Loading wad took: {:?}", start.elapsed());
 
     let start = Instant::now();
 
@@ -236,7 +236,7 @@ fn main() {
 
     let need_defaults = HashSet::from([hash_bin("SpellDataResource"), hash_bin("SpellObject")]);
 
-    // 收集所有 (wad_index, entry_hash) 任务
+    // Collect all (wad_index, entry_hash) tasks
     let tasks: Vec<_> = loader
         .wads
         .iter()
@@ -253,16 +253,16 @@ fn main() {
     let total_tasks = tasks.len();
     let processed_count = AtomicUsize::new(0);
 
-    // 使用线程安全容器收集结果
+    // Use thread-safe container to collect results
     let class_map = Mutex::new(HashMap::new());
 
     tasks.par_iter().for_each(|(wad_index, hash)| {
         let wad = &loader.wads[*wad_index];
 
-        // 无论成功与否都增加计数
+        // Increment count regardless of success or failure
         let current = processed_count.fetch_add(1, Ordering::Relaxed) + 1;
         if current % 10000 == 0 || current == total_tasks {
-            println!("已处理 {} / {} 个 entry", current, total_tasks);
+            println!("Processed {} / {} entries", current, total_tasks);
         }
 
         let Ok(bin) = wad.get_prop_bin_by_hash(*hash) else {
@@ -279,7 +279,7 @@ fn main() {
             merge_class_maps(&mut bin_class_map, class_map_entry);
         }
 
-        // 合并到全局 class_map
+        // Merge into global class_map
         let mut class_map_guard = class_map.lock().unwrap();
         merge_class_maps(&mut class_map_guard, bin_class_map);
     });
@@ -292,5 +292,5 @@ fn main() {
     write("league.rs", rust_code).unwrap();
     write("init_league_asset.rs", init_code).unwrap();
 
-    println!("耗时: {:?}", start.elapsed());
+    println!("Time elapsed: {:?}", start.elapsed());
 }

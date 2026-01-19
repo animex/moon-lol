@@ -216,7 +216,7 @@ impl render_graph::Node for ImageCopyDriver {
                 },
                 src_image.size,
             );
-            info!("copy 结束");
+            info!("copy finished");
 
             let render_queue = world.get_resource::<RenderQueue>().unwrap();
             render_queue.submit(std::iter::once(encoder.finish()));
@@ -289,11 +289,11 @@ fn step(state: &State<BevyAppState>, action_json: Option<Json<Action>>) -> Statu
 
     match state.sender.send(AppMsg::Step(action)) {
         Ok(_) => {
-            info!("Action 已成功发送到 Bevy App。");
+            info!("Action sent to Bevy App successfully.");
             Status::Accepted
         }
         Err(e) => {
-            info!("发送 Action 到 Bevy App 失败: {}", e);
+            info!("Failed to send Action to Bevy App: {}", e);
             Status::InternalServerError
         }
     }
@@ -304,11 +304,11 @@ fn render(state: &State<BevyAppState>) -> Result<(ContentType, Vec<u8>), Status>
     let image_option = state.image.lock().unwrap().clone();
 
     if let Some(image_data) = image_option {
-        info!("找到图像 ({} 字节)，正在作为 JPEG 返回。", image_data.len());
+        info!("Found image ({} bytes), returning as JPEG.", image_data.len());
 
         Ok((ContentType::JPEG, image_data))
     } else {
-        info!("图像尚未准备好 (返回 404)。");
+        info!("Image not ready yet (returning 404).");
 
         Err(Status::NotFound)
     }
@@ -321,7 +321,7 @@ fn observe(state: &State<BevyAppState>) -> Result<Json<Observe>, Status> {
     if let Some(observe_data) = observe_option {
         Ok(Json(observe_data))
     } else {
-        info!("[OBSERVE] Observe 数据尚未准备好 (返回 404)。");
+        info!("[OBSERVE] Observe data not ready yet (returning 404).");
         Err(Status::NotFound)
     }
 }
@@ -390,7 +390,7 @@ fn rocket() -> _ {
             }
 
             app.update();
-            info!("update 结束");
+            info!("update finished");
 
             let world = app.world_mut();
 
@@ -414,27 +414,27 @@ fn rocket() -> _ {
         .allow_credentials(true);
 
     rocket::build()
-        .attach(cors.to_cors().expect("CORS fairing 创建失败"))
+        .attach(cors.to_cors().expect("Failed to create CORS fairing"))
         .manage(bevy_state)
         .mount("/", routes![step, render, observe])
 }
 
 fn receive_and_encode_image_async(world: &mut World, shared_image: Arc<Mutex<Option<Vec<u8>>>>) {
     let receiver = world.resource::<MainWorldReceiver>();
-    info!("尝试从 RenderWorld 接收图像...");
+    info!("Attempting to receive image from RenderWorld...");
 
     let Ok(image_data) = receiver.try_recv() else {
-        info!("本帧未收到图像数据。");
+        info!("No image data received this frame.");
         return;
     };
 
     if image_data.is_empty() {
-        info!("收到空的图像数据。");
+        info!("Received empty image data.");
         return;
     }
 
     info!(
-        "收到 {} 字节的原始图像数据。正在派发到后台线程处理...",
+        "Received {} bytes of raw image data. Dispatching to background thread for processing...",
         image_data.len()
     );
 
@@ -444,7 +444,7 @@ fn receive_and_encode_image_async(world: &mut World, shared_image: Arc<Mutex<Opt
     let format = TextureFormat::bevy_default();
 
     thread::spawn(move || {
-        info!("[后台线程] 开始处理图像...");
+        info!("[Background thread] Starting image processing...");
 
         let row_bytes = width as usize * format.pixel_size().unwrap();
         let aligned_row_bytes = RenderDevice::align_copy_bytes_per_row(row_bytes);
@@ -452,7 +452,7 @@ fn receive_and_encode_image_async(world: &mut World, shared_image: Arc<Mutex<Opt
         let final_image_data = if row_bytes == aligned_row_bytes {
             image_data
         } else {
-            info!("[后台线程] 正在去除图像行填充...");
+            info!("[Background thread] Removing image row padding...");
             image_data
                 .chunks(aligned_row_bytes)
                 .take(height as usize)
@@ -462,22 +462,22 @@ fn receive_and_encode_image_async(world: &mut World, shared_image: Arc<Mutex<Opt
         };
 
         let Some(img) = image::RgbaImage::from_raw(width, height, final_image_data) else {
-            warn!("[后台线程] 无法从原始数据创建 RgbaImage。");
+            warn!("[Background thread] Unable to create RgbaImage from raw data.");
             return;
         };
 
         let mut jpeg_bytes = Vec::new();
         let mut encoder = JpegEncoder::new_with_quality(&mut jpeg_bytes, 80);
 
-        info!("[后台线程] 正在将图像编码为 JPEG...");
+        info!("[Background thread] Encoding image to JPEG...");
         if encoder.encode_image(&img).is_err() {
-            warn!("[后台线程] JPEG 编码失败");
+            warn!("[Background thread] JPEG encoding failed");
             return;
         }
-        info!("[后台线程] 编码结束。正在更新 Mutex...");
+        info!("[Background thread] Encoding finished. Updating Mutex...");
 
         *shared_image.lock().unwrap() = Some(jpeg_bytes);
-        info!("[后台线程] 写入最新游戏图像。");
+        info!("[Background thread] Wrote latest game image.");
     });
 }
 

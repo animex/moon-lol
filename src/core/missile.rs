@@ -23,18 +23,18 @@ impl Plugin for PluginMissile {
     }
 }
 
-/// 攻击组件 - 包含攻击的基础属性
+/// Missile component - contains basic missile properties
 #[derive(Debug, Component, Clone)]
 pub struct Missile {
     pub key: HashKey<SpellObject>,
     pub speed: f32,
 }
 
-/// 攻击状态机
+/// Missile state machine
 #[derive(Component, Clone, Serialize, Deserialize)]
 pub struct MissileState {
     pub source: Entity,
-    /// 攻击目标
+    /// Attack target
     pub target: Option<Entity>,
     pub target_bone: Option<Entity>,
 }
@@ -141,7 +141,7 @@ fn on_command_missile_create(
         }
     };
 
-    debug!("{} 发射导弹 {:?}", entity, trigger.spell_key);
+    debug!("{} fires missile {:?}", entity, trigger.spell_key);
     let missile_entity = commands
         .spawn((
             Missile {
@@ -199,7 +199,7 @@ fn on_event_movement_end(
     };
 
     if let Ok(damage) = q_damage.get(state.source) {
-        debug!("{} 对 {} 造成伤害 {}", state.source, target, damage.0);
+        debug!("{} deals {} damage to {}", state.source, damage.0, target);
         commands.try_trigger(CommandDamageCreate {
             entity: target,
             source: state.source,

@@ -120,7 +120,7 @@ fn process_attack_logic(
     target_radius: f32,
     range: f32,
 ) {
-    // 优化：使用平方距离避免 sqrt 开方运算
+    // Optimization: use squared distance to avoid sqrt operation
     let dist_sq = pos.distance_squared(target_pos);
     let required_range = range + radius + target_radius;
     let required_range_sq = required_range * required_range;
@@ -131,12 +131,12 @@ fn process_attack_logic(
             target: RunTarget::Target(target),
         });
 
-        debug!("{} 停止攻击：离开攻击范围", entity);
+        debug!("{} stopping attack: left attack range", entity);
         commands.trigger(CommandAttackStop { entity });
     } else {
         commands.trigger(CommandRunStop { entity });
 
-        debug!("{} 开始攻击：进入攻击范围", entity);
+        debug!("{} starting attack: entered attack range", entity);
         commands.trigger(CommandAttackStart { entity, target });
     }
 }

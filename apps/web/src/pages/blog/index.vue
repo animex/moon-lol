@@ -5,22 +5,22 @@ const router = useRouter();
 
 const posts = [
   {
-    title: "工程架构",
-    desc: "Moon LoL 的高层系统设计：Rust Core, Python Interface, Vue Frontend.",
+    title: "Architecture",
+    desc: "High-level system design of Moon LoL: Rust Core, Python Interface, Vue Frontend.",
     date: "2025.11.28",
     path: "/blog/architecture",
     tag: "ARCHITECTURE",
   },
   {
-    title: "数据流转",
-    desc: "从 Bevy ECS 到 Python Gym 再到 Web 前端的数据管线。",
+    title: "Data Flow",
+    desc: "Data pipeline from Bevy ECS to Python Gym to Web Frontend.",
     date: "2025.11.28",
     path: "/blog/data-flow",
     tag: "DATA",
   },
   {
-    title: "ECS 组件与系统",
-    desc: "深入解析游戏核心逻辑：插件系统与实体组件设计。",
+    title: "ECS Components and Systems",
+    desc: "Deep dive into game core logic: plugin system and entity-component design.",
     date: "2025.11.28",
     path: "/blog/ecs",
     tag: "CORE",

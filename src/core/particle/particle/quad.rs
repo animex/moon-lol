@@ -164,7 +164,7 @@ pub struct ConditionalMaterialKey {
     shader_frag: Handle<Shader>,
 }
 
-// 2. 为 Key 实现 From Trait
+// 2. Implement From Trait for Key
 impl From<&ParticleMaterialQuad> for ConditionalMaterialKey {
     fn from(material: &ParticleMaterialQuad) -> Self {
         let mut shader_frag_defs = vec![];

@@ -9,7 +9,7 @@ fn main() {
         .add_plugins((
             DefaultPlugins.build().set(WindowPlugin {
                 primary_window: Some(Window {
-                    title: "锐雯技能测试".to_string(),
+                    title: "Riven Skill Test".to_string(),
                     // resolution: (300, 300).into(),
                     // position: WindowPosition::At((0, 1000).into()),
                     ..default()
@@ -25,14 +25,14 @@ fn main() {
         ))
         .insert_resource(WinitSettings {
             focused_mode: UpdateMode::Reactive {
-                wait: Duration::MAX,           // 不超时，只靠你触发
-                react_to_device_events: false, // 不理会输入设备事件
+                wait: Duration::MAX,           // No timeout, only triggered by you
+                react_to_device_events: false, // Ignore input device events
                 react_to_user_events: false,
                 react_to_window_events: false,
             },
             unfocused_mode: UpdateMode::Reactive {
                 wait: Duration::MAX,
-                react_to_device_events: false, // 不理会输入设备事件
+                react_to_device_events: false, // Ignore input device events
                 react_to_user_events: false,
                 react_to_window_events: false,
             },

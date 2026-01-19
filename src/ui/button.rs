@@ -125,7 +125,7 @@ fn update_button(
 
         let interaction_entity = match *interaction {
             Interaction::Pressed => {
-                debug!("按下 {}", ui_element_group_button_data.name);
+                debug!("Pressed {}", ui_element_group_button_data.name);
                 let Some(&clicked_entity) = ui_element_group_button_data
                     .clicked_state_elements
                     .as_ref()
@@ -138,7 +138,7 @@ fn update_button(
                 clicked_entity
             }
             Interaction::Hovered => {
-                debug!("悬停 {}", ui_element_group_button_data.name);
+                debug!("Hovered {}", ui_element_group_button_data.name);
                 let &hover_entity = ui_element_group_button_data
                     .hover_state_elements
                     .as_ref()
@@ -149,7 +149,7 @@ fn update_button(
                 hover_entity
             }
             Interaction::None => {
-                debug!("恢复 {}", ui_element_group_button_data.name);
+                debug!("Reset {}", ui_element_group_button_data.name);
                 let &default_entity = ui_element_group_button_data
                     .default_state_elements
                     .as_ref()

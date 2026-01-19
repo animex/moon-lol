@@ -1,17 +1,17 @@
 
-# 需求
+# Requirements
 
-- 粒子发射器和粒子的生命由生命周期组件统一管理，实体生命结束时会立即销毁实体
+- Particle emitter and particle lifetime is managed uniformly by lifetime component, entities are despawned immediately when lifetime ends
 
-- 粒子发射器生命结束时，粒子可能仍需要存活
+- When particle emitter lifetime ends, particles may still need to be alive
 
-- 英雄生命结束时，所有粒子发射器和粒子都需要销毁
+- When champion lifetime ends, all particle emitters and particles need to be despawned
 
-- 粒子的 transform 应该是在粒子发射器的 transform 下，而粒子发射器的 transform 应该在英雄下
+- Particle's transform should be under particle emitter's transform, and particle emitter's transform should be under champion
 
-# 方案
+# Solution
 
-## 层级结构
+## Hierarchy Structure
 
 entity
 └── emitter ParticleId
@@ -23,10 +23,10 @@ map
 
 decal_geometry Mesh3d MeshMaterial3d<ParticleMaterialUnlitDecal>
 
-- 生命周期支持生命结束时不销毁，当没有子实体时才销毁的模式，emitter 应用这种模式
+- Lifetime supports a mode where entities are not despawned when lifetime ends, only despawned when there are no child entities. Emitter should use this mode
 
-- 通过 ParticleId 销毁指定的 emitter，子粒子自动销毁
+- Despawn specified emitter through ParticleId, child particles are automatically despawned
 
-- emitter 的 is_local_orientation 为 true 时，emitter 手动更新自己的 GlobalTransform，particle 使用父实体即 emitter 手动更新后的 GlobalTransform 计算 world matrix 传给 shader
+- When emitter's is_local_orientation is true, emitter manually updates its own GlobalTransform, particle uses parent entity (emitter's manually updated GlobalTransform) to calculate world matrix passed to shader
 
-- 遍历 (Entity, ParticleDecal) 实体，取 ParticleDecalGeometry
+- Iterate over (Entity, ParticleDecal) entities, get ParticleDecalGeometry

@@ -6,40 +6,40 @@ use league_file::LeagueMeshStatic;
 pub fn mesh_static_to_bevy_mesh(mesh: LeagueMeshStatic) -> Mesh {
     let num_vertices = mesh.faces.len() * 3;
 
-    // 1. 准备好展开后的顶点属性 Vec
+    // 1. Prepare expanded vertex attribute Vecs
     let mut bevy_positions: Vec<[f32; 3]> = Vec::with_capacity(num_vertices);
     let mut bevy_uvs: Vec<[f32; 2]> = Vec::with_capacity(num_vertices);
 
-    // 只有当源 mesh 包含顶点色时才创建 Vec
+    // Only create Vec when source mesh contains vertex colors
     let mut bevy_colors: Option<Vec<[f32; 4]>> = if mesh.has_vertex_colors {
         Some(Vec::with_capacity(num_vertices))
     } else {
         None
     };
 
-    // 2. 遍历所有面，展开顶点数据
+    // 2. Iterate through all faces, expand vertex data
     for face in &mesh.faces {
         for i in 0..3 {
-            // 获取面中第 i 个顶点的索引，指向全局 "vertices" 列表
+            // Get the index of the i-th vertex in the face, pointing to global "vertices" list
             let global_pos_index = face.indices[i] as usize;
 
-            // a. 获取位置数据
-            // 从全局 "vertices" 列表查找位置
+            // a. Get position data
+            // Look up position from global "vertices" list
             let pos = mesh.vertices[global_pos_index];
             bevy_positions.push(pos);
 
-            // c. 获取UV数据
-            // UV 数据也直接存储在 face 中
+            // c. Get UV data
+            // UV data is also stored directly in face
             let uv = face.uvs[i];
             bevy_uvs.push(uv);
 
-            // d. 获取顶点色数据（如果存在）
+            // d. Get vertex color data (if exists)
             if let Some(colors_vec) = bevy_colors.as_mut() {
-                // 顶点色和位置一样，从全局列表 "vertex_colors" 中查找
+                // Vertex colors, like positions, are looked up from global "vertex_colors" list
                 let bgra_u8 = mesh.vertex_colors.as_ref().unwrap()[global_pos_index];
 
-                // 转换: [u8; 4] (BGRA) -> [f32; 4] (RGBA, normalized)
-                // 参考 skin_mesh.rs 的转换
+                // Convert: [u8; 4] (BGRA) -> [f32; 4] (RGBA, normalized)
+                // Reference skin_mesh.rs for conversion
                 colors_vec.push([
                     bgra_u8[2] as f32 / 255.0, // R
                     bgra_u8[1] as f32 / 255.0, // G
@@ -50,11 +50,11 @@ pub fn mesh_static_to_bevy_mesh(mesh: LeagueMeshStatic) -> Mesh {
         }
     }
 
-    // 3. 创建索引
-    // 因为我们展开了所有顶点，索引现在只是一个简单的 0, 1, 2, 3, 4, 5, ... 序列
+    // 3. Create indices
+    // Since we expanded all vertices, indices are now just a simple 0, 1, 2, 3, 4, 5, ... sequence
     let indices: Vec<u16> = (0..num_vertices as u16).collect();
 
-    // 4. 创建 Bevy Mesh 并插入所有属性
+    // 4. Create Bevy Mesh and insert all attributes
     let mut bevy_mesh = Mesh::new(
         PrimitiveTopology::TriangleList,
         RenderAssetUsages::default(),

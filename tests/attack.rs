@@ -3,13 +3,13 @@ mod tests {
     use bevy::prelude::*;
     use moon_lol::*;
 
-    // ===== 测试常量定义 =====
+    // ===== Test Constants =====
     const TEST_FPS: f32 = 30.0;
     const EPSILON: f32 = 1e-6;
 
-    // ===== 测试辅助工具 =====
+    // ===== Test Utilities =====
 
-    /// 测试装置 - 封装通用的测试设置
+    /// Test Harness - Encapsulates common test setup
     struct TestHarness {
         app: App,
         attacker: Entity,
@@ -17,7 +17,7 @@ mod tests {
     }
 
     impl TestHarness {
-        /// 创建新的测试装置
+        /// Create a new test harness
         fn new() -> Self {
             let mut app = App::new();
             app.add_plugins(MinimalPlugins);
@@ -34,7 +34,7 @@ mod tests {
             }
         }
 
-        /// 使用构建者模式配置攻击者
+        /// Configure attacker using builder pattern
         fn with_attacker(mut self, attack_component: Attack) -> Self {
             self.app
                 .world_mut()
@@ -43,14 +43,14 @@ mod tests {
             self
         }
 
-        /// 创建额外的目标实体
+        /// Create an additional target entity
         fn spawn_target(&mut self) -> Entity {
             self.app.world_mut().spawn_empty().id()
         }
 
-        // ===== 动作方法 (Action Methods) - 返回 &mut Self =====
+        // ===== Action Methods - Returns &mut Self =====
 
-        /// 推进时间
+        /// Advance time
         fn advance_time(&mut self, seconds: f32) -> &mut Self {
             let ticks = (seconds * TEST_FPS).ceil() as u32;
             for _ in 0..ticks {
@@ -62,7 +62,7 @@ mod tests {
             self
         }
 
-        /// 发送攻击命令
+        /// Send attack command
         fn attack(&mut self) -> &mut Self {
             self.app.world_mut().trigger(CommandAttackStart {
                 entity: self.attacker,
@@ -72,7 +72,7 @@ mod tests {
             self
         }
 
-        /// 发送取消命令
+        /// Send cancel command
         fn cancel(&mut self) -> &mut Self {
             self.app.world_mut().trigger(CommandAttackStop {
                 entity: self.attacker,
@@ -81,7 +81,7 @@ mod tests {
             self
         }
 
-        /// 发送重置命令
+        /// Send reset command
         fn reset(&mut self) -> &mut Self {
             self.app.world_mut().trigger(CommandAttackReset {
                 entity: self.attacker,
@@ -90,13 +90,13 @@ mod tests {
             self
         }
 
-        /// 切换攻击者的目标
+        /// Switch attacker's target
         fn switch_target(&mut self, new_target: Entity) -> &mut Self {
             self.target = new_target;
             self
         }
 
-        /// 修改攻击组件的属性
+        /// Modify attacker component properties
         fn modify_attacker<F>(&mut self, modifier: F) -> &mut Self
         where
             F: FnOnce(&mut Attack),
@@ -110,29 +110,29 @@ mod tests {
             self
         }
 
-        /// 获取攻击状态
+        /// Get attack state
         fn attack_state(&self) -> Option<&AttackState> {
             self.app.world().get::<AttackState>(self.attacker)
         }
 
-        /// 获取攻击组件
+        /// Get attack component
         fn attack_component(&self) -> &Attack {
             self.app.world().get::<Attack>(self.attacker).unwrap()
         }
 
-        // ===== 断言方法 (Assertion Methods) - 返回 &mut Self =====
+        // ===== Assertion Methods - Returns &mut Self =====
 
-        /// 断言攻击状态为空闲
+        /// Assert attack state is idle
         fn then_expect_idle(&mut self, message: &str) -> &mut Self {
             let state = self.attack_state();
-            assert!(state.is_none(), "处于攻击状态: {}", message);
+            assert!(state.is_none(), "In attack state: {}", message);
             self
         }
 
-        /// 断言攻击状态为前摇
+        /// Assert attack state is windup
         fn then_expect_windup(&mut self, message: &str) -> &mut Self {
             let state = self.attack_state();
-            assert!(state.is_some(), "没有处于攻击状态: {}", message);
+            assert!(state.is_some(), "Not in attack state: {}", message);
             let state = state.unwrap();
             assert!(
                 state.is_windup(),
@@ -143,10 +143,10 @@ mod tests {
             self
         }
 
-        /// 断言攻击状态为后摇
+        /// Assert attack state is cooldown
         fn then_expect_cooldown(&mut self, message: &str) -> &mut Self {
             let state = self.attack_state();
-            assert!(state.is_some(), "没有处于攻击状态: {}", message);
+            assert!(state.is_some(), "Not in attack state: {}", message);
             let state = state.unwrap();
             assert!(
                 state.is_cooldown(),
@@ -157,28 +157,28 @@ mod tests {
             self
         }
 
-        /// 断言攻击目标
+        /// Assert attack target
         fn then_expect_target(&mut self, expected_target: Entity, message: &str) -> &mut Self {
             let state = self.attack_state();
-            assert!(state.is_some(), "没有处于攻击状态: {}", message);
+            assert!(state.is_some(), "Not in attack state: {}", message);
             let state = state.unwrap();
             assert_eq!(state.target, Some(expected_target), "{}", message);
             self
         }
 
-        /// 执行自定义断言
+        /// Execute custom assertion
         fn then_custom_assert<F>(&mut self, assert_fn: F, message: &str) -> &mut Self
         where
             F: FnOnce(&Self) -> bool,
         {
-            assert!(assert_fn(self), "自定义断言失败: {}", message);
+            assert!(assert_fn(self), "Custom assertion failed: {}", message);
             self
         }
     }
 
-    // ===== 一、核心状态机与流程 (Core State Machine & Flow) =====
+    // ===== 1. Core State Machine & Flow =====
 
-    /// 目标 1：完整的攻击循环
+    /// Goal 1: Complete attack cycle
     #[test]
     fn test_complete_attack_cycle() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
@@ -187,17 +187,17 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
-            .then_expect_target(target, "攻击目标应该正确")
+            .then_expect_windup("Attack command should trigger windup state")
+            .then_expect_target(target, "Attack target should be correct")
             .advance_time(0.3)
-            .then_expect_cooldown("前摇结束后应该进入后摇状态")
-            .then_expect_target(target, "后摇期间目标应该保持不变")
+            .then_expect_cooldown("Should enter cooldown state after windup ends")
+            .then_expect_target(target, "Target should remain the same during cooldown")
             .advance_time(0.7)
-            .then_expect_windup("后摇结束后应该自动开始下一次攻击")
-            .then_expect_target(target, "下一次攻击的目标应该相同");
+            .then_expect_windup("Should automatically start next attack after cooldown ends")
+            .then_expect_target(target, "Next attack target should be the same");
     }
 
-    /// 目标 2：连续攻击同一目标
+    /// Goal 2: Consecutive attacks on same target
     #[test]
     fn test_consecutive_attacks_same_target() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
@@ -206,44 +206,44 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("第一次攻击应该触发前摇状态")
+            .then_expect_windup("First attack should trigger windup state")
             .advance_time(1.0)
-            .then_expect_windup("后摇结束后应该自动开始下一次攻击")
-            .then_expect_target(target, "下一次攻击的目标应该相同")
-            // 手动发送第二次攻击命令（测试同目标不重新开始）
+            .then_expect_windup("Should automatically start next attack after cooldown ends")
+            .then_expect_target(target, "Next attack target should be the same")
+            // Manually send second attack command (test same target doesn't restart)
             .attack()
-            .then_expect_windup("第二次攻击应该保持前摇状态")
-            .then_expect_target(target, "攻击目标应该保持不变");
+            .then_expect_windup("Second attack should maintain windup state")
+            .then_expect_target(target, "Attack target should remain unchanged");
 
         assert!(
             (harness.attack_component().windup_duration_secs() - 0.3).abs() < EPSILON,
-            "前摇时间配置正确"
+            "Windup time configuration is correct"
         );
         assert!(
             (harness.attack_component().cooldown_time() - 0.7).abs() < EPSILON,
-            "后摇时间配置正确"
+            "Cooldown time configuration is correct"
         );
     }
 
-    // ===== 二、攻击取消机制 (Attack Cancellation Mechanics) =====
+    // ===== 2. Attack Cancellation Mechanics =====
 
-    /// 目标 4：在"可取消"阶段取消前摇
+    /// Goal 4: Cancel windup during "cancellable" phase
     #[test]
     fn test_cancel_attack_during_cancellable_windup() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
+            .then_expect_windup("Attack command should trigger windup state")
             .advance_time(0.1)
             .cancel()
-            .then_expect_idle("可取消期内的攻击应该被取消")
+            .then_expect_idle("Attack should be cancelled during cancellable period")
             .attack()
-            .then_expect_windup("应该能立即开始新的攻击");
+            .then_expect_windup("Should be able to start new attack immediately");
     }
 
-    // ===== 三、攻击重置 (走A) 机制 (Attack Reset / Kiting) =====
+    // ===== 3. Attack Reset (Kiting) Mechanics =====
 
-    /// 目标 6：在后摇 (Cooldown) 期间重置攻击
+    /// Goal 6: Reset attack during Cooldown
     #[test]
     fn test_attack_reset_during_cooldown() {
         let target = TestHarness::new().target;
@@ -251,27 +251,27 @@ mod tests {
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
-            .then_expect_cooldown("应该进入后摇状态")
+            .then_expect_cooldown("Should enter cooldown state")
             .reset()
-            .then_expect_windup("重置后应该立即进入新的前摇状态")
-            .then_expect_target(target, "重置后目标应该保持不变");
+            .then_expect_windup("Should immediately enter new windup state after reset")
+            .then_expect_target(target, "Target should remain unchanged after reset");
     }
 
-    /// 测试攻击重置事件触发
+    /// Test attack reset event triggering
     #[test]
     fn test_attack_reset_event_triggering() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
-            .then_expect_cooldown("应该进入后摇状态")
+            .then_expect_cooldown("Should enter cooldown state")
             .reset()
-            .then_expect_windup("重置后应该进入前摇状态");
+            .then_expect_windup("Should enter windup state after reset");
     }
 
-    // ===== 四、攻击速度影响 (Impact of Attack Speed) =====
+    // ===== 4. Impact of Attack Speed =====
 
-    /// 目标 7：攻速变化对攻击时间的影响
+    /// Goal 7: Effect of attack speed changes on attack timing
     #[test]
     fn test_attack_speed_impact_on_timing() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.25, 1.0));
@@ -286,18 +286,18 @@ mod tests {
                     h.attack_component().total_duration_secs()
                         < initial_attack.total_duration_secs()
                 },
-                "攻击间隔应该缩短",
+                "Attack interval should decrease",
             )
             .then_custom_assert(
                 |h| {
                     h.attack_component().windup_duration_secs()
                         < initial_attack.windup_duration_secs()
                 },
-                "前摇时间应该缩短",
+                "Windup time should decrease",
             )
             .then_custom_assert(
                 |h| h.attack_component().cooldown_time() < initial_attack.cooldown_time(),
-                "后摇时间应该缩短",
+                "Cooldown time should decrease",
             )
             .then_custom_assert(
                 |h| {
@@ -305,11 +305,11 @@ mod tests {
                         + h.attack_component().cooldown_time())
                         < (initial_attack.windup_duration_secs() + initial_attack.cooldown_time())
                 },
-                "总攻击时间应该缩短",
+                "Total attack time should decrease",
             );
     }
 
-    /// 目标 8：攻击速度达到上限
+    /// Goal 8: Attack speed reaches cap
     #[test]
     fn test_attack_speed_cap() {
         let attack = Attack::from_legacy(0.0, 0.625, 0.0).with_bonus_attack_speed(10.0);
@@ -318,14 +318,14 @@ mod tests {
 
         let mut harness = TestHarness::new().with_attacker(attack);
 
-        // 验证基本的攻速限制
+        // Verify basic attack speed limit
         assert!(
             (harness.attack_component().current_attack_speed() - 2.5).abs() < EPSILON,
-            "攻速应该被限制在2.5"
+            "Attack speed should be capped at 2.5"
         );
         assert!(
             (harness.attack_component().total_duration_secs() - min_interval).abs() < EPSILON,
-            "攻击间隔应该是最小值"
+            "Attack interval should be minimum value"
         );
 
         harness.modify_attacker(|attack| {
@@ -334,17 +334,17 @@ mod tests {
 
         assert!(
             (harness.attack_component().current_attack_speed() - 2.5).abs() < EPSILON,
-            "进一步增加bonus_attack_speed不应该改变结果"
+            "Further increasing bonus_attack_speed should not change result"
         );
         assert!(
             (harness.attack_component().total_duration_secs() - min_interval).abs() < EPSILON,
-            "攻击间隔不应该改变"
+            "Attack interval should not change"
         );
     }
 
-    // ===== 五、前摇配置与修正 (Windup Configuration & Modifiers) =====
+    // ===== 5. Windup Configuration & Modifiers =====
 
-    /// 验证Legacy前摇公式
+    /// Verify Legacy windup formula
     #[test]
     fn test_legacy_windup_formula() {
         let test_cases = [(0.1, 0.4), (-0.1, 0.2), (0.0, 0.3)];
@@ -355,7 +355,7 @@ mod tests {
             let actual_windup = harness.attack_component().windup_duration_secs();
             assert!(
                 (actual_windup - expected_windup).abs() < EPSILON,
-                "Legacy模式下，attack_offset={}应产生前摇时间{}，实际为{}",
+                "In Legacy mode, attack_offset={} should produce windup time {}, actual {}",
                 attack_offset,
                 expected_windup,
                 actual_windup
@@ -363,7 +363,7 @@ mod tests {
         }
     }
 
-    /// 验证Modern前摇公式
+    /// Verify Modern windup formula
     #[test]
     fn test_modern_windup_formula() {
         let test_cases = [
@@ -382,14 +382,14 @@ mod tests {
             let actual_windup = harness.attack_component().windup_duration_secs();
             assert!(
                 (actual_windup - expected_windup).abs() < EPSILON,
-                "Modern模式下，配置应产生前摇时间{}，实际为{}",
+                "In Modern mode, config should produce windup time {}, actual {}",
                 expected_windup,
                 actual_windup
             );
         }
     }
 
-    /// 验证windup_modifier的效果
+    /// Verify windup_modifier effect
     #[test]
     fn test_windup_modifier_effect() {
         let test_cases = [(1.0, 0.3), (0.5, 0.15), (1.5, 0.45), (0.1, 0.03)];
@@ -404,14 +404,14 @@ mod tests {
             let actual_windup = harness.attack_component().windup_duration_secs();
             assert!(
                 (actual_windup - expected_windup).abs() < EPSILON,
-                "Modifier={}应产生前摇时间{}，实际为{}",
+                "Modifier={} should produce windup time {}, actual {}",
                 modifier,
                 expected_windup,
                 actual_windup
             );
         }
 
-        // 测试Legacy模式下的修正系数
+        // Test modifier in Legacy mode
         let legacy_attack = Attack::new(0.0, 0.3 + 0.1, 1.0);
         let legacy_attack = Attack {
             windup_modifier: 0.8,
@@ -422,15 +422,15 @@ mod tests {
         let actual_windup = harness.attack_component().windup_duration_secs();
         assert!(
             (actual_windup - expected_legacy).abs() < EPSILON,
-            "Legacy模式下的修正系数测试，期望{}，实际为{}",
+            "Legacy mode modifier test, expected {}, actual {}",
             expected_legacy,
             actual_windup
         );
     }
 
-    // ===== 七、辅助测试函数和浮点数精度 =====
+    // ===== 7. Helper Test Functions and Floating Point Precision =====
 
-    /// 攻击速度计算验证
+    /// Attack speed calculation verification
     #[test]
     fn test_attack_speed_calculations() {
         let attack = Attack::from_legacy(0.0, 0.625, 0.0).with_bonus_attack_speed(1.0);
@@ -440,23 +440,23 @@ mod tests {
         let component = harness.attack_component();
         assert!(
             (component.current_attack_speed() - 1.25).abs() < EPSILON,
-            "当前攻速计算不正确"
+            "Current attack speed calculation is incorrect"
         );
         assert!(
             (component.total_duration_secs() - 0.8).abs() < EPSILON,
-            "攻击间隔计算不正确"
+            "Attack interval calculation is incorrect"
         );
         assert!(
             (component.windup_duration_secs() - 0.3).abs() < EPSILON,
-            "前摇时间计算不正确"
+            "Windup time calculation is incorrect"
         );
         assert!(
             (component.cooldown_time() - 0.5).abs() < EPSILON,
-            "后摇时间计算不正确"
+            "Cooldown time calculation is incorrect"
         );
     }
 
-    /// 浮点数精度测试
+    /// Floating point precision test
     #[test]
     fn test_floating_point_precision() {
         let attack = Attack::new(0.0, 0.25, 1.0);
@@ -475,30 +475,30 @@ mod tests {
         let component = harness.attack_component();
         assert!(
             (component.current_attack_speed() - expected_speed).abs() < EPSILON,
-            "攻速不精确"
+            "Attack speed is imprecise"
         );
         assert!(
             (component.total_duration_secs() - expected_interval).abs() < EPSILON,
-            "攻击间隔不精确"
+            "Attack interval is imprecise"
         );
         assert!(
             (component.windup_duration_secs() - expected_windup).abs() < EPSILON,
-            "前摇时间不精确"
+            "Windup time is imprecise"
         );
     }
 
-    /// 在前摇期间重置攻击
+    /// Reset attack during windup
     #[test]
     fn test_attack_reset_during_windup() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
+            .then_expect_windup("Attack command should trigger windup state")
             .reset()
-            .then_expect_windup("前摇期间重置应该重新回到前摇状态");
+            .then_expect_windup("Reset during windup should return to windup state");
     }
 
-    /// Modern模式下的攻速缩放测试
+    /// Modern mode attack speed scaling test
     #[test]
     fn test_modern_windup_with_attack_speed_scaling() {
         let mut harness = TestHarness::new()
@@ -506,27 +506,27 @@ mod tests {
 
         let target = harness.target;
 
-        // 先验证时间计算
+        // First verify time calculations
         assert!(
             (harness.attack_component().windup_duration_secs() - 0.125).abs() < EPSILON,
-            "前摇时间计算不正确"
+            "Windup time calculation is incorrect"
         );
         assert!(
             (harness.attack_component().cooldown_time() - 0.375).abs() < EPSILON,
-            "后摇时间计算不正确"
+            "Cooldown time calculation is incorrect"
         );
 
         harness
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
+            .then_expect_windup("Attack command should trigger windup state")
             .advance_time(0.125)
-            .then_expect_cooldown("前摇结束后应该进入后摇状态")
+            .then_expect_cooldown("Should enter cooldown state after windup ends")
             .advance_time(0.375)
-            .then_expect_windup("后摇结束后应该自动开始下一次攻击")
-            .then_expect_target(target, "下一次攻击的目标应该相同");
+            .then_expect_windup("Should automatically start next attack after cooldown ends")
+            .then_expect_target(target, "Next attack target should be the same");
     }
 
-    /// 不可取消宽限期测试
+    /// Uncancellable grace period test
     #[test]
     fn test_uncancellable_grace_period() {
         let attack = Attack::new(0.0, 0.05, 0.95);
@@ -538,10 +538,10 @@ mod tests {
         assert!(attack.windup_duration_secs() < UNCANCELLABLE_GRACE_PERIOD);
     }
 
-    // ===== 八、目标切换与攻击取消的交互 (Target Switching & Attack Cancellation Interaction) =====
+    // ===== 8. Target Switching & Attack Cancellation Interaction =====
 
-    /// 测试场景1：攻击目标A，在不可取消期间切换到目标B
-    /// 期望：当前攻击仍攻击目标A，但下一次自动攻击应该攻击目标B
+    /// Test scenario 1: Attack target A, switch to target B during uncancellable period
+    /// Expected: Current attack still attacks target A, but next auto attack should attack target B
     #[test]
     fn test_new_target_command_during_uncancellable_period() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
@@ -551,27 +551,27 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
-            .then_expect_target(target_a, "攻击目标应该是A")
+            .then_expect_windup("Attack command should trigger windup state")
+            .then_expect_target(target_a, "Attack target should be A")
             .advance_time(0.234)
             .switch_target(target_b)
             .attack()
-            .then_expect_windup("攻击应该重新进入前摇状态")
-            .then_expect_target(target_b, "当前攻击的目标应该是B")
+            .then_expect_windup("Attack should re-enter windup state")
+            .then_expect_target(target_b, "Current attack target should be B")
             .advance_time(0.5)
-            .then_expect_cooldown("应该进入冷却状态")
-            .then_expect_target(target_b, "下一次攻击的目标还是B")
+            .then_expect_cooldown("Should enter cooldown state")
+            .then_expect_target(target_b, "Next attack target is still B")
             .switch_target(target_a)
             .attack()
-            .then_expect_cooldown("攻击应该还是后摇状态")
-            .then_expect_target(target_a, "下一次攻击的目标应该是A")
+            .then_expect_cooldown("Attack should still be in cooldown state")
+            .then_expect_target(target_a, "Next attack target should be A")
             .advance_time(0.5)
-            .then_expect_windup("后摇结束后应该自动开始下一次攻击")
-            .then_expect_target(target_a, "下一次攻击的目标应该是A");
+            .then_expect_windup("Should automatically start next attack after cooldown ends")
+            .then_expect_target(target_a, "Next attack target should be A");
     }
 
-    /// 测试场景2：攻击目标A，在可取消期间攻击目标B
-    /// 期望：会立即取消当前攻击，重新开始攻击目标B且重新计时
+    /// Test scenario 2: Attack target A, attack target B during cancellable period
+    /// Expected: Will immediately cancel current attack, restart attacking target B with timer reset
     #[test]
     fn test_new_target_command_during_cancellable_period() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
@@ -581,71 +581,71 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("攻击命令应该触发前摇状态")
-            .then_expect_target(target_a, "攻击目标应该是A")
+            .then_expect_windup("Attack command should trigger windup state")
+            .then_expect_target(target_a, "Attack target should be A")
             .advance_time(0.1)
             .switch_target(target_b)
             .attack()
-            .then_expect_windup("应该立即开始攻击目标B")
-            .then_expect_target(target_b, "当前攻击的目标应该是B")
+            .then_expect_windup("Should immediately start attacking target B")
+            .then_expect_target(target_b, "Current attack target should be B")
             .advance_time(0.3)
-            .then_expect_cooldown("前摇结束后应该进入后摇状态")
-            .then_expect_target(target_b, "后摇期间目标应该是B")
+            .then_expect_cooldown("Should enter cooldown state after windup ends")
+            .then_expect_target(target_b, "Target should be B during cooldown")
             .advance_time(0.7)
-            .then_expect_windup("后摇结束后应该自动开始下一次攻击")
-            .then_expect_target(target_b, "下一次攻击的目标应该是B");
+            .then_expect_windup("Should automatically start next attack after cooldown ends")
+            .then_expect_target(target_b, "Next attack target should be B");
     }
 
-    // ===== 九、边缘和异常情况测试 (Edge Cases & Exception Handling) =====
+    // ===== 9. Edge Cases & Exception Handling =====
 
-    /// 测试后摇期间发送取消命令
+    /// Test sending cancel command during cooldown
     #[test]
     fn test_cancel_attack_during_cooldown() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
             .attack()
             .advance_time(0.3)
-            .then_expect_cooldown("前摇结束后应该进入后摇状态")
+            .then_expect_cooldown("Should enter cooldown state after windup ends")
             .cancel()
-            .then_expect_cooldown("后摇期间取消攻击还是后摇状态")
+            .then_expect_cooldown("Cancel during cooldown should still be in cooldown state")
             .attack()
-            .then_expect_cooldown("后摇期间发送攻击命令应该不变");
+            .then_expect_cooldown("Attack command during cooldown should not change state");
     }
 
-    /// 测试空闲状态下发送取消或重置命令
+    /// Test sending cancel or reset command in idle state
     #[test]
     fn test_cancel_and_reset_in_idle_state() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.3, 1.0))
-            .then_expect_idle("初始状态应该是空闲")
+            .then_expect_idle("Initial state should be idle")
             .cancel()
-            .then_expect_idle("空闲状态下取消命令不应改变状态")
+            .then_expect_idle("Cancel command in idle state should not change state")
             .reset()
-            .then_expect_idle("空闲状态下重置命令不应改变状态");
+            .then_expect_idle("Reset command in idle state should not change state");
     }
 
-    /// 演示：continue_attack控制测试
+    /// Demo: continue_attack control test
     #[test]
     fn test_continue_attack_control() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
 
-        // 正常攻击循环
+        // Normal attack cycle
         harness
             .attack()
             .then_custom_assert(
                 |h| h.attack_state().unwrap().target.is_some(),
-                "默认应该继续攻击",
+                "Should continue attacking by default",
             )
             .advance_time(1.0)
-            .then_expect_windup("没有取消命令时应该自动继续攻击")
-            // 测试取消命令停止自动攻击
+            .then_expect_windup("Should automatically continue attacking without cancel command")
+            // Test cancel command stops auto attack
             .cancel()
-            .then_expect_idle("取消后应该回到空闲状态");
+            .then_expect_idle("Should return to idle state after cancel");
     }
 
-    // ===== 十、复杂交互场景测试 (Complex Interaction Scenarios) =====
+    // ===== 10. Complex Interaction Scenarios =====
 
-    /// 复杂场景：走位攻击和目标切换组合
+    /// Complex scenario: Kiting and target switching combination
     #[test]
     fn test_complex_kiting_and_target_switching_scenario() {
         let mut harness = TestHarness::new().with_attacker(Attack::new(0.0, 0.3, 1.0));
@@ -655,36 +655,36 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("应该开始攻击初始目标")
-            .then_expect_target(initial_target, "目标应为 initial_target")
+            .then_expect_windup("Should start attacking initial target")
+            .then_expect_target(initial_target, "Target should be initial_target")
             .advance_time(0.1)
             .switch_target(new_target)
             .attack()
-            .then_expect_windup("攻击被取消，并立即开始攻击新目标")
-            .then_expect_target(new_target, "目标应切换为 new_target")
+            .then_expect_windup("Attack cancelled, immediately start attacking new target")
+            .then_expect_target(new_target, "Target should switch to new_target")
             .advance_time(0.3)
-            .then_expect_cooldown("对新目标的攻击完成，进入后摇")
+            .then_expect_cooldown("Attack on new target complete, enter cooldown")
             .advance_time(0.2)
             .reset()
-            .then_expect_windup("后摇被重置，立即开始新的攻击")
-            .then_expect_target(new_target, "目标仍然是 new_target")
+            .then_expect_windup("Cooldown reset, immediately start new attack")
+            .then_expect_target(new_target, "Target is still new_target")
             .advance_time(0.1)
             .switch_target(initial_target)
             .attack()
-            .then_expect_windup("可以正常开始攻击初始目标")
+            .then_expect_windup("Can successfully start attacking initial target")
             .advance_time(0.1)
             .modify_attacker(|attack| {
                 attack.bonus_attack_speed = 1.0;
             })
             .advance_time(0.1)
-            .then_expect_windup("前摇中加攻速不会影响前摇时间")
+            .then_expect_windup("Adding attack speed during windup doesn't affect windup time")
             .advance_time(0.1)
-            .then_expect_cooldown("进入后摇")
+            .then_expect_cooldown("Enter cooldown")
             .advance_time(0.35)
-            .then_expect_windup("加攻速后，后摇时间变为 0.35 秒，进入下一次攻击前摇");
+            .then_expect_windup("After adding attack speed, cooldown becomes 0.35s, enter next attack windup");
     }
 
-    /// 复杂场景：多目标切换和取消序列
+    /// Complex scenario: Multi-target switching and cancellation sequence
     #[test]
     fn test_multi_target_switching_and_cancellation_sequence() {
         let mut harness = TestHarness::new()
@@ -696,45 +696,45 @@ mod tests {
 
         harness
             .attack()
-            .then_expect_windup("开始攻击目标A")
-            .then_expect_target(target_a, "确认攻击目标A")
+            .then_expect_windup("Start attacking target A")
+            .then_expect_target(target_a, "Confirm attacking target A")
             .advance_time(0.03)
             .switch_target(target_b)
             .attack()
-            .then_expect_windup("切换攻击目标B")
-            .then_expect_target(target_b, "确认攻击目标B")
+            .then_expect_windup("Switch to attacking target B")
+            .then_expect_target(target_b, "Confirm attacking target B")
             .advance_time(0.03)
             .switch_target(target_c)
             .attack()
-            .then_expect_windup("切换攻击目标C")
-            .then_expect_target(target_c, "确认攻击目标C")
+            .then_expect_windup("Switch to attacking target C")
+            .then_expect_target(target_c, "Confirm attacking target C")
             .advance_time(0.1)
-            .then_expect_cooldown("完成对目标C的攻击")
+            .then_expect_cooldown("Complete attack on target C")
             .advance_time(0.4)
-            .then_expect_windup("自动开始下一次攻击目标C")
+            .then_expect_windup("Automatically start next attack on target C")
             .advance_time(0.04)
             .switch_target(target_a)
             .attack()
-            .then_expect_windup("成功切换攻击目标A")
-            .then_expect_target(target_a, "目标现在是A");
+            .then_expect_windup("Successfully switch to attacking target A")
+            .then_expect_target(target_a, "Target is now A");
     }
 
-    /// 复杂场景：攻速变化下的精确时间控制
+    /// Complex scenario: Precise timing control with attack speed changes
     #[test]
     fn test_attack_speed_scaling_with_precise_timing() {
         TestHarness::new()
             .with_attacker(Attack::new(0.0, 0.25, 1.0))
             .attack()
-            .then_expect_windup("开始基础攻速攻击")
+            .then_expect_windup("Start base attack speed attack")
             .then_custom_assert(
                 |h| (h.attack_component().windup_duration_secs() - 0.25).abs() < EPSILON,
-                "基础攻速下前摇时间应为0.25秒",
+                "Base attack speed windup time should be 0.25s",
             )
             .advance_time(0.25)
-            .then_expect_cooldown("完成基础攻速前摇")
+            .then_expect_cooldown("Complete base attack speed windup")
             .then_custom_assert(
                 |h| (h.attack_component().cooldown_time() - 0.75).abs() < EPSILON,
-                "基础攻速下后摇时间应为0.75秒",
+                "Base attack speed cooldown time should be 0.75s",
             )
             .advance_time(0.4)
             .modify_attacker(|attack| {
@@ -742,17 +742,17 @@ mod tests {
             })
             .then_custom_assert(
                 |h| (h.attack_component().total_duration_secs() - 0.5).abs() < EPSILON,
-                "攻速提升后间隔应为0.5秒",
+                "After attack speed boost, interval should be 0.5s",
             )
             .advance_time(0.35)
-            .then_expect_windup("开始新攻速的攻击")
+            .then_expect_windup("Start attack with new attack speed")
             .then_custom_assert(
                 |h| (h.attack_component().windup_duration_secs() - 0.125).abs() < EPSILON,
-                "新攻速下前摇时间应为0.125秒",
+                "New attack speed windup time should be 0.125s",
             )
             .advance_time(0.125)
-            .then_expect_cooldown("完成新攻速前摇")
+            .then_expect_cooldown("Complete new attack speed windup")
             .advance_time(0.375)
-            .then_expect_windup("新攻速下的下一次攻击");
+            .then_expect_windup("Next attack with new attack speed");
     }
 }

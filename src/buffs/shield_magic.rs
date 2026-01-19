@@ -11,13 +11,13 @@ impl Plugin for PluginShieldMagic {
     }
 }
 
-/// 魔法护盾组件 - 只能抵挡魔法伤害
+/// Magic shield component - can only block magic damage
 #[derive(Component, Debug, Default, Clone)]
 #[require(Buff = Buff { name: "ShieldMagic" })]
 pub struct BuffShieldMagic {
-    /// 当前护盾值
+    /// Current shield value
     pub current: f32,
-    /// 最大护盾值
+    /// Maximum shield value
     pub max: f32,
 }
 
@@ -29,14 +29,14 @@ impl BuffShieldMagic {
         }
     }
 
-    /// 吸收魔法伤害，返回剩余伤害
+    /// Absorb magic damage, returns remaining damage
     pub fn absorb_magic_damage(&mut self, damage: f32) -> f32 {
         let absorbed = damage.min(self.current);
         self.current -= absorbed;
         damage - absorbed
     }
 
-    /// 检查护盾是否已耗尽
+    /// Check if shield is depleted
     pub fn is_depleted(&self) -> bool {
         self.current <= 0.0
     }
@@ -45,7 +45,7 @@ impl BuffShieldMagic {
 fn update_shield_magic(mut commands: Commands, q_shield: Query<(Entity, &BuffShieldMagic)>) {
     for (entity, shield) in q_shield.iter() {
         if shield.is_depleted() {
-            debug!("正在移除实体 {:?} 的耗尽魔法护盾", entity);
+            debug!("Removing depleted magic shield from entity {:?}", entity);
             commands.entity(entity).despawn();
         }
     }

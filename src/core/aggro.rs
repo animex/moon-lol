@@ -43,14 +43,14 @@ pub fn aggro_scan(
         let mut closest_distance = f32::MAX;
         let mut target_entity = Entity::PLACEHOLDER;
 
-        // 遍历所有可攻击单位筛选目标
+        // Iterate through all attackable units to find targets
         for (attackable_entity, attackable_team, attackable_transform) in q_attackable.iter() {
-            // 忽略友方单位
+            // Ignore friendly units
             if attackable_team == team || *attackable_team == Team::Neutral {
                 continue;
             }
 
-            // 计算距离并检查是否在仇恨范围内
+            // Calculate distance and check if within aggro range
             let distance = transform
                 .translation
                 .distance(attackable_transform.translation);
@@ -59,14 +59,14 @@ pub fn aggro_scan(
                 continue;
             }
 
-            // 获取仇恨值（默认为0）
+            // Get aggro value (default is 0)
             let aggro = aggro_state
                 .aggros
                 .get(&attackable_entity)
                 .copied()
                 .unwrap_or(0.0);
 
-            // 优先选择仇恨值更高的目标，仇恨相同时选择更近的
+            // Prioritize targets with higher aggro, choose closer target when aggro is equal
             if aggro > best_aggro || (aggro == best_aggro && distance < closest_distance) {
                 best_aggro = aggro;
                 closest_distance = distance;
@@ -74,9 +74,9 @@ pub fn aggro_scan(
             }
         }
 
-        // 如果找到有效目标则触发
+        // Trigger event if valid target found
         if target_entity != Entity::PLACEHOLDER {
-            debug!("{} 找到仇恨目标 {}", entity, target_entity);
+            debug!("{} found aggro target {}", entity, target_entity);
             commands.trigger(EventAggroTargetFound {
                 entity,
                 target: target_entity,
@@ -141,35 +141,35 @@ mod tests {
     use super::*;
     use crate::{DamageResult, DamageType, EventDamageCreate, EventDead};
 
-    // 用于测试中捕获系统选中的目标
+    // Used in tests to capture the target selected by the system
     #[derive(Resource, Default)]
     struct LastTarget(Option<Entity>);
 
-    // 测试辅助函数：构建 App 并注入必要的 Plugin 和 Resource
+    // Test helper function: build App and inject necessary Plugins and Resources
     fn setup_app() -> App {
         let mut app = App::new();
         app.add_plugins(MinimalPlugins);
         app.add_plugins(PluginAggro);
-        // 手动控制时间更新，使得 app.update() 能运行一次 FixedUpdate
+        // Manually control time updates so app.update() can run one FixedUpdate
         app.insert_resource(TimeUpdateStrategy::ManualDuration(Duration::from_micros(
             15625,
         )));
         app.init_resource::<LastTarget>();
 
-        // 注册观察者：当 Aggro 系统发出“找到目标”事件时，记录到 Resource 中
+        // Register observer: when Aggro system emits "target found" event, record to Resource
         app.add_observer(
             |event: On<EventAggroTargetFound>, mut res: ResMut<LastTarget>| {
                 res.0 = Some(event.event().target);
             },
         );
 
-        // 运行一次，使 TimePlugin 记录初始值
+        // Run once to let TimePlugin record initial values
         app.update();
 
         app
     }
 
-    // 辅助构建 DamageResult
+    // Helper to build DamageResult
     fn mock_damage_result() -> DamageResult {
         DamageResult {
             final_damage: 10.0,
@@ -186,12 +186,12 @@ mod tests {
         let mut app = setup_app();
         let world = app.world_mut();
 
-        // 1. 创建拥有仇恨系统的单位 (Order)
+        // 1. Create unit with aggro system (Order)
         let _me = world
             .spawn((Team::Order, Transform::default(), Aggro { range: 100.0 }))
             .id();
 
-        // 2. 创建两个敌人，一个近(10m)，一个远(20m)
+        // 2. Create two enemies, one close (10m), one far (20m)
         let enemy_near = world
             .spawn((Team::Chaos, Transform::from_xyz(10.0, 0.0, 0.0)))
             .id();
@@ -200,12 +200,12 @@ mod tests {
             .spawn((Team::Chaos, Transform::from_xyz(20.0, 0.0, 0.0)))
             .id();
 
-        // 运行系统
+        // Run the system
         app.update();
 
-        // 断言：在没有仇恨值的情况下，应当选择最近的敌人
+        // Assert: when no aggro values exist, should select the closest enemy
         let target = app.world().resource::<LastTarget>().0;
-        assert_eq!(target, Some(enemy_near), "应优先选择距离最近的目标");
+        assert_eq!(target, Some(enemy_near), "should prioritize the closest target");
     }
 
     #[test]
@@ -225,16 +225,16 @@ mod tests {
             .spawn((Team::Chaos, Transform::from_xyz(50.0, 0.0, 0.0)))
             .id();
 
-        // 手动注入仇恨值：远处的仇恨极高
+        // Manually inject aggro values: far enemy has very high aggro
         let mut aggro_state = world.get_mut::<AggroState>(me).unwrap();
         aggro_state.aggros.insert(enemy_near, 0.0);
         aggro_state.aggros.insert(enemy_far, 100.0);
 
         app.update();
 
-        // 断言：应当忽略距离，选择仇恨值最高的目标
+        // Assert: should ignore distance and select the target with highest aggro
         let target = app.world().resource::<LastTarget>().0;
-        assert_eq!(target, Some(enemy_far), "应优先选择仇恨值最高的目标");
+        assert_eq!(target, Some(enemy_far), "should prioritize target with highest aggro");
     }
 
     #[test]
@@ -242,17 +242,17 @@ mod tests {
         let mut app = setup_app();
         let world = app.world_mut();
 
-        // 自身范围只有 10
+        // Own range is only 10
         world.spawn((Team::Order, Transform::default(), Aggro { range: 10.0 }));
 
-        // 敌人在 20 处
+        // Enemy is at distance 20
         world.spawn((Team::Chaos, Transform::from_xyz(20.0, 0.0, 0.0)));
 
         app.update();
 
-        // 断言：没有目标被选中
+        // Assert: no target should be selected
         let target = app.world().resource::<LastTarget>().0;
-        assert_eq!(target, None, "超出范围的目标应被忽略");
+        assert_eq!(target, None, "out of range targets should be ignored");
     }
 
     #[test]
@@ -260,7 +260,7 @@ mod tests {
         let mut app = setup_app();
         let world = app.world_mut();
 
-        // 模拟场景：队友被攻击，附近的守卫应该对攻击者产生仇恨
+        // Simulate scenario: ally is attacked, nearby guard should generate aggro against attacker
         let attacker = world
             .spawn((Team::Order, Transform::from_xyz(5.0, 0.0, 0.0)))
             .id();
@@ -270,7 +270,7 @@ mod tests {
             .spawn((Team::Chaos, Transform::default(), Aggro { range: 50.0 }))
             .id();
 
-        // 触发伤害事件
+        // Trigger damage event
         world.trigger(EventDamageCreate {
             entity: ally,
             source: attacker,
@@ -280,11 +280,11 @@ mod tests {
 
         app.update();
 
-        // 验证守卫的仇恨列表
+        // Verify guard's aggro list
         let state = app.world().get::<AggroState>(guard).unwrap();
         let aggro_val = state.aggros.get(&attacker).copied().unwrap_or(0.0);
 
-        assert_eq!(aggro_val, 10.0, "队友受击应增加攻击者的仇恨值");
+        assert_eq!(aggro_val, 10.0, "ally being hit should increase attacker's aggro value");
     }
 
     #[test]
@@ -295,22 +295,22 @@ mod tests {
         let enemy = world.spawn(Team::Chaos).id();
         let me = world.spawn((Team::Order, Aggro { range: 100.0 })).id();
 
-        // 1. 初始化仇恨
+        // 1. Initialize aggro
         if let Some(mut state) = world.get_mut::<AggroState>(me) {
             state.aggros.insert(enemy, 50.0);
         }
 
-        // 2. 触发目标死亡事件 (在目标实体上触发)
-        // 注意：根据 on_target_dead 实现，EventDead 需触发在死亡实体上
+        // 2. Trigger target death event (triggered on target entity)
+        // Note: According to on_target_dead implementation, EventDead needs to be triggered on the dead entity
         world.trigger(EventDead { entity: enemy });
 
         app.update();
 
-        // 3. 验证清理逻辑
+        // 3. Verify cleanup logic
         let state = app.world().get::<AggroState>(me).unwrap();
         assert!(
             !state.aggros.contains_key(&enemy),
-            "目标死亡后应从仇恨列表中移除"
+            "target should be removed from aggro list after death"
         );
     }
 }

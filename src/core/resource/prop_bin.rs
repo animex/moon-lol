@@ -65,7 +65,7 @@ fn on_command_load_prop_bin(
     mut res_active_prop_loads: ResMut<ActivePropLoads>,
 ) {
     if let Some(label) = &event.label {
-        info!("{} 配置文件开始加载，一共 {} 个", label, event.path.len());
+        info!("{} config files starting to load, {} total", label, event.path.len());
     }
 
     let mut handles = Vec::new();
@@ -103,8 +103,8 @@ fn on_command_load_prop_bin(
                 .extend(handles);
         }
     } else {
-        // 如果没有新资源加载，可能已经加载完成，或者本来就是空的
-        // 这里我们不直接触发 EventLoadPropEnd，因为可能还有正在加载的资源
+        // If no new resources are loading, they may have already finished loading, or were empty to begin with
+        // We don't trigger EventLoadPropEnd here directly, because there may still be resources being loaded
     }
 }
 
@@ -134,8 +134,8 @@ fn update_collect_properties(
                 return false;
             }
 
-            // 递归加载时，目前无法得知原始 label，这可能是一个问题
-            // 如果递归加载的资源也需要通知完成，我们需要在 ActivePropLoads 中跟踪
+            // When loading recursively, we currently cannot determine the original label, which may be an issue
+            // If recursively loaded resources also need completion notification, we need to track them in ActivePropLoads
             commands.trigger(CommandLoadPropBin {
                 path: PropPath::Path(league_properties.1.clone()),
                 label: None,
@@ -144,7 +144,7 @@ fn update_collect_properties(
             false
         });
 
-    // 处理带标签的加载任务
+    // Process loading tasks with labels
     let mut finished_labels = Vec::new();
     for (label, handles) in res_active_prop_loads.map.iter_mut() {
         handles.retain(|handle| !res_assets_league_properties.contains(handle));
@@ -156,7 +156,7 @@ fn update_collect_properties(
     for label in finished_labels {
         res_active_prop_loads.map.remove(&label);
         if !label.is_empty() {
-            info!("{} 配置文件加载完成", label);
+            info!("{} config files finished loading", label);
             commands.trigger(EventLoadPropEnd { label });
         }
     }

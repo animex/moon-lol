@@ -8,12 +8,12 @@ export interface Post {
 
 export const posts: Record<string, Post> = {
   architecture: {
-    title: "工程架构",
-    desc: "Moon LoL 的高层系统设计：Rust Core 与 Web Frontend.",
+    title: "Architecture",
+    desc: "High-level system design of Moon LoL: Rust Core and Web Frontend.",
     date: "2025.11.28",
     tag: "ARCHITECTURE",
     content: `
-# 工程架构
+# Architecture
 
 \`\`\`mermaid
 graph TD
@@ -33,27 +33,27 @@ graph TD
     Web -->|Input| ECS
 \`\`\`
 
-## 核心设计理念
+## Core Design Philosophy
 
-Moon LoL 采用高性能的分层架构。 系统的核心是基于 Rust 的 Bevy 引擎，它提供了极致的性能和类型安全的 ECS 架构。
+Moon LoL adopts a high-performance layered architecture. The core of the system is based on the Rust Bevy engine, which provides ultimate performance and a type-safe ECS architecture.
 
-## 核心支柱
+## Core Pillars
 
-- **Rust Core (Bevy):** 负责所有游戏逻辑、物理模拟和状态管理。利用 ECS 模式实现高并发和内存友好的数据处理。
-- **Frontend (Vue 3):** 通过 WebSocket 或 HTTP 轮询获取游戏状态，利用 WebGL/Canvas 进行实时渲染，主要用于调试和观察。
+- **Rust Core (Bevy):** Handles all game logic, physics simulation, and state management. Uses ECS pattern to achieve high concurrency and memory-friendly data processing.
+- **Frontend (Vue 3):** Fetches game state via WebSocket or HTTP polling, uses WebGL/Canvas for real-time rendering, mainly for debugging and observation.
 
-## 高性能通信
+## High-Performance Communication
 
-前端与后端通过高效的数据协议进行通信，确保在渲染大量实体时依然保持流畅的帧率。
+The frontend and backend communicate through efficient data protocols, ensuring smooth frame rates even when rendering large numbers of entities.
     `,
   },
   "data-flow": {
-    title: "数据流转",
-    desc: "从 Bevy ECS 到 Web 前端的数据管线。",
+    title: "Data Flow",
+    desc: "Data pipeline from Bevy ECS to Web Frontend.",
     date: "2025.11.28",
     tag: "DATA",
     content: `
-# 数据流转
+# Data Flow
 
 \`\`\`mermaid
 sequenceDiagram
@@ -64,7 +64,7 @@ sequenceDiagram
         Bevy->>Bevy: Run Systems (Movement, Attack, etc.)
         Bevy->>Bevy: Update State
     end
-    
+
     loop Render Loop
         Frontend->>Bevy: Request State
         Bevy-->>Frontend: JSON Snapshot
@@ -72,45 +72,45 @@ sequenceDiagram
     end
 \`\`\`
 
-## 游戏循环
+## Game Loop
 
-系统的数据流转完全由 Bevy 的 Schedule 驱动。
+The system's data flow is entirely driven by Bevy's Schedule.
 
-## 核心循环 (Update)
+## Core Loop (Update)
 
-Bevy 引擎每帧执行一次 Update Schedule：
+The Bevy engine executes the Update Schedule once per frame:
 
-1. 处理输入事件 (Input Events)。
-2. 运行所有的 Systems (移动、攻击、伤害计算)。
-3. 更新组件状态 (Components)。
+1. Process input events.
+2. Run all Systems (movement, attack, damage calculation).
+3. Update component states.
 
-## 渲染循环 (Render)
+## Render Loop
 
-前端 Vue 应用并不控制游戏逻辑，它只是一个观察者。它通过 API 定期拉取最新的游戏状态快照（通常是 JSON 格式），然后更新 DOM 或 Canvas。这种解耦设计允许后端以最大速度运行，而前端只负责可视化。
+The frontend Vue application doesn't control game logic; it's just an observer. It periodically pulls the latest game state snapshots (usually in JSON format) via API, then updates the DOM or Canvas. This decoupled design allows the backend to run at maximum speed while the frontend only handles visualization.
     `,
   },
   ecs: {
-    title: "ECS 组件与系统",
-    desc: "深入解析游戏核心逻辑：插件系统与实体组件设计。",
+    title: "ECS Components and Systems",
+    desc: "Deep dive into game core logic: plugin system and entity-component design.",
     date: "2025.11.28",
     tag: "CORE",
     content: `
-# ECS 组件与系统
+# ECS Components and Systems
 
-## 一切皆实体 (Everything is an Entity)
+## Everything is an Entity
 
-在 Moon LoL 中，无论是英雄、小兵、防御塔，还是飞行的技能弹道，本质上都是 ECS 世界中的一个 Entity。 它们的行为差异仅仅来自于它们挂载了不同的 Component 集合。
+In Moon LoL, whether it's a champion, minion, turret, or a flying skill projectile, they are all essentially Entities in the ECS world. Their behavioral differences come solely from the different Component sets they have attached.
 
-## 核心组件 (Components)
+## Core Components
 
-- **Health:** 存储当前生命值和最大生命值。当生命值归零时，触发死亡逻辑。
-- **Controller:** 标记该实体受外部控制（如 RL Agent 或 玩家输入）。
-- **Transform:** Bevy 内置组件，定义实体在 3D 空间中的位置、旋转和缩放。
-- **Skill:** 管理技能冷却、等级和施放状态。
+- **Health:** Stores current health and maximum health. When health reaches zero, death logic is triggered.
+- **Controller:** Marks that the entity is controlled externally (such as by an RL Agent or player input).
+- **Transform:** Bevy built-in component that defines the entity's position, rotation, and scale in 3D space.
+- **Skill:** Manages skill cooldowns, levels, and casting states.
 
-## 系统插件 (Plugins)
+## System Plugins
 
-我们将功能模块化为 Bevy Plugins。每个 Plugin 注册相关的 Systems 和 Resources。 以下是当前系统注册的所有核心插件：
+We modularize functionality into Bevy Plugins. Each Plugin registers related Systems and Resources. Here are all the core plugins currently registered in the system:
 
 - PluginFioraPassive
 - PluginFioraE

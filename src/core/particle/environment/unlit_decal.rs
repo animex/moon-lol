@@ -79,7 +79,7 @@ impl MaterialPath for ParticleMaterialUnlitDecal {
     const VERT_PATH: &str = "assets/shaders/hlsl/environment/unlit_decal_vs.vs.glsl";
 }
 
-// 2. 为 Key 实现 From Trait
+// 2. Implement From Trait for Key
 impl From<&ParticleMaterialUnlitDecal> for ParticleMaterialKeyUnlitDecal {
     fn from(material: &ParticleMaterialUnlitDecal) -> Self {
         Self {

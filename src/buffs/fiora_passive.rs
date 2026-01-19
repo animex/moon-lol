@@ -230,7 +230,7 @@ fn update_remove_vital(
     }
 }
 
-/// 监听伤害事件并创建伤害数字
+/// Listen for damage events and create damage numbers
 fn on_damage_create(
     trigger: On<EventDamageCreate>,
     mut commands: Commands,

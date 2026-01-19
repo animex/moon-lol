@@ -72,7 +72,7 @@ pub struct NavigationStats {
     pub check_path_time: Duration,
 }
 
-/// A* 可视化 debug 资源
+/// A* visualization debug resource
 #[derive(Resource, Default)]
 pub struct NavigationDebug {
     pub enabled: bool,
@@ -127,7 +127,7 @@ pub fn get_nav_path_with_debug(
         let start_time = Instant::now();
         if let Some(new_start_grid_pos) = find_nearest_walkable_cell(grid, start_grid_pos) {
             debug!(
-                "寻路: 起点 ({}, {}) 不可行走，使用最近的可行走格子 ({}, {})",
+                "Pathfinding: start point ({}, {}) is not walkable, using nearest walkable cell ({}, {})",
                 start_grid_pos.0, start_grid_pos.1, new_start_grid_pos.0, new_start_grid_pos.1
             );
             {
@@ -136,20 +136,20 @@ pub fn get_nav_path_with_debug(
             }
             grid.get_cell_center_position_by_xy(new_start_grid_pos).xz()
         } else {
-            warn!("寻路: 起点附近未找到可行走格子");
+            warn!("Pathfinding: no walkable cell found near start point");
             return None;
         }
     } else {
         *start_pos
     };
 
-    // 检查终点是否可行走，如果不可行，找到最近的可达格子
+    // Check if the end point is walkable, if not, find the nearest reachable cell
     let end_grid_pos = grid.get_cell_xy_by_position(end_pos);
     let adjusted_end_pos = if !grid.is_walkable_by_xy(end_grid_pos) {
         let start_time = Instant::now();
         if let Some(new_end_grid_pos) = find_nearest_walkable_cell(grid, end_grid_pos) {
             debug!(
-                "寻路: 终点 ({}, {}) 不可行走，使用最近的可行走格子 ({}, {})",
+                "Pathfinding: end point ({}, {}) is not walkable, using nearest walkable cell ({}, {})",
                 end_grid_pos.0, end_grid_pos.1, new_end_grid_pos.0, new_end_grid_pos.1
             );
             {
@@ -158,25 +158,25 @@ pub fn get_nav_path_with_debug(
             }
             grid.get_cell_center_position_by_xy(new_end_grid_pos).xz()
         } else {
-            warn!("寻路: 终点附近未找到可行走格子");
+            warn!("Pathfinding: no walkable cell found near end point");
             return None;
         }
     } else {
         *end_pos
     };
 
-    // 检查起点和终点是否可直达
+    // Check if start and end points have direct line of sight
     let adjusted_start_grid_pos = (adjusted_start_pos - grid.min_position) / grid.cell_size;
     let adjusted_end_grid_pos = (adjusted_end_pos - grid.min_position) / grid.cell_size;
 
     if has_line_of_sight(&grid, adjusted_start_grid_pos, adjusted_end_grid_pos) {
-        debug!("直接路径找到，耗时 {:.6}ms", start.elapsed().as_millis());
+        debug!("Direct path found, took {:.6}ms", start.elapsed().as_millis());
         {
             stats.get_nav_path_count += 1;
             stats.get_nav_path_time += start.elapsed();
         }
 
-        // 直线路径的 debug 信息
+        // Debug info for direct path
         if let Some(ref mut nav_debug) = debug {
             nav_debug.visited_cells.clear();
             nav_debug.path_cells.clear();
@@ -187,10 +187,10 @@ pub fn get_nav_path_with_debug(
         return Some(vec![adjusted_start_pos, adjusted_end_pos]);
     }
 
-    // 如果不可直达，则使用A*算法规划路径（包含 debug 信息）
+    // If not directly reachable, use A* algorithm to plan the path (with debug info)
     let result = find_path_with_result(&grid, &adjusted_start_pos, &adjusted_end_pos);
 
-    debug!("A* 路径找到，耗时 {:.6}ms", start.elapsed().as_millis());
+    debug!("A* path found, took {:.6}ms", start.elapsed().as_millis());
 
     {
         stats.get_nav_path_count += 1;
@@ -211,7 +211,7 @@ pub fn get_nav_path_with_debug(
     }
 }
 
-/// 寻路结果，包含路径和 debug 信息
+/// Pathfinding result, containing path and debug information
 pub struct FindPathResult {
     pub path: Vec<Vec2>,
     pub visited_cells: Vec<(usize, usize)>,
@@ -219,12 +219,12 @@ pub struct FindPathResult {
     pub unoptimized_path: Vec<Vec2>,
 }
 
-/// 主要的寻路函数，结合A*和漏斗算法
+/// Main pathfinding function, combining A* and funnel algorithm
 pub fn find_path(grid: &ConfigNavigationGrid, start: &Vec2, end: &Vec2) -> Option<Vec<Vec2>> {
     find_path_with_result(grid, start, end).map(|result| result.path)
 }
 
-/// 主要的寻路函数，返回完整的 debug 信息
+/// Main pathfinding function, returns complete debug information
 pub fn find_path_with_result(
     grid: &ConfigNavigationGrid,
     start: &Vec2,
@@ -287,15 +287,15 @@ fn optimize_path(grid: &ConfigNavigationGrid, path: &Vec<Vec2>) -> Vec<Vec2> {
     let mut optimized_path = vec![path[0]];
     let mut current_index = 0;
     while current_index < path.len() - 1 {
-        // 默认最远能到达的点是下一个点
+        // Default furthest reachable point is the next point
         let mut furthest_visible_index = current_index + 1;
 
-        // 从路径的末尾向前迭代，寻找第一个可见的点
+        // Iterate backwards from the end of the path to find the first visible point
         for lookahead_index in ((current_index + 2)..path.len()).rev() {
             let start_pos = path[current_index];
             let end_pos = path[lookahead_index];
 
-            // 只要找到一个可见的，那它一定是从后往前看的"最远"的点
+            // Once we find a visible point, it must be the "furthest" point when looking backwards
             if has_line_of_sight(grid, start_pos, end_pos) {
                 furthest_visible_index = lookahead_index;
                 break;
@@ -309,19 +309,19 @@ fn optimize_path(grid: &ConfigNavigationGrid, path: &Vec<Vec2>) -> Vec<Vec2> {
     optimized_path
 }
 
-/// 检测给定路径上是否有障碍物阻挡
-/// 从当前位置开始，检测路径的剩余部分是否仍然可通行
+/// Detect if there are obstacles blocking the given path
+/// Starting from the current position, check if the remaining path is still passable
 pub fn is_path_blocked(grid: &ConfigNavigationGrid, path: &[Vec3], current_index: usize) -> bool {
     if path.is_empty() || current_index >= path.len() {
         return false;
     }
 
-    // 检测从当前点到路径终点的每一段是否被阻挡
+    // Check if each segment from the current point to the path end is blocked
     for i in current_index..path.len().saturating_sub(1) {
         let start = path[i].xz();
         let end = path[i + 1].xz();
 
-        // 转换为网格坐标
+        // Convert to grid coordinates
         let start_grid = (start - grid.min_position) / grid.cell_size;
         let end_grid = (end - grid.min_position) / grid.cell_size;
 
@@ -381,7 +381,7 @@ pub fn has_line_of_sight(grid: &ConfigNavigationGrid, start: Vec2, end: Vec2) ->
     let steps_to_take = (end_grid_x - start_grid_x).abs() + (end_grid_y - start_grid_y).abs();
 
     for _ in 0..steps_to_take {
-        // --- 核心算法逻辑 ---
+        // --- Core algorithm logic ---
         if (t_max_x - t_max_y).abs() < CORNER_EPSILON {
             current_grid_x += step_x;
             current_grid_y += step_y;
@@ -395,12 +395,12 @@ pub fn has_line_of_sight(grid: &ConfigNavigationGrid, start: Vec2, end: Vec2) ->
             t_max_y += t_delta_y;
         }
 
-        // 检查新位置是否可行走
+        // Check if the new position is walkable
         if !grid.is_walkable_by_xy((current_grid_x as usize, current_grid_y as usize)) {
             return false;
         }
 
-        // 检查是否到达终点
+        // Check if we have reached the destination
         if current_grid_x == end_grid_x && current_grid_y == end_grid_y {
             return true;
         }
@@ -409,14 +409,14 @@ pub fn has_line_of_sight(grid: &ConfigNavigationGrid, start: Vec2, end: Vec2) ->
     true
 }
 
-/// 将世界坐标转换为网格坐标的辅助函数
+/// Helper function to convert world coordinates to grid coordinates
 pub fn world_pos_to_grid_xy(grid: &ConfigNavigationGrid, world_pos: Vec2) -> (usize, usize) {
     let x = ((world_pos.x - grid.min_position.x) / grid.cell_size).floor() as usize;
     let y = ((world_pos.y - grid.min_position.y) / grid.cell_size).floor() as usize;
     (x, y)
 }
 
-/// 找到最近的可达格子
+/// Find the nearest reachable cell
 pub fn find_nearest_walkable_cell(
     grid: &ConfigNavigationGrid,
     start: (usize, usize),
@@ -484,7 +484,7 @@ fn pre_update_global_occupied_cells(
     };
     let start = Instant::now();
 
-    // 计算所有实体的 occupied_cells（不排除任何实体）
+    // Calculate occupied_cells for all entities (without excluding any entity)
     let occupied_cells = calculate_occupied_grid_cells(grid, &entities_with_bounding, &[]);
     grid.occupied_cells = occupied_cells;
 
@@ -493,15 +493,15 @@ fn pre_update_global_occupied_cells(
     stats.occupied_grid_cells_num = grid.occupied_cells.len() as u32;
 }
 
-/// 根据所有带Bounding组件的实体，计算被占据的网格格子及其通行成本
+/// Calculate occupied grid cells and their traversal costs based on all entities with Bounding components
 ///
-/// # 参数
-/// - `grid`: 导航网格
-/// - `entities_with_bounding`: 查询所有带Transform和Bounding组件的实体
-/// - `exclude_entities`: 要排除的实体ID列表（不将其作为障碍物），例如当前移动的实体自身
+/// # Parameters
+/// - `grid`: Navigation grid
+/// - `entities_with_bounding`: Query all entities with Transform and Bounding components
+/// - `exclude_entities`: List of entity IDs to exclude (not treated as obstacles), e.g., the currently moving entity itself
 ///
-/// # 返回值
-/// - 格子坐标到通行成本的映射，成本越高表示通行代价越大
+/// # Returns
+/// - Mapping from cell coordinates to traversal cost, higher cost means greater traversal difficulty
 pub fn calculate_occupied_grid_cells(
     grid: &ConfigNavigationGrid,
     entities_with_bounding: &Query<(Entity, &GlobalTransform, &Bounding)>,
@@ -589,7 +589,7 @@ fn update_visualization_astar(
         return;
     }
 
-    // 删除旧的 A* 可视化单元格
+    // Delete old A* visualization cells
     for entity in visited_query.iter() {
         commands.entity(entity).despawn();
     }
@@ -607,7 +607,7 @@ fn update_visualization_astar(
         Vec2::splat(grid.cell_size / 2.0 - 3.0),
     ));
 
-    // 障碍物格子（红色正五边形）
+    // Obstacle cells (red)
     let red_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 0.3, 0.3),
         unlit: true,
@@ -643,7 +643,7 @@ fn update_visualization_astar(
         ));
     }
 
-    // 访问的单元格（黄色）
+    // Visited cells (yellow)
     let yellow_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 1.0, 0.0),
         unlit: true,
@@ -664,7 +664,7 @@ fn update_visualization_astar(
         ));
     }
 
-    // 路径单元格（白色）
+    // Path cells (white)
     let white_material = materials.add(StandardMaterial {
         base_color: Color::srgb(1.0, 1.0, 1.0),
         unlit: true,
@@ -686,7 +686,7 @@ fn update_visualization_astar(
     }
 }
 
-/// 绘制移动路径（粉色为未优化路径，蓝色为优化后路径）
+/// Draw movement path (pink for unoptimized path, blue for optimized path)
 fn update_visualization_move_path(
     res_grid: Res<ResourceGrid>,
     assets_grid: Res<Assets<ConfigNavigationGrid>>,

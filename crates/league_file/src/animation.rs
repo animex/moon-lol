@@ -161,7 +161,7 @@ impl From<u16> for CompressedTransformType {
             0 => CompressedTransformType::Rotation,
             1 => CompressedTransformType::Translation,
             2 => CompressedTransformType::Scale,
-            _ => panic!("未知的动画数据类型"),
+            _ => panic!("Unknown animation data type"),
         }
     }
 }

@@ -21,13 +21,13 @@ impl ShaderRewriter {
         self.lines.push(line.into());
     }
 
-    /// 处理通用行逻辑：版本号、precise、out 变量
-    /// 返回 true 表示该行已被处理，无需继续后续逻辑
+    /// Process common line logic: version number, precise, out variables
+    /// Returns true if the line has been processed, no need for subsequent logic
     fn try_process_common(&mut self, line: &str) -> bool {
         let trimmed = line.trim();
 
         if trimmed.is_empty() {
-            // 保留空行但不处理
+            // Keep empty line but don't process
             if !self.lines.is_empty() {
                 self.push("");
             }
@@ -70,7 +70,7 @@ pub fn convert_vert(code: &str) -> String {
         ("VIEW_PROJECTION_MATRIX", "camera_view.clip_from_world"),
     ];
 
-    // 预处理：替换 uniform 引用
+    // Preprocessing: replace uniform references
     let mut stage1_code = code.to_string();
     for (from, to) in replacements {
         stage1_code = stage1_code.replace(&format!("_UniformsVertex.{}", from), to);
@@ -87,7 +87,7 @@ pub fn convert_vert(code: &str) -> String {
             continue;
         }
 
-        // 处理 UniformsVertex 结构体替换
+        // Handle UniformsVertex struct replacement
         if trimmed == "uniform UniformsVertex _UniformsVertex;" {
             rewriter.push("layout(set = 3, binding = 0) uniform UniformsVertex uniforms_vertext;");
             continue;
@@ -103,7 +103,7 @@ pub fn convert_vert(code: &str) -> String {
             if trimmed.starts_with("};") {
                 in_struct = false;
             }
-            // 如果该字段在替换列表中，则跳过（删除）
+            // If the field is in the replacement list, skip (delete) it
             if replacements.iter().any(|(k, _)| trimmed.contains(k)) {
                 continue;
             }
@@ -111,7 +111,7 @@ pub fn convert_vert(code: &str) -> String {
             continue;
         }
 
-        // 处理带 ATTR 的输入
+        // Handle input with ATTR
         if let Some(caps) = attr_re.captures(line) {
             let loc = caps.get(1).unwrap().as_str();
             rewriter.push(format!("layout(location = {}) {}", loc, line));
@@ -121,7 +121,7 @@ pub fn convert_vert(code: &str) -> String {
         rewriter.push(line);
     }
 
-    // 注入 CameraView
+    // Inject CameraView
     let camera_view_def = r#"
 struct CameraView {
     mat4 clip_from_world;
@@ -137,7 +137,7 @@ struct CameraView {
 layout(set = 0, binding = 0) uniform CameraView camera_view;
 "#;
 
-    // 插入到 #version 之后
+    // Insert after #version
     let mut final_code = rewriter.finish();
     if let Some(idx) = final_code.find("#version 450") {
         let insert_pos = idx + "#version 450".len();
@@ -148,7 +148,7 @@ layout(set = 0, binding = 0) uniform CameraView camera_view;
 }
 
 pub fn convert_frag(code: &str) -> String {
-    let mut rewriter = ShaderRewriter::new(2); // Pixel bindings 从 2 开始
+    let mut rewriter = ShaderRewriter::new(2); // Pixel bindings start from 2
     let sampler_re = Regex::new(r"^\s*uniform\s+sampler2D\s+([a-zA-Z0-9_]+);").unwrap();
     let mut sampler_names = Vec::new();
 
@@ -164,7 +164,7 @@ pub fn convert_frag(code: &str) -> String {
             continue;
         }
 
-        // 拆分 sampler2D
+        // Split sampler2D
         if let Some(caps) = sampler_re.captures(trimmed) {
             let name = caps.get(1).unwrap().as_str();
             sampler_names.push(name.to_string());
@@ -194,7 +194,7 @@ pub fn convert_frag(code: &str) -> String {
     let mut final_code = rewriter.finish();
     final_code = final_code.replace("_UniformsPixel", "uniforms_pixel");
 
-    // 替换 texture 调用
+    // Replace texture calls
     for name in sampler_names.clone() {
         let pattern = format!(r"texture\s*\(\s*{}\s*,", name);
         let replacement = format!("texture(sampler2D({}_texture, {}_sampler),", name, name);
@@ -202,7 +202,7 @@ pub fn convert_frag(code: &str) -> String {
         final_code = re.replace_all(&final_code, &replacement).to_string();
     }
 
-    // 替换 texelFetch 调用
+    // Replace texelFetch calls
     for name in sampler_names {
         let pattern = format!(r"texelFetch\s*\(\s*{}\s*,", name);
         let replacement = format!("texelFetch(sampler2D({}_texture, {}_sampler),", name, name);

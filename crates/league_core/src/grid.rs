@@ -98,7 +98,7 @@ impl From<u8> for MainRegionFlags {
             10 => MainRegionFlags::BotSideBasePerimeter,
             11 => MainRegionFlags::TopSideLaneAlcove,
             12 => MainRegionFlags::BotSideLaneAlcove,
-            _ => MainRegionFlags::Spawn, // 默认值
+            _ => MainRegionFlags::Spawn, // Default value
         }
     }
 }
@@ -137,7 +137,7 @@ impl From<u8> for NearestLaneFlags {
             9 => NearestLaneFlags::RedSideTopNeutralZone,
             10 => NearestLaneFlags::RedSideMidNeutralZone,
             11 => NearestLaneFlags::RedSideBotNeutralZone,
-            _ => NearestLaneFlags::BlueSideTopLane, // 默认值
+            _ => NearestLaneFlags::BlueSideTopLane, // Default value
         }
     }
 }
@@ -175,7 +175,7 @@ impl From<u8> for POIFlags {
             8 => POIFlags::CampKrugs,
             9 => POIFlags::CampRaptors,
             10 => POIFlags::CampMurkWolves,
-            _ => POIFlags::None, // 默认值
+            _ => POIFlags::None, // Default value
         }
     }
 }
@@ -208,7 +208,7 @@ impl From<u8> for RingFlags {
             7 => RingFlags::RedInhibToInner,
             8 => RingFlags::RedInnerToOuter,
             9 => RingFlags::RedOuterToNeutral,
-            _ => RingFlags::BlueSpawnToNexus, // 默认值
+            _ => RingFlags::BlueSpawnToNexus, // Default value
         }
     }
 }
@@ -252,7 +252,7 @@ impl From<u8> for UnknownSRXFlags {
             11 => UnknownSRXFlags::BlueTeamOnlyNeutralZoneVisibility,
             12 => UnknownSRXFlags::RedTeamOnlyNeutralZoneVisibility,
             13 => UnknownSRXFlags::BrushWall,
-            _ => UnknownSRXFlags::Walkable, // 默认值
+            _ => UnknownSRXFlags::Walkable, // Default value
         }
     }
 }

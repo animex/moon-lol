@@ -41,12 +41,12 @@ fn update_player_skill_icon(
     res_ui_element_entity: Res<UIElementEntity>,
 ) {
     let Ok(passive_skill) = q_passive_skill.single() else {
-        debug!("未找到控制器的被动技能");
+        debug!("Controller passive skill not found");
         return;
     };
 
     let Ok(skills) = q_skills.single() else {
-        debug!("未找到控制器的技能列表");
+        debug!("Controller skill list not found");
         return;
     };
 
@@ -58,7 +58,7 @@ fn update_player_skill_icon(
         };
 
         let Some(&entity) = res_ui_element_entity.get_by_string(&key) else {
-            debug!("未找到技能图标 UI 元素 {}", key);
+            debug!("Skill icon UI element not found {}", key);
             continue;
         };
 
@@ -69,12 +69,12 @@ fn update_player_skill_icon(
         let &child = children.get(0).unwrap();
         let mut image_node = q_image_node.get_mut(child).unwrap();
         if image_node.rect.is_none() {
-            debug!("技能图标 {} 的 rect 为空", index);
+            debug!("Skill icon {} rect is empty", index);
             continue;
         }
 
         let Ok(skill) = q_skill.get(skill) else {
-            debug!("未找到技能实体 {} 的技能组件", index);
+            debug!("Skill component not found for skill entity {}", index);
             continue;
         };
 
@@ -107,7 +107,7 @@ fn update_skill_level_up_button(
     q_skill: Query<&Skill>,
 ) {
     let Ok((entity, level, skill_points, skills)) = q_skill_points.single() else {
-        debug!("未找到控制器的技能点信息");
+        debug!("Controller skill points info not found");
         return;
     };
 
@@ -118,12 +118,12 @@ fn update_skill_level_up_button(
         );
         let key = league_utils::hash_bin(&key_str);
 
-        // 如果没有技能点，或者技能已经满级，或者不满足加点条件，则隐藏/销毁按钮
+        // If no skill points, or skill is max level, or doesn't meet upgrade conditions, hide/destroy button
         let mut should_show = skill_points.0 > 0;
 
         if should_show {
             if let Ok(skill) = q_skill.get(skill_entity) {
-                // 1 级只能加点 q w e，6 级才能加点 r，6 级前一个技能最多加 3 点
+                // Level 1 can only upgrade Q W E, R available at level 6, before level 6 each skill max 3 points
                 if level.value < 6 {
                     if index == 3 {
                         should_show = false;
@@ -139,7 +139,7 @@ fn update_skill_level_up_button(
                 continue;
             }
 
-            debug!("生成技能升级按钮 实体 {} 索引 {}", entity, index);
+            debug!("Spawning skill upgrade button entity {} index {}", entity, index);
             let entity_button = commands
                 .spawn_empty()
                 .observe(move |_event: On<Pointer<Click>>, mut commands: Commands| {
@@ -153,7 +153,7 @@ fn update_skill_level_up_button(
             });
         } else {
             if let Some(entity_button) = res_skill_level_up_button.entities[index] {
-                debug!("销毁技能升级按钮 实体 {} 索引 {}", entity, index);
+                debug!("Destroying skill upgrade button entity {} index {}", entity, index);
                 res_skill_level_up_button.entities[index] = None;
                 commands.trigger(CommandDespawnButton {
                     entity: entity_button,
@@ -161,5 +161,5 @@ fn update_skill_level_up_button(
             }
         }
     }
-    debug!("技能升级按钮更新完成");
+    debug!("Skill upgrade button update complete");
 }

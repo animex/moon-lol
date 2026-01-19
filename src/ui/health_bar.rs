@@ -142,7 +142,7 @@ fn update_health(
 
         node.width = Val::Percent(health.value / health.max * 100.0);
 
-        // 英雄血条需要生成每 100 点血的标记
+        // Champion health bar needs to generate markers for every 100 HP
         // if health_bar.bar_type == HealthBarType::Champion {
         //     commands.entity(entity).despawn_children();
         //     commands.entity(entity).with_children(|parent| {

@@ -53,9 +53,9 @@ impl<'a, 'de> Visitor<'de> for CharacterConfigsVisitor<'a> {
     {
         let mut configs = Vec::new();
 
-        // 循环读取序列中的所有元素
+        // Loop through all elements in the sequence
         while let Some(intermediate) = seq.next_element::<ConfigCharacter>()? {
-            // 读取 config 后，必须紧跟着一个组件 map
+            // After reading config, a component map must immediately follow
             let components = seq
                 .next_element_seed(SceneMapDeserializer {
                     registry: self.type_registry,

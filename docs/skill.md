@@ -1,24 +1,24 @@
-技能触发后，按行为树的序列执行
+After ability triggers, execute according to behavior tree sequence
 
-剑姬Q
+Fiora Q
 
-位移结束，对自身范围内的一个敌人造成物理伤害，可附加攻击特效
+After dash ends, deal physical damage to one enemy within self range, can apply attack effects
 
-锐雯Q - 多次释放
+Riven Q - Multiple casts
 
-第一段位移，对路径上的敌人造成物理伤害
-第二段位移，对路径上的敌人造成物理伤害
-第三段位移，对终点的敌人造成短暂击飞和物理伤害
+First cast dash, deal physical damage to enemies in path
+Second cast dash, deal physical damage to enemies in path
+Third cast dash, deal brief knockup and physical damage to enemies at endpoint
 
-剑姬E
+Fiora E
 
-重置普攻后，两次攻击可以增加攻击范围和攻速，第一次攻击能够减速目标，第二次攻击视为暴击伤害
+After resetting auto attack, two attacks gain increased attack range and attack speed, first attack can slow target, second attack counts as critical damage
 
-锐雯E
+Riven E
 
-获得护盾并位移
+Gain shield and dash
 
-青钢影Q - 多次释放
+Camille Q - Multiple casts
 
-第一段重置普攻后，下一次攻击附加伤害
-第二段重置普攻后，下一次攻击造成真实伤害
+First cast resets auto attack, next attack deals bonus damage
+Second cast resets auto attack, next attack deals true damage

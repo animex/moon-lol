@@ -39,7 +39,7 @@ impl Health {
 pub fn spawn_event(mut commands: Commands, q_alive: Query<Entity, Added<Health>>) {
     let spawn_count = q_alive.iter().count();
     if spawn_count > 0 {
-        debug!("生成 {} 个新实体", spawn_count);
+        debug!("Spawned {} new entities", spawn_count);
     }
 
     for entity in q_alive.iter() {
@@ -59,7 +59,7 @@ fn on_event_damage_create(
     };
 
     if health.value <= 0.0 {
-        debug!("{:?} 死了", entity);
+        debug!("{:?} died", entity);
         commands.trigger(EventDead { entity });
         commands.entity(entity).despawn();
     }

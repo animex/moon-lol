@@ -169,7 +169,7 @@ fn update_spawn_map_geometry(
         .spawn((Transform::default(), Visibility::default(), Map))
         .id();
 
-    debug!("地图网格数量: {:?}", config_map_geo.submeshes.len());
+    debug!("Map mesh count: {:?}", config_map_geo.submeshes.len());
 
     for (mesh_handle, mat_name, bounding_box) in &config_map_geo.submeshes {
         let static_material_def = res_assets_static_material_def.load_hash(mat_name).unwrap();

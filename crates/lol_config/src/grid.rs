@@ -9,7 +9,7 @@ use league_core::{
 };
 use serde::{Deserialize, Serialize};
 
-/// 表示格子不可通行的成本值
+/// Cost value indicating the cell is impassable
 pub const CELL_COST_IMPASSABLE: f32 = f32::MAX;
 
 #[derive(Asset, TypePath, Clone, Default, Serialize, Deserialize)]
@@ -22,7 +22,7 @@ pub struct ConfigNavigationGrid {
     pub height_x_len: usize,
     pub height_y_len: usize,
     pub height_samples: Vec<Vec<f32>>,
-    /// 动态障碍物的通行成本，值越大表示通行代价越高，CELL_COST_IMPASSABLE 表示不可通行
+    /// Movement cost of dynamic obstacles, higher values indicate higher cost, CELL_COST_IMPASSABLE means impassable
     #[serde(skip)]
     pub occupied_cells: HashMap<(usize, usize), f32>,
     #[serde(skip)]
@@ -103,7 +103,7 @@ impl ConfigNavigationGrid {
         self.get_world_position_by_position(&vec2(self.get_width() / 2.0, self.get_height() / 2.0))
     }
 
-    /// 获取格子的动态障碍物通行成本，0.0 表示无额外成本
+    /// Get the dynamic obstacle movement cost of a cell, 0.0 means no additional cost
     pub fn get_cell_cost(&self, pos: (usize, usize)) -> f32 {
         if self.exclude_cells.contains(&pos) {
             return 0.0;
@@ -112,7 +112,7 @@ impl ConfigNavigationGrid {
         self.occupied_cells.get(&pos).copied().unwrap_or(0.0)
     }
 
-    /// 判断格子是否可通行（静态墙体 + 动态障碍物成本检查）
+    /// Check if a cell is walkable (static wall + dynamic obstacle cost check)
     pub fn is_walkable_by_xy(&self, (x, y): (usize, usize)) -> bool {
         if x >= self.x_len || y >= self.y_len {
             return false;

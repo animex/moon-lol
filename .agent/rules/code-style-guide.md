@@ -2,14 +2,14 @@
 trigger: always_on
 ---
 
-# 通用代码规范
+# General Code Style Guide
 
-1. 缩进不能超过 3 层，使用提前 return 减少缩进，避免多层 if 嵌套。
-2. 如果缩进必须超过 3 层，说明该拆分为多个函数了。
-3. 写注释要精简，不要写显而易见的注释。
+1. Indentation should not exceed 3 levels. Use early return to reduce indentation and avoid nested if statements.
+2. If indentation must exceed 3 levels, the code should be split into multiple functions.
+3. Comments should be concise. Do not write comments for obvious code.
 
-# rust
+# Rust
 
-1. let else return 或 if return 减少缩进
-2. 要在文件顶部导入，不要用 qualify 导入，要用 use
-3. debug! 时要写中文可读性强的日志，例如：要写 {:?} 攻击了 {:?}，而不是写攻击者：{:?} 被攻击者：{:?}
+1. Use let-else return or if return to reduce indentation
+2. Import at the top of the file. Do not use qualified imports, use `use` statements instead
+3. When using debug!, write readable logs, e.g.: write {:?} attacked {:?}, not attacker: {:?} target: {:?}

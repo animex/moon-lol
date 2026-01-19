@@ -63,7 +63,7 @@ pub fn find_grid_path_with_result(
     let end_pos = grid.get_cell_xy_by_position(end);
 
     if !grid.is_walkable_by_xy(start_pos) || !grid.is_walkable_by_xy(end_pos) {
-        warn!("双向 A* 起点或终点位置无效");
+        warn!("Bidirectional A*: start or end position is invalid");
         return None;
     }
 
@@ -85,7 +85,7 @@ pub fn find_grid_path_with_result(
 
     let mut visited_cells = Vec::new();
 
-    // 初始化正向搜索
+    // Initialize forward search
     g_fwd.insert(start_pos, 0.0);
     open_fwd.push(AStarNode {
         pos: start_pos,
@@ -93,7 +93,7 @@ pub fn find_grid_path_with_result(
         h_cost: heuristic_cost(grid.cell_size, start_pos, end_pos),
     });
 
-    // 初始化反向搜索
+    // Initialize backward search
     g_bwd.insert(end_pos, 0.0);
     open_bwd.push(AStarNode {
         pos: end_pos,
@@ -108,18 +108,18 @@ pub fn find_grid_path_with_result(
     while !open_fwd.is_empty() && !open_bwd.is_empty() {
         iterations += 1;
         if iterations > 10000 {
-            warn!("双向 A* 超过迭代次数限制");
+            warn!("Bidirectional A*: exceeded iteration limit");
             return None;
         }
 
-        // 优化验证：如果两端最小的 f_cost 之和已经超过了已知的最佳路径，则不可能找到更优解
+        // Optimization check: if the sum of minimum f_costs from both ends exceeds the known best path, no better solution is possible
         if let (Some(f), Some(b)) = (open_fwd.peek(), open_bwd.peek()) {
             if f.f_cost() + b.f_cost() >= best_path_cost && best_connection.is_some() {
                 break;
             }
         }
 
-        // 平衡扩展：选择节点较少的一端进行扩展
+        // Balanced expansion: choose the end with fewer nodes to expand
         let expand_forward = open_fwd.len() <= open_bwd.len();
 
         let current_node = if expand_forward {
@@ -149,14 +149,14 @@ pub fn find_grid_path_with_result(
                 )
             };
 
-        // 惰性删除检查：如果在该方向已经有更优路径到达此点，跳过
+        // Lazy deletion check: if a better path already exists to this point in this direction, skip
         if let Some(&g) = current_g_map.get(&current_node.pos) {
             if current_node.g_cost > g {
                 continue;
             }
         }
 
-        // 检查是否在当前节点与另一端相遇
+        // Check if the current node meets the other end
         if let Some(&other_g) = other_g_map.get(&current_node.pos) {
             let total_cost = current_node.g_cost + other_g;
             if total_cost < best_path_cost {
@@ -165,7 +165,7 @@ pub fn find_grid_path_with_result(
             }
         }
 
-        // 处理邻居的逻辑提取为闭包以减少缩进
+        // Extract neighbor processing logic into a closure to reduce indentation
         let mut process_neighbor = |neighbor_pos: (usize, usize)| {
             let tentative_g =
                 current_node.g_cost + movement_cost(grid, current_node.pos, neighbor_pos);
@@ -185,7 +185,7 @@ pub fn find_grid_path_with_result(
                 h_cost: heuristic_cost(grid.cell_size, neighbor_pos, target_pos),
             });
 
-            // 扩展时立即检查连接，加速收敛
+            // Check connection immediately during expansion to accelerate convergence
             if let Some(&other_g) = other_g_map.get(&neighbor_pos) {
                 let total_cost = tentative_g + other_g;
                 if total_cost < best_path_cost {
@@ -201,7 +201,7 @@ pub fn find_grid_path_with_result(
     }
 
     if let Some(meet_node) = best_connection {
-        debug!("双向 A* 找到路径 迭代次数 {}", iterations);
+        debug!("Bidirectional A* found path, iterations: {}", iterations);
         let path = reconstruct_bidirectional_path(meet_node, &came_from_fwd, &came_from_bwd);
         return Some(AStarResult {
             path,
@@ -222,7 +222,7 @@ fn reconstruct_bidirectional_path(
 ) -> Vec<(usize, usize)> {
     let mut path = Vec::new();
 
-    // 1. 从相遇点回溯到起点
+    // 1. Backtrack from meeting point to start point
     let mut curr = meet_node;
     path.push(curr);
     while let Some(&parent) = came_from_fwd.get(&curr) {
@@ -231,7 +231,7 @@ fn reconstruct_bidirectional_path(
     }
     path.reverse();
 
-    // 2. 从相遇点回溯到终点 (注意：came_from_bwd 记录的是从终点反向搜索的父节点)
+    // 2. Backtrack from meeting point to end point (note: came_from_bwd records parent nodes from backward search starting at end)
     curr = meet_node;
     while let Some(&parent) = came_from_bwd.get(&curr) {
         path.push(parent);
@@ -281,7 +281,7 @@ fn distance_cost(cell_size: f32, from: (usize, usize), to: (usize, usize)) -> f3
     }
 }
 
-/// 计算从 from 移动到 to 的实际成本（包含动态障碍物成本）
+/// Calculate the actual cost of moving from `from` to `to` (including dynamic obstacle costs)
 fn movement_cost(grid: &ConfigNavigationGrid, from: (usize, usize), to: (usize, usize)) -> f32 {
     let base_cost = distance_cost(grid.cell_size, from, to);
     let cell_cost = grid.get_cell_cost(to);

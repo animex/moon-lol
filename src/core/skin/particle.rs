@@ -18,25 +18,25 @@ pub struct CommandSkinParticleDespawn {
 
 fn resolve_skin_resource_record<'a>(
     entity: Entity,
-    input_hash: u32, // 假设 trigger.hash 是 u32，请根据实际类型调整
+    input_hash: u32, // Assuming trigger.hash is u32, adjust according to actual type
     query_skin: &Query<&Skin>,
     assets_skin: &Assets<SkinCharacterDataProperties>,
     assets_resolver: &'a Assets<ResourceResolver>,
 ) -> Option<&'a u32> {
-    // 假设 record 是 u32 或类似的引用
-    // 1. 获取 Skin 组件
+    // Assuming record is u32 or similar reference
+    // 1. Get Skin component
     let skin = query_skin.get(entity).ok()?;
 
-    // 2. 获取角色皮肤数据
+    // 2. Get character skin data
     let skin_data = assets_skin.load_hash(skin.key)?;
 
-    // 3. 获取资源解析器句柄
+    // 3. Get resource resolver handle
     let resolver_handle = skin_data.m_resource_resolver?;
 
-    // 4. 获取资源解析器资产
+    // 4. Get resource resolver asset
     let resolver = assets_resolver.load_hash(resolver_handle)?;
 
-    // 5. 查找具体的资源记录
+    // 5. Find the specific resource record
     resolver.resource_map.as_ref()?.get(&input_hash)
 }
 
@@ -48,9 +48,9 @@ pub fn on_command_character_particle_spawn(
     query: Query<&Skin>,
 ) {
     let entity = trigger.event_target();
-    debug!("{entity} 创建人物特效 {:x}", trigger.hash);
+    debug!("{entity} creating character particle effect {:x}", trigger.hash);
 
-    // 使用辅助函数获取记录，如果任何一步失败（返回 None），直接 return
+    // Use helper function to get record, if any step fails (returns None), return directly
     let Some(record) = resolve_skin_resource_record(
         entity,
         trigger.hash,
@@ -63,7 +63,7 @@ pub fn on_command_character_particle_spawn(
 
     commands.trigger(CommandParticleSpawn {
         entity,
-        hash: (*record).into(), // 解引用并转换
+        hash: (*record).into(), // Dereference and convert
     });
 }
 
@@ -75,9 +75,9 @@ pub fn on_command_character_particle_despawn(
     query: Query<&Skin>,
 ) {
     let entity = trigger.event_target();
-    debug!("{entity} 销毁人物特效 {:x}", trigger.hash);
+    debug!("{entity} destroying character particle effect {:x}", trigger.hash);
 
-    // 复用相同的逻辑
+    // Reuse the same logic
     let Some(record) = resolve_skin_resource_record(
         entity,
         trigger.hash,

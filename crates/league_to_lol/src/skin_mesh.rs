@@ -9,7 +9,7 @@ pub fn skinned_mesh_to_intermediate(
 
     let vertex_size = skinned_mesh.vertex_declaration.get_vertex_size() as usize;
 
-    // 计算顶点数据范围
+    // Calculate vertex data range
     let vertex_start_byte = range.start_vertex as usize * vertex_size;
     let vertex_end_byte = vertex_start_byte + (range.vertex_count as usize * vertex_size);
     let vertex_data_slice = skinned_mesh
@@ -27,7 +27,7 @@ pub fn skinned_mesh_to_intermediate(
     let mut colors: Option<Vec<[f32; 4]>> = None;
     let mut tangents: Option<Vec<[f32; 4]>> = None;
 
-    // 根据顶点声明类型准备颜色和切线数据
+    // Prepare color and tangent data based on vertex declaration type
     if skinned_mesh.vertex_declaration != SkinnedMeshVertex::Basic {
         colors = Some(Vec::with_capacity(capacity));
         if skinned_mesh.vertex_declaration == SkinnedMeshVertex::Tangent {
@@ -35,18 +35,18 @@ pub fn skinned_mesh_to_intermediate(
         }
     }
 
-    // 解析顶点数据
+    // Parse vertex data
     for v_chunk in vertex_data_slice.chunks_exact(vertex_size) {
         let mut offset = 0;
 
-        // 读取位置
+        // Read position
         let x_pos = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
         let y_pos = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
         let z_pos = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
         positions.push([x_pos, y_pos, z_pos]);
         offset += 12;
 
-        // 读取骨骼索引
+        // Read joint indices
         let j_indices_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
         joint_indices.push([
             j_indices_u8[0] as u16,
@@ -56,7 +56,7 @@ pub fn skinned_mesh_to_intermediate(
         ]);
         offset += 4;
 
-        // 读取骨骼权重
+        // Read joint weights
         let weights: [f32; 4] = [
             f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap()),
             f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap()),
@@ -66,20 +66,20 @@ pub fn skinned_mesh_to_intermediate(
         joint_weights.push(weights);
         offset += 16;
 
-        // 读取法线
+        // Read normals
         let x_norm = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
         let y_norm = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
         let z_norm = f32::from_le_bytes(v_chunk[offset + 8..offset + 12].try_into().unwrap());
         normals.push([x_norm, y_norm, z_norm]);
         offset += 12;
 
-        // 读取UV
+        // Read UV
         let u = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
         let v = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
         uvs.push([u, v]);
         offset += 8;
 
-        // 读取颜色（如果存在）
+        // Read color (if exists)
         if let Some(colors_vec) = colors.as_mut() {
             let color_u8: [u8; 4] = v_chunk[offset..offset + 4].try_into().unwrap();
             colors_vec.push([
@@ -91,7 +91,7 @@ pub fn skinned_mesh_to_intermediate(
             offset += 4;
         }
 
-        // 读取切线（如果存在）
+        // Read tangent (if exists)
         if let Some(tangents_vec) = tangents.as_mut() {
             let tan_x = f32::from_le_bytes(v_chunk[offset..offset + 4].try_into().unwrap());
             let tan_y = f32::from_le_bytes(v_chunk[offset + 4..offset + 8].try_into().unwrap());
@@ -102,7 +102,7 @@ pub fn skinned_mesh_to_intermediate(
         }
     }
 
-    // 处理索引数据
+    // Process index data
     let index_start_byte = range.start_index as usize * 2;
     let index_end_byte = index_start_byte + (range.index_count as usize * 2);
     let index_data_slice = skinned_mesh
@@ -116,7 +116,7 @@ pub fn skinned_mesh_to_intermediate(
         .map(|global_index| global_index - range.start_vertex as u16)
         .collect();
 
-    // 创建中间mesh结构
+    // Create intermediate mesh structure
     let mut intermediate_mesh = IntermediateMesh::new(range.name.clone());
 
     intermediate_mesh.set_positions(positions);
@@ -126,7 +126,7 @@ pub fn skinned_mesh_to_intermediate(
     intermediate_mesh.set_joint_weights(Some(joint_weights));
     intermediate_mesh.set_indices(local_indices);
 
-    // 设置可选属性
+    // Set optional attributes
     if let Some(colors_data) = colors {
         intermediate_mesh.set_colors(Some(colors_data));
     }
@@ -135,7 +135,7 @@ pub fn skinned_mesh_to_intermediate(
         intermediate_mesh.set_tangents(Some(tangents_data));
     }
 
-    // 设置材质信息（如果有名称）
+    // Set material info (if name exists)
     if !range.name.is_empty() {
         intermediate_mesh.set_material_info(Some(range.name.clone()));
     }

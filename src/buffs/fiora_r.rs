@@ -98,7 +98,7 @@ fn fixed_update(
         buff.remove_timer.tick(time.delta());
 
         if buff.remove_timer.is_finished() {
-            // 清理所有剩余的粒子
+            // Clean up all remaining particles
             for direction in buff.vitals.iter() {
                 commands.entity(target_entity);
                 commands.trigger(CommandSkinParticleDespawn {
@@ -119,7 +119,7 @@ fn fixed_update(
     }
 }
 
-/// 监听伤害事件并创建伤害数字
+/// Listen for damage events and create damage numbers
 fn on_damage_create(
     trigger: On<EventDamageCreate>,
     mut commands: Commands,
@@ -165,9 +165,9 @@ fn on_damage_create(
     buff_fiora_r.vitals.retain(|direction| {
         if hit_direction.is_none() && is_in_direction(source_position, target_position, direction) {
             hit_direction = Some(direction.clone());
-            false // 移除此方向
+            false // Remove this direction
         } else {
-            true // 保留此方向
+            true // Keep this direction
         }
     });
 
@@ -193,8 +193,8 @@ fn on_damage_create(
     });
 
     if buff_fiora_r.vitals.is_empty() {
-        // TODO: 在这里触发治疗光环
-        // 完成所有破绽，移除 buff
+        // TODO: Trigger healing aura here
+        // All vitals completed, remove buff
         commands.entity(buff_entity).despawn();
     }
 }

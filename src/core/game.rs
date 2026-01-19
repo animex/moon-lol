@@ -28,7 +28,7 @@ fn fixed_update_frame(mut frame: ResMut<FixedFrameCount>) {
 }
 
 fn startup(mut commands: Commands, config_game: Res<ConfigGame>) {
-    // 使用 ConfigGame 中保存的 character_record 和 skin_path
+    // Use character_record and skin_path stored in ConfigGame
     for (entity, skin, character_record) in config_game.legends.clone() {
         commands.trigger(CommandCharacterSpawn {
             entity,

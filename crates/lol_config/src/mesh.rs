@@ -5,58 +5,58 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct IntermediateMesh {
-    /// mesh名称或标识
+    /// Mesh name or identifier
     pub name: String,
 
-    /// 顶点数量，用于验证其他数据长度
+    /// Vertex count, used to validate other data lengths
     pub vertex_count: u32,
 
-    /// 顶点位置数据
+    /// Vertex position data
     pub positions: Vec<[f32; 3]>,
 
-    /// 法线数据（可选）
+    /// Normal data (optional)
     pub has_normals: u8,
 
     pub normals: Option<Vec<[f32; 3]>>,
 
-    /// UV坐标数据（可选）
+    /// UV coordinate data (optional)
     pub has_uvs: u8,
 
     pub uvs: Option<Vec<[f32; 2]>>,
 
-    /// 顶点颜色数据（可选）
+    /// Vertex color data (optional)
     pub has_colors: u8,
 
     pub colors: Option<Vec<[f32; 4]>>,
 
-    /// 切线数据（可选）
+    /// Tangent data (optional)
     pub has_tangents: u8,
 
     pub tangents: Option<Vec<[f32; 4]>>,
 
-    /// 骨骼索引数据（可选，用于骨骼动画）
+    /// Joint index data (optional, for skeletal animation)
     pub has_joint_indices: u8,
 
     pub joint_indices: Option<Vec<[u16; 4]>>,
 
-    /// 骨骼权重数据（可选，用于骨骼动画）
+    /// Joint weight data (optional, for skeletal animation)
     pub has_joint_weights: u8,
 
     pub joint_weights: Option<Vec<[f32; 4]>>,
 
-    /// 索引数量
+    /// Index count
     pub index_count: u32,
-    /// 索引数据
+    /// Index data
     pub indices: Vec<u16>,
 
-    /// 材质信息（可选）
+    /// Material info (optional)
     pub has_material_info: u8,
 
     pub material_info: Option<String>,
 }
 
 impl IntermediateMesh {
-    /// 创建一个新的空mesh
+    /// Create a new empty mesh
     pub fn new(name: String) -> Self {
         Self {
             name: name.into(),
@@ -81,76 +81,76 @@ impl IntermediateMesh {
         }
     }
 
-    /// 检查mesh是否包含骨骼动画数据
+    /// Check if mesh contains skeletal animation data
     pub fn is_skinned(&self) -> bool {
         self.joint_indices.is_some() && self.joint_weights.is_some()
     }
 
-    /// 获取顶点数量
+    /// Get vertex count
     pub fn vertex_count(&self) -> usize {
         self.vertex_count as usize
     }
 
-    /// 获取三角形数量
+    /// Get triangle count
     pub fn triangle_count(&self) -> usize {
         self.indices.len() / 3
     }
 
-    /// 设置顶点位置（自动更新vertex_count）
+    /// Set vertex positions (automatically updates vertex_count)
     pub fn set_positions(&mut self, positions: Vec<[f32; 3]>) {
         self.vertex_count = positions.len() as u32;
         self.positions = positions;
     }
 
-    /// 设置索引数据（自动更新index_count）
+    /// Set index data (automatically updates index_count)
     pub fn set_indices(&mut self, indices: Vec<u16>) {
         self.index_count = indices.len() as u32;
         self.indices = indices;
     }
 
-    /// 设置法线数据
+    /// Set normal data
     pub fn set_normals(&mut self, normals: Option<Vec<[f32; 3]>>) {
         self.has_normals = if normals.is_some() { 1 } else { 0 };
         self.normals = normals;
     }
 
-    /// 设置UV数据
+    /// Set UV data
     pub fn set_uvs(&mut self, uvs: Option<Vec<[f32; 2]>>) {
         self.has_uvs = if uvs.is_some() { 1 } else { 0 };
         self.uvs = uvs;
     }
 
-    /// 设置颜色数据
+    /// Set color data
     pub fn set_colors(&mut self, colors: Option<Vec<[f32; 4]>>) {
         self.has_colors = if colors.is_some() { 1 } else { 0 };
         self.colors = colors;
     }
 
-    /// 设置切线数据
+    /// Set tangent data
     pub fn set_tangents(&mut self, tangents: Option<Vec<[f32; 4]>>) {
         self.has_tangents = if tangents.is_some() { 1 } else { 0 };
         self.tangents = tangents;
     }
 
-    /// 设置骨骼索引数据
+    /// Set joint index data
     pub fn set_joint_indices(&mut self, joint_indices: Option<Vec<[u16; 4]>>) {
         self.has_joint_indices = if joint_indices.is_some() { 1 } else { 0 };
         self.joint_indices = joint_indices;
     }
 
-    /// 设置骨骼权重数据
+    /// Set joint weight data
     pub fn set_joint_weights(&mut self, joint_weights: Option<Vec<[f32; 4]>>) {
         self.has_joint_weights = if joint_weights.is_some() { 1 } else { 0 };
         self.joint_weights = joint_weights;
     }
 
-    /// 设置材质信息
+    /// Set material info
     pub fn set_material_info(&mut self, material_info: Option<String>) {
         self.has_material_info = if material_info.is_some() { 1 } else { 0 };
         self.material_info = material_info.map(|s| s.into());
     }
 
-    /// 验证mesh数据的完整性
+    /// Validate mesh data integrity
     pub fn validate(&self) -> Result<(), String> {
         if self.vertex_count == 0 {
             return Err("Mesh must have at least one vertex".to_string());
@@ -158,12 +158,12 @@ impl IntermediateMesh {
 
         let vertex_count = self.vertex_count as usize;
 
-        // 检查positions长度
+        // Check positions length
         if self.positions.len() != vertex_count {
             return Err("Positions count doesn't match vertex_count".to_string());
         }
 
-        // 检查所有顶点属性的长度是否一致
+        // Check if all vertex attribute lengths are consistent
         if let Some(ref normals) = self.normals {
             if normals.len() != vertex_count {
                 return Err("Normals count doesn't match vertex count".to_string());
@@ -200,12 +200,12 @@ impl IntermediateMesh {
             }
         }
 
-        // 检查索引长度
+        // Check index length
         if self.indices.len() != self.index_count as usize {
             return Err("Indices length doesn't match index_count".to_string());
         }
 
-        // 检查索引是否有效
+        // Check if indices are valid
         for &index in &self.indices {
             if index as usize >= vertex_count {
                 return Err(format!(
@@ -215,7 +215,7 @@ impl IntermediateMesh {
             }
         }
 
-        // 检查索引数量是否是3的倍数
+        // Check if index count is a multiple of 3
         if self.indices.len() % 3 != 0 {
             return Err("Index count must be a multiple of 3 for triangle lists".to_string());
         }
@@ -231,10 +231,10 @@ impl From<IntermediateMesh> for Mesh {
             RenderAssetUsages::default(),
         );
 
-        // 插入必需的位置属性
+        // Insert required position attribute
         bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_POSITION, mesh.positions.clone());
 
-        // 插入可选属性
+        // Insert optional attributes
         if let Some(ref normals) = mesh.normals {
             bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_NORMAL, normals.clone());
         }
@@ -251,7 +251,7 @@ impl From<IntermediateMesh> for Mesh {
             bevy_mesh.insert_attribute(Mesh::ATTRIBUTE_TANGENT, tangents.clone());
         }
 
-        // 插入骨骼动画属性
+        // Insert skeletal animation attributes
         if let Some(ref joint_indices) = mesh.joint_indices {
             bevy_mesh.insert_attribute(
                 Mesh::ATTRIBUTE_JOINT_INDEX,
@@ -265,7 +265,7 @@ impl From<IntermediateMesh> for Mesh {
 
         let indices = mesh.indices.clone();
 
-        // 插入索引
+        // Insert indices
         bevy_mesh.insert_indices(Indices::U16(indices));
 
         bevy_mesh

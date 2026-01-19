@@ -3,7 +3,7 @@ use std::collections::HashMap;
 use league_file::{ElementName, LeagueMapGeo, LeagueMapGeoMesh, Submesh};
 use lol_config::IntermediateMesh;
 
-/// 从静态mesh（submesh）创建中间结构
+/// Create intermediate structure from static mesh (submesh)
 pub fn submesh_to_intermediate(
     submesh: &Submesh,
     map_file: &LeagueMapGeo,
@@ -12,42 +12,42 @@ pub fn submesh_to_intermediate(
     all_normals: &Vec<[f32; 3]>,
     all_uvs: &Vec<[f32; 2]>,
 ) -> IntermediateMesh {
-    // 获取索引数据
+    // Get index data
     let index_buffer = map_file
         .index_buffers
         .get(map_mesh.index_buffer_id as usize)
         .unwrap();
     let all_indices = &index_buffer.buffer;
 
-    // 获取当前submesh的索引范围
+    // Get current submesh index range
     let start = submesh.start_index as usize;
     let end = start + submesh.submesh_index_count as usize;
 
     let global_indices_slice = &all_indices[start..end];
 
-    // 创建局部顶点数据和索引映射
+    // Create local vertex data and index mapping
     let mut local_positions = Vec::new();
     let mut local_normals = Vec::new();
     let mut local_uvs = Vec::new();
     let mut local_indices = Vec::with_capacity(global_indices_slice.len());
     let mut global_to_local_map = HashMap::new();
 
-    // 重新映射顶点数据，只保留当前submesh使用的顶点
+    // Remap vertex data, keeping only vertices used by current submesh
     for &global_index in global_indices_slice {
         let local_index = *global_to_local_map.entry(global_index).or_insert_with(|| {
             let new_local_index = local_positions.len() as u16;
 
-            // 添加位置数据
+            // Add position data
             if let Some(pos) = all_positions.get(global_index as usize) {
                 local_positions.push(*pos);
             }
 
-            // 添加法线数据
+            // Add normal data
             if let Some(normal) = all_normals.get(global_index as usize) {
                 local_normals.push(*normal);
             }
 
-            // 添加UV数据
+            // Add UV data
             if let Some(uv) = all_uvs.get(global_index as usize) {
                 local_uvs.push(*uv);
             }
@@ -57,12 +57,12 @@ pub fn submesh_to_intermediate(
         local_indices.push(local_index);
     }
 
-    // 创建中间mesh结构
+    // Create intermediate mesh structure
     let mut intermediate_mesh = IntermediateMesh::new(submesh.material_name.text.clone());
 
     intermediate_mesh.set_positions(local_positions);
 
-    // 只有当数据不为空时才设置可选属性
+    // Only set optional attributes when data is not empty
     if !local_normals.is_empty() {
         intermediate_mesh.set_normals(Some(local_normals));
     }
@@ -77,13 +77,13 @@ pub fn submesh_to_intermediate(
     intermediate_mesh
 }
 
-/// 从 MapGeoMesh 中解析出所有顶点属性，作为共享的全局数据池。
-/// 返回一个元组，包含所有顶点的位置、法线和 UV 坐标。
+/// Parse all vertex attributes from MapGeoMesh as a shared global data pool.
+/// Returns a tuple containing all vertex positions, normals, and UV coordinates.
 pub fn parse_vertex_data(
     map_file: &LeagueMapGeo,
     map_mesh: &LeagueMapGeoMesh,
 ) -> (Vec<[f32; 3]>, Vec<[f32; 3]>, Vec<[f32; 2]>) {
-    // 预分配容量可以轻微提升性能，但需要估算大小。为简化，这里省略。
+    // Pre-allocating capacity can slightly improve performance, but requires size estimation. Omitted for simplicity.
     let mut all_positions = Vec::new();
     let mut all_normals = Vec::new();
     let mut all_uvs = Vec::new();
@@ -96,7 +96,7 @@ pub fn parse_vertex_data(
         let vertex_buffer = &map_file.vertex_buffers[v_buff_index];
         let buffer_data = &vertex_buffer.buffer;
 
-        // 计算顶点声明的总步长（单个顶点占用的字节数）
+        // Calculate total stride of vertex declaration (bytes per vertex)
         let stride = declaration
             .elements
             .iter()
@@ -107,10 +107,10 @@ pub fn parse_vertex_data(
             continue;
         }
 
-        // 遍历顶点缓冲区中的每一个顶点
+        // Iterate through each vertex in the vertex buffer
         for vtx_chunk in buffer_data.chunks_exact(stride) {
             let mut offset = 0;
-            // 遍历顶点声明中的每一个元素（如位置、法线等）
+            // Iterate through each element in the vertex declaration (position, normal, etc.)
             for element in &declaration.elements {
                 let size = element.format.get_size();
                 let element_data = &vtx_chunk[offset..offset + size];

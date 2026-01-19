@@ -1,151 +1,151 @@
-# 重点
+# Priority
 
-- [ ] 锐雯 Q 技能
+- [ ] Riven Q ability
 
-- [ ] 锐雯 W 技能
+- [ ] Riven W ability
 
-- [ ] 锐雯 E 技能
+- [ ] Riven E ability
 
-- [ ] 锐雯 R 技能
+- [ ] Riven R ability
 
-# 游戏实验
+# Game Experiments
 
-- [x] 在 2 帧中重置普通攻击会取消第一次攻击吗
-      会，根本就没有 2 帧无法取消的机制，只是网络延迟而已
+- [x] Does resetting auto attack within 2 frames cancel the first attack
+      Yes, there's no mechanism that prevents canceling within 2 frames, it's just network latency
 
-- [x] A 立马往后闪会取消攻击吗
-      不会，A 闪后只要不打断攻击就会 A 出来，所以闪现以后不要移动
+- [x] Does A then immediately flashing backwards cancel the attack
+      No, after A-flash the attack will still go through as long as you don't interrupt it, so don't move after flashing
 
-- [x] 攻击动画要根据攻击速度来调整动画时间，动画时间就是攻击组件的 total_duration 的时间，其它动画也有可能要调整动画时间，考虑一下怎么实现更优雅
+- [x] Attack animation needs to adjust based on attack speed, animation duration equals the attack component's total_duration time. Other animations may also need duration adjustments, consider a more elegant implementation
 
-- [ ] 攻击后摇的时候 A 闪会 A 出下一次吗
+- [ ] After attack backswing, does A-flash trigger the next attack
 
-# 对线
+# Laning
 
-- [x] 防御塔仇恨机制
+- [x] Turret aggro mechanism
 
-- [x] 小兵死亡掉落经验
+- [x] Minion death drops experience
 
-- [x] 英雄面板
+- [x] Champion panel
 
-- [x] 攻击范围判定
+- [x] Attack range detection
 
-- [x] 飞弹系统
+- [x] Missile system
 
-- [x] 蓝量
+- [x] Mana
 
-- [x] 护甲减免物理伤害
+- [x] Armor reduces physical damage
 
-- [ ] 升级后增加属性
+- [ ] Attribute increase on level up
 
-- [ ] 闪现
+- [ ] Flash
 
-- [ ] 点燃
+- [ ] Ignite
 
-# 剑姬
+# Fiora
 
-- [x] 根据剑姬破绽方向触发不同方位的粒子特效
+- [x] Trigger different position particle effects based on Fiora vital direction
 
-- [x] 弄清楚剑姬破绽的生命周期
+- [x] Understand Fiora vital lifecycle
 
 warning active timeout_red
 
-- [x] 粒子释放方向
+- [x] Particle emission direction
 
-# 粒子系统
+# Particle System
 
-- [x] 在 bevy 中, shader 有不同的变体, 怎么把 cpu 数据传给 gpu, 难道为每个变体创建一个 AsBindGroup 的结构体吗
+- [x] In bevy, shaders have different variants, how to pass CPU data to GPU, should we create an AsBindGroup struct for each variant?
 
 mat -> key -> def
 
-- [x] 如何为不同的 def 传入不同的数据组合呢
+- [x] How to pass different data combinations for different defs
 
-- [x] 粒子系统支持 birthRotation0
+- [x] Particle system supports birthRotation0
 
-- [x] 粒子系统支持 blend mode
+- [x] Particle system supports blend mode
 
-- [x] 人物移动时粒子会抖的问题
+- [x] Fix particle jitter when character moves
 
-- [x] 支持 single particle 属性
+- [x] Support single particle attribute
 
-- [x] 支持 birth scale
+- [x] Support birth scale
 
-- [x] 支持 velocity
+- [x] Support velocity
 
-- [ ] 弄清楚粒子系统 pass 属性的作用
+- [ ] Understand particle system pass attribute usage
 
-- [x] 粒子系统支持设置 color 顶点属性
+- [x] Particle system supports setting color vertex attribute
 
-- [x] 弄清楚粒子系统 texture mult 子属性的作用
+- [x] Understand particle system texture mult sub-attribute usage
 
-- [x] 弄清楚粒子系统的方向
+- [x] Understand particle system direction
 
-- [ ] 受击粒子效果
+- [ ] Hit particle effect
 
-# 技能系统
+# Ability System
 
-- [x] 如何实现多技能，可热插拔的技能系统
+- [x] How to implement multi-ability, hot-swappable ability system
 
-一个英雄拥有多个技能实体，技能组件挂在技能实体上
+A champion has multiple ability entities, ability components are attached to ability entities
 
-- [x] 如何在收到技能输入时，触发对应的技能
+- [x] How to trigger corresponding ability when receiving ability input
 
-- [x] 技能冷却
+- [x] Ability cooldown
 
-- [x] 加点机制
+- [x] Ability point allocation mechanism
 
-- [x] 减少蓝量
+- [x] Reduce mana
 
-- [ ] 从技能资源获取技能数据
+- [ ] Get ability data from ability resources
 
-- [ ] 快捷键加点
+- [ ] Hotkey ability point allocation
 
-# 移动系统
+# Movement System
 
-- [x] 以指定速率移动
+- [x] Move at specified rate
 
-# 寻路系统
+# Pathfinding System
 
-- [x] 小兵碰撞体积过大的问题
+- [x] Minion collision volume too large issue
 
-- [ ] 小兵间隔过小的问题
+- [ ] Minion spacing too small issue
 
-# UI 系统
+# UI System
 
-- [x] ui system 要对 Health 组件受到伤害事件后要显示伤害数字，数字要从实体的位置往上飘一下往下落，数字一开始比较大，后来逐渐变小
+- [x] UI system should display damage numbers after Health component receives damage event, numbers should float up then fall down from entity position, starting large then gradually shrinking
 
-- [x] ui 缩放问题
+- [x] UI scaling issue
 
-- [x] 经验等级 UI
+- [x] Experience level UI
 
-- [x] 血量 UI
+- [x] Health UI
 
-- [x] 蓝量 UI
+- [x] Mana UI
 
-- [x] 防御塔血条
+- [x] Turret health bar
 
-- [x] 技能图标
+- [x] Ability icons
 
-- [x] 英雄图标
+- [x] Champion icon
 
-- [x] 加点按钮
+- [x] Point allocation button
 
-- [x] 技能升级动画
+- [x] Ability upgrade animation
 
-- [ ] 属性面板 UI
+- [ ] Attribute panel UI
 
-- [ ] 技能冷却计时 UI
+- [ ] Ability cooldown timer UI
 
-- [ ] 修复浮动伤害数字
+- [ ] Fix floating damage numbers
 
-- [ ] 等级文字 UI
+- [ ] Level text UI
 
-- [ ] 血条文字 UI
+- [ ] Health bar text UI
 
-- [ ] 用 UIElement 重构血条
+- [ ] Refactor health bar with UIElement
 
-- [ ] 技能等级 UI
+- [ ] Ability level UI
 
-- [ ] 指针
+- [ ] Cursor
 
-- [ ] 移动动画
+- [ ] Movement animation

@@ -74,7 +74,7 @@ fn update_loading<T: Send + Sync + Debug + 'static>(
         loading.update(&time);
 
         if loading.is_timeout() {
-            info!("加载超时: {:?}", loading.value);
+            info!("Loading timeout: {:?}", loading.value);
             commands.entity(entity).remove::<Loading<T>>();
         }
     }

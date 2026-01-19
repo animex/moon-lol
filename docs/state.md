@@ -1,198 +1,198 @@
-## 系统
+## Systems
 
-- 移动系统
-  不关心是谁下达的移动指令，只关心移动方式和移动速度，负责按帧修改 transform 组件。
-- 攻击系统
-  不关心与目标相隔多远，只关心攻击谁，负责攻击状态（前摇、冷却）的更新。
-- 自动攻击系统
-  通过查询攻击者与目标的距离，不在攻击范围则对寻路系统下达寻路移动指令，在攻击范围则下达攻击指令和移动停止指令。
-- 技能系统
-  在收到含有位移效果的技能时，命令移动系统沿着技能所指的方向进行移动。
-- 控制器系统
-  为实体上的技能数组注册快捷键，输入触发对应技能的释放，包括移动、停止。
+- Movement System
+  Doesn't care who issued the movement command, only cares about movement mode and speed, responsible for modifying transform component per frame.
+- Attack System
+  Doesn't care about distance to target, only cares about who to attack, responsible for updating attack state (windup, cooldown).
+- Auto Attack System
+  Queries distance between attacker and target, if not in attack range issues pathfinding movement command to navigation system, if in attack range issues attack command and movement stop command.
+- Ability System
+  When receiving an ability with displacement effect, commands movement system to move in the direction indicated by the ability.
+- Controller System
+  Registers hotkeys for abilities in the entity's ability array, input triggers corresponding ability cast, including movement and stop.
 
-当自动攻击指令、移动指令、位移位移指令争抢最终移动系统的控制权时，比如自动攻击向目标靠近时收到了移动指令需要停止攻击改为移动，当位移技能位移时攻击指令和移动命令都会被忽略，传统命令式的设计需要移动指令中手动停止自动攻击行为、移动命令需要检查是否处于位移状态。当越来越多的指令争抢移动控制权的时候，每个系统都需要知道其它系统的存在，那么该如何使用声明式的设计来解决这个问题呢
+When auto attack command, movement command, and displacement command compete for final movement system control, e.g. when auto attack is moving toward target and receives a movement command needing to stop attack and switch to movement, when displacement ability is displacing both attack and movement commands are ignored. Traditional imperative design requires movement command to manually stop auto attack behavior, movement command needs to check if in displacement state. As more commands compete for movement control, each system needs to know about other systems. How can we use declarative design to solve this problem?
 
-## 移动权争夺问题
+## Movement Control Contest Problem
 
-Run 指令，位移指令
+Run command, displacement command
 
-1. 命令式
+1. Imperative
 
-当 Run 指令触发时，命令一次移动系统移动，当位移指令触发时，命令一次移动系统按路径快速位移。
+When Run command triggers, command movement system to move once. When displacement command triggers, command movement system to rapidly displace along path.
 
-问题：指令并发时，新指令会覆盖旧指令的移动，没有优先级。
+Problem: When commands are concurrent, new command overwrites old command's movement, no priority.
 
-2. 优先级式
+2. Priority-based
 
-移动系统保存上一次移动命令的优先级，对比当前移动命令的优先级，决定是否进行新的移动。
+Movement system saves priority of last movement command, compares with current movement command's priority, decides whether to perform new movement.
 
-优点：优先级高的指令不会被优先级低的指令覆盖。
-问题：先 Run 指令移动，然后位移指令移动，位移指令移动结束后，不能继续之前的 Run 指令。
+Advantage: High priority commands won't be overwritten by low priority commands.
+Problem: Run command first, then displacement command, after displacement ends, cannot continue previous Run command.
 
-3. 优先级 + 持续命令式
+3. Priority + Continuous Command
 
-保存上一次移动命令的优先级，对比当前移动命令的优先级，决定是否进行新的移动。 Run 指令系统通过添加 Run 组件，Run 系统持续发出低优先级的移动命令。
+Save priority of last movement command, compare with current movement command's priority, decide whether to perform new movement. Run command system adds Run component, Run system continuously issues low priority movement commands.
 
-优点：高优先级的移动命令结束时会立即恢复到低优先级的移动命令。
-问题：需要移除 Run 组件
+Advantage: When high priority movement command ends, immediately resumes low priority movement command.
+Problem: Need to remove Run component
 
-## 在什么条件下移除 Run 组件
+## When to Remove Run Component
 
-在到达 Run 的目的地时被移除
+Removed when reaching Run destination
 
-如何判断是否到达目的地
+How to determine if destination reached
 
-1. 在 Run 系统中检测与目的地的距离，如果小于移动速度 \* dt 的距离则认为抵达目的地。
+1. In Run system detect distance to destination, if less than movement speed * dt distance then consider arrived at destination.
 
-问题：移动系统中已经存在是否到达目的地的检测了，会有冗余
+Problem: Movement system already has destination arrival detection, would be redundant
 
-2. 使用移动系统的 EventMovementEnd 事件，移除 Run 组件。
+2. Use movement system's EventMovementEnd event, remove Run component.
 
-问题：位移的移动结束不应该移除 Run 组件。
+Problem: Movement end from displacement should not remove Run component.
 
-3. EventMovementEnd 事件加一个 type 字段，当 type 类型为 Run 时，移除 Run 组件
+3. EventMovementEnd event adds a type field, when type is Run, remove Run component
 
-问题：需要维护一个包含所有类型 MovementType 的 enum，每增加一种类型的移动，就需要增加一个变体。
+Problem: Need to maintain a MovementType enum containing all types, every new movement type requires a new variant.
 
-## 先寻路还是先决定移动
+## Pathfinding First or Movement Decision First
 
-先寻路的话，寻路会耗时，耗时后决定不移动的话就浪费了，所以是先决定是否移动，再寻路
+If pathfinding first, pathfinding takes time, if after that time decide not to move then wasted, so decide whether to move first, then pathfind
 
-## 自动攻击系统与移动
+## Auto Attack System and Movement
 
-自动攻击系统 = Run 系统 + 攻击循环系统
+Auto Attack System = Run System + Attack Loop System
 
-当处于攻击范围外时：添加 Run 组件，命令一次攻击系统停止攻击
-当处于攻击范围内时：移除 Run 组件，命令一次攻击系统攻击
+When outside attack range: Add Run component, command attack system to stop attacking once
+When inside attack range: Remove Run component, command attack system to attack once
 
-问题：当移除 Run 组件后，移动系统可能仍处于移动中。
+Problem: After removing Run component, movement system may still be moving.
 
-1. Run 组件移除时下达移动停止指令。
+1. Run component removal issues movement stop command.
 
-优点：解决了移除 Run 组件后会继续移动的问题
-问题：移除 Run 组件时，如果此时处于位移移动状态，位移会被 Run 组件的移除而中断。
+Advantage: Solves the problem of continuing to move after Run component is removed
+Problem: When removing Run component, if currently in displacement movement state, displacement will be interrupted by Run component removal.
 
-2. Run 组件移除时下达移动停止指令，移动停止指令的优先级要对比上一次移动命令的优先级才决定是否停止移动。
+2. Run component removal issues movement stop command, movement stop command's priority must compare with last movement command's priority to decide whether to stop movement.
 
-优点：解决了高优先级的移动被低优先级的停止移动命令中断的问题
+Advantage: Solves the problem of high priority movement being interrupted by low priority stop movement command
 
-## 原版逻辑
+## Original Logic
 
-1. 在攻击范围内
+1. Within attack range
 
-无论攻击是否就绪，不进行任何移动，攻击就绪时直接开始攻击，攻击未就绪时等待攻击就绪开始攻击。
+Regardless of whether attack is ready, no movement is performed. When attack is ready, start attack immediately. When attack is not ready, wait for attack to be ready then start attack.
 
-2. 在攻击范围外
+2. Outside attack range
 
-会向目标移动，进入攻击范围内后：
+Will move toward target, after entering attack range:
 
-- 攻击就绪时
+- When attack is ready
 
-停止移动，开始攻击目标。
+Stop moving, start attacking target.
 
-- 攻击未就绪时
+- When attack is not ready
 
-继续移动，直到敌人的 bounding 完全处于攻击范围内停止移动，等待攻击就绪，一旦攻击就绪则开始攻击。
+Continue moving until enemy's bounding is completely within attack range then stop moving, wait for attack ready, once attack is ready start attack.
 
-## 自动攻击实现
+## Auto Attack Implementation
 
-调整攻击系统，收到攻击指令时检测是否处于攻击范围，若不处于攻击范围则不开始攻击。
+Adjust attack system, when receiving attack command check if within attack range, if not within attack range don't start attack.
 
-每帧发出攻击指令。
+Issue attack command every frame.
 
-添加 Run 组件，每帧发起移动到目标的指令。
+Add Run component, issue move to target command every frame.
 
-收到攻击开始事件时，移除 Run 组件，即停止移动。
+When receiving attack start event, remove Run component, i.e. stop moving.
 
-优点：时刻发起攻击，一旦成功发起攻击，则停止移动。
-问题：攻击未就绪时会一直移动向目标移动。
+Advantage: Constantly initiate attack, once attack successfully initiated, stop moving.
+Problem: When attack not ready will keep moving toward target.
 
-每帧检测是否处于攻击前摇，若处于攻击前摇则不进行攻击范围检测及后续逻辑。
+Every frame check if in attack windup, if in attack windup don't perform attack range detection and subsequent logic.
 
-每帧检测是否处于攻击范围内：
+Every frame check if within attack range:
 
-- 如果处于攻击范围内，则尝试移除 Run 组件，保证不进行移动，并且每帧发起攻击指令。
-- 如果不处于攻击范围内，则添加 Run 组件，每帧发起移动到目标的指令。
+- If within attack range, try to remove Run component, ensure no movement, and issue attack command every frame.
+- If not within attack range, add Run component, issue move to target command every frame.
 
-优点：
+Advantages:
 
-- 时刻发起攻击，处于攻击范围内时无论是否攻击就绪都不会移动，处于攻击范围外时会向目标移动，移动到攻击范围内时会停止移动并尝试攻击。
-- 攻击前摇时，敌人离开攻击范围，不会出现一边向敌人移动，一边进行攻击的问题。
-  问题：攻击未就绪时进入攻击范围时会停止移动，而原版是攻击未就绪时仍会移动，直到敌人的 bounding 完全处于攻击范围内才会停止移动。
+- Constantly initiate attack, when within attack range regardless of whether attack is ready won't move, when outside attack range will move toward target, when moving into attack range will stop moving and attempt attack.
+- During attack windup, when enemy leaves attack range, won't have the problem of moving toward enemy while performing attack.
+  Problem: When attack not ready and entering attack range will stop moving, but original version continues moving when attack not ready, until enemy's bounding is completely within attack range before stopping.
 
-## 自动攻击系统与移动系统的交互
+## Auto Attack System and Movement System Interaction
 
 AutoAttack FixedUpdate
 ├── Attack FixedUpdate
 └── Run FixedUpdate
 └── Movement PostUpdate
 
-Run 在 FixedUpdate 发出 CommandMovementStart 指令
-处于攻击范围时，AutoAttack 在 FixedUpdate 发出停止 CommandRunStop 指令，CommandRunStop 监听器移除 Run 组件并发出 CommandMovementStop 指令
-Run 和 AutoAttack 都处于 FixedUpdate 中，所以会出现 Run 先发出 CommandMovementStart 指令，AutoAttack 再发出 CommandRunStop 指令，导致 Run 移除滞后。
-而当 Movement 在一帧中收到同时收到 CommandMovementStart 指令和 CommandMovementStop 指令时，由于 CommandMovementStart 需要先收集到 RequestBuffer 再 Reduce 和 Apply ，所以 CommandMovementStop 还需要清理 RequestBuffer 中的 CommandMovementStart 指令。
-就算清理了 RequestBuffer ，CommandMovementStart 在 CommandMovementStop 之后执行的话，先 Stop 再 Start ，也会无法停止移动。
+Run issues CommandMovementStart command in FixedUpdate
+When within attack range, AutoAttack issues CommandRunStop command in FixedUpdate, CommandRunStop listener removes Run component and issues CommandMovementStop command
+Both Run and AutoAttack are in FixedUpdate, so Run issues CommandMovementStart command first, then AutoAttack issues CommandRunStop command, causing Run removal lag.
+When Movement receives both CommandMovementStart command and CommandMovementStop command in one frame, since CommandMovementStart needs to be collected to RequestBuffer first then Reduce and Apply, CommandMovementStop also needs to clean up CommandMovementStart commands in RequestBuffer.
+Even if RequestBuffer is cleaned, if CommandMovementStart executes after CommandMovementStop, Stop then Start, movement still cannot be stopped.
 
-- Run 每帧发出 CommandMovementStart 指令有问题吗？
-  Run 需要持续发出低优先级的移动指令，才能确保高优先级移动结束时立即执行低优先级的 Run
+- Is there a problem with Run issuing CommandMovementStart command every frame?
+  Run needs to continuously issue low priority movement commands to ensure low priority Run executes immediately when high priority movement ends
 
-- 处于攻击范围时，AutoAttack 每帧发出停止 CommandRunStop 指令有问题吗？
-  AutoAttack 每帧发出移动停止指令，是为了确保在攻击范围内时，不管攻击是否就绪都停止移动。
+- Is there a problem with AutoAttack issuing CommandRunStop command every frame when within attack range?
+  AutoAttack issues movement stop command every frame to ensure that when within attack range, movement is stopped regardless of whether attack is ready.
 
-1. 调整 AutoAttack 和 Run 的执行顺序，确保 AutoAttack 在 Run 之前执行。
+1. Adjust execution order of AutoAttack and Run, ensure AutoAttack executes before Run.
 
-Run 是一个更基础的系统，不应该因为上层系统调整自己的执行顺序，所以只能调整 AutoAttack 的执行阶段为 FixedPreUpdate。
+Run is a more fundamental system, shouldn't adjust its execution order because of upper layer systems, so can only adjust AutoAttack's execution stage to FixedPreUpdate.
 
-优点：Run 组件在未发出移动指令之前被移除。
-问题：一帧内，CommandMovementStop 在 CommandMovementStart 后面出现时，依然会开始移动。
+Advantage: Run component is removed before issuing movement command.
+Problem: Within one frame, when CommandMovementStop appears after CommandMovementStart, movement will still start.
 
-## 移动指令的问题
+## Movement Command Problem
 
-1. 将 Movement 开始和停止的命令统一放进 RequestBuffer ，在 Reduce 阶段检测到 RequestBuffer 存在停止命令时，只以停止移动为最终决策。
+1. Put Movement start and stop commands into RequestBuffer, during Reduce stage when stop command exists in RequestBuffer, only use stop movement as final decision.
 
-问题：在同一帧内，先收到 Stop 再收到 Start 时，会无脑 Stop
+Problem: Within same frame, when Stop received first then Start, will blindly Stop
 
-2. 收到 CommandMovementStop 时清理 RequestBuffer 中的 CommandMovementStart 指令。
+2. When receiving CommandMovementStop, clean up CommandMovementStart commands in RequestBuffer.
 
-优点：确保在同一帧内，先收到 Start 再收到 Stop 时，不会开始移动。
+Advantage: Ensures within same frame, when Start received first then Stop, movement won't start.
 
-3. 将 CommandMovementStart 和 CommandMovementStop 合并为 CommandMovement 指令，取其中 priority 最高的作为最终决策。
+3. Merge CommandMovementStart and CommandMovementStop into CommandMovement command, take the one with highest priority as final decision.
 
 [Start-0, Stop-0]
-取 Stop-0 作为最终决策
+Take Stop-0 as final decision
 
 [Start-0, Stop-1]
-取 Stop-1 作为最终决策
+Take Stop-1 as final decision
 
 [Start-1, Stop-0]
-取 Start-1 作为最终决策
+Take Start-1 as final decision
 
 [Start-1, Stop-1]
-取 Stop-1 作为最终决策
+Take Stop-1 as final decision
 
 [Start-1, Stop-0, Start-2]
-取 Start-2 作为最终决策
+Take Start-2 as final decision
 
 [Start-1, Stop-2, Start-2]
-取 Start-2 作为最终决策
+Take Start-2 as final decision
 
 [Start-2, Stop-1, Start-1]
-取 Start-2 作为最终决策
+Take Start-2 as final decision
 
 [Start-1, Stop-2, Start-1]
-取 Stop-2 作为最终决策
+Take Stop-2 as final decision
 
-问题：
+Problems:
 
-- 没有考虑上一次的最终决策，比如上一次最终决策为 Start-1，这一次收到 Start-0，则应该忽略
-- [Start-1, Stop-2, Start-1] 实际上应该取 Start-1 作为最终决策
+- Doesn't consider last final decision, e.g. if last final decision was Start-1, this time receives Start-0, should ignore
+- [Start-1, Stop-2, Start-1] should actually take Start-1 as final decision
 
-4. 将 CommandMovementStart 和 CommandMovementStop 合并为 CommandMovement 指令，buffer 在开始的地方加入上次的决策，依次按顺序模拟执行，高的指令会覆盖低的指令，除了 start 不管多低都覆盖高的 stop。
+4. Merge CommandMovementStart and CommandMovementStop into CommandMovement command, buffer adds last decision at the beginning, simulate execution in order, high commands overwrite low commands, except start always overwrites high stop regardless of how low.
 
 [Start-1, Stop-2, Start-1]
-取 Start-1 作为最终决策
+Take Start-1 as final decision
 
-# 伤害与生命
+# Damage and Life
 
-问题1：
+Problem 1:

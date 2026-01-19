@@ -30,7 +30,7 @@ impl Plugin for PluginRiven {
 pub struct Riven;
 
 fn startup_load_assets(mut res_assets_skill_effect: ResMut<Assets<SkillEffect>>) {
-    // Q 技能三段
+    // Q ability three stages
     res_assets_skill_effect.add_hash(
         "Characters/Riven/Spells/RivenTriCleaveAbility/RivenTriCleave",
         create_riven_tri_cleave_q1(),

@@ -23,7 +23,7 @@ fn on_event_aggro_target_found(
     let entity = trigger.event_target();
 
     if q_turret.get(entity).is_ok() {
-        debug!("{} 对仇恨目标 {} 发起攻击", entity, trigger.target);
+        debug!("{} initiating attack on aggro target {}", entity, trigger.target);
 
         commands.trigger(CommandAttackAutoStart {
             entity,

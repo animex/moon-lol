@@ -9,8 +9,8 @@ fn main() {
 }
 
 fn setup(mut virtual_time: ResMut<Time<Virtual>>) {
-    println!("加速");
-    // 只是尽可能加速
+    println!("Accelerating");
+    // Just speed up as much as possible
     virtual_time.set_relative_speed(10000.0);
 }
 

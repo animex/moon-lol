@@ -13,26 +13,26 @@ impl Plugin for PluginUIDamage {
     }
 }
 
-/// 伤害数字组件 - 用于显示飘动的伤害数字
+/// Damage number component - used to display floating damage numbers
 #[derive(Component)]
 pub struct DamageNumber {
-    /// 伤害数值
+    /// Damage value
     pub damage: f32,
-    /// 生存时间（秒）
+    /// Lifetime (seconds)
     pub lifetime: f32,
-    /// 最大生存时间
+    /// Maximum lifetime
     pub max_lifetime: f32,
-    /// 初始位置
+    /// Initial position
     pub start_position: Vec3,
-    /// 垂直速度
+    /// Vertical velocity
     pub velocity_y: f32,
-    /// 重力加速度
+    /// Gravity acceleration
     pub gravity: f32,
-    /// 最终字体大小
+    /// Final font size
     pub final_scale: f32,
 }
 
-/// 监听伤害事件并创建伤害数字
+/// Listen for damage events and create damage numbers
 fn on_event_damage_create(
     trigger: On<EventDamageCreate>,
     mut commands: Commands,
@@ -41,19 +41,19 @@ fn on_event_damage_create(
     let target_entity = trigger.event_target();
     let damage_result = &trigger.damage_result;
 
-    // 只显示实际造成的伤害
+    // Only display actual damage dealt
     if damage_result.final_damage <= 0.0 {
         return;
     }
 
-    // 获取目标实体的位置
+    // Get target entity's position
     let Ok(target_transform) = global_transform.get(target_entity) else {
         return;
     };
 
     let world_position = target_transform.translation();
 
-    // 创建伤害数字UI
+    // Create damage number UI
     commands.spawn((
         Text::new(format!("{:.0}", damage_result.final_damage)),
         TextFont {
@@ -72,16 +72,16 @@ fn on_event_damage_create(
         DamageNumber {
             damage: damage_result.final_damage,
             lifetime: 0.0,
-            max_lifetime: 1.0, // 2秒生存时间
+            max_lifetime: 1.0, // 1 second lifetime
             start_position: world_position,
-            velocity_y: 250.0, // 初始向上速度
-            gravity: -200.0,   // 重力加速度
+            velocity_y: 250.0, // Initial upward velocity
+            gravity: -200.0,   // Gravity acceleration
             final_scale: 0.5,
         },
     ));
 }
 
-/// 更新伤害数字的动画效果
+/// Update damage number animation effects
 fn update_damage_numbers(
     mut commands: Commands,
     time: Res<Time>,
@@ -100,42 +100,42 @@ fn update_damage_numbers(
     for (i, (entity, mut transform, mut damage_number, mut node, mut text_color)) in
         damage_numbers.iter_mut().enumerate()
     {
-        // 更新生存时间
+        // Update lifetime
         damage_number.lifetime += delta_time;
 
-        // 如果超过生存时间，销毁实体
+        // If exceeded lifetime, destroy entity
         if damage_number.lifetime >= damage_number.max_lifetime {
             commands.entity(entity).despawn();
             continue;
         }
 
-        // 计算动画进度 (0.0 到 1.0)
+        // Calculate animation progress (0.0 to 1.0)
         let progress = damage_number.lifetime / damage_number.max_lifetime;
 
-        // 更新垂直速度（重力影响）
+        // Update vertical velocity (gravity effect)
         damage_number.velocity_y += damage_number.gravity * delta_time;
 
-        // 计算当前位置
+        // Calculate current position
         let current_y_offset = damage_number.velocity_y * damage_number.lifetime
             + 0.5 * damage_number.gravity * damage_number.lifetime * damage_number.lifetime;
 
         let current_world_pos =
             damage_number.start_position + Vec3::new(0.0, current_y_offset, 0.0);
 
-        // 转换到屏幕坐标
+        // Convert to screen coordinates
         if let Ok(viewport_position) =
             camera.world_to_viewport(camera_global_transform, current_world_pos)
         {
-            node.left = Val::Px(viewport_position.x - 20.0); // 居中偏移
+            node.left = Val::Px(viewport_position.x - 20.0); // Center offset
             node.top = Val::Px(viewport_position.y + i as f32 * 20.);
         }
 
-        // // 字体大小动画：从大到小
+        // Font size animation: from large to small
         let current_font_size = 1. - (1. - damage_number.final_scale) * progress;
 
         transform.scale = Vec2::splat(current_font_size);
 
-        // 透明度动画：逐渐消失
+        // Opacity animation: gradually fade out
         let alpha = 1.0 - progress;
         text_color.0 = text_color.0.with_alpha(alpha);
     }

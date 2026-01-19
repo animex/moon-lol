@@ -2,4 +2,4 @@
 trigger: always_on
 ---
 
-1. 不要增加新的文档
+1. Do not add new documentation files

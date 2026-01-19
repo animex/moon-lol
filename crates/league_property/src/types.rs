@@ -33,7 +33,7 @@ pub enum Error {
 }
 
 impl Error {
-    /// 为错误添加上下文，形成类似堆栈的错误链
+    /// Add context to error, forming a stack-like error chain
     pub fn with_context(self, context: impl Into<String>) -> Self {
         let context = context.into();
         let message = self.format_full_chain();
@@ -44,7 +44,7 @@ impl Error {
         }
     }
 
-    /// 格式化完整的错误链，生成类似堆栈的输出
+    /// Format complete error chain, generating stack-like output
     fn format_full_chain(&self) -> String {
         let mut parts = Vec::new();
         self.collect_chain(&mut parts);
@@ -68,8 +68,8 @@ impl Error {
     fn root_message(&self) -> String {
         match self {
             Error::Message(msg) => msg.clone(),
-            Error::MissingField(field) => format!("缺少字段: {}", field),
-            Error::InvalidBinType(byte) => format!("无效的类型字节: {}", byte),
+            Error::MissingField(field) => format!("Missing field: {}", field),
+            Error::InvalidBinType(byte) => format!("Invalid type byte: {}", byte),
             Error::UnknownVariant(msg) => msg.clone(),
             Error::WithContext { source, .. } => source.root_message(),
         }

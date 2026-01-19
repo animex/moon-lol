@@ -80,7 +80,7 @@ fn pre_update(
     q_need: Query<Entity, With<NeedUpdateImmediately>>,
 ) {
     println!(
-        "frame: {:?} fixed_frame: {:?} [PreUpdate] NeedUpdateImmediately 数量: {:?}",
+        "frame: {:?} fixed_frame: {:?} [PreUpdate] NeedUpdateImmediately count: {:?}",
         frame.0,
         fixed_frame.0,
         q_need.iter().count(),
@@ -93,7 +93,7 @@ fn update(
     q_need: Query<Entity, With<NeedUpdateImmediately>>,
 ) {
     println!(
-        "frame: {:?} fixed_frame: {:?} [Update] NeedUpdateImmediately 数量: {:?}",
+        "frame: {:?} fixed_frame: {:?} [Update] NeedUpdateImmediately count: {:?}",
         frame.0,
         fixed_frame.0,
         q_need.iter().count(),

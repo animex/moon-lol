@@ -52,7 +52,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
                 if _name.is_empty() {
                     e
                 } else {
-                    e.with_context(format!("结构体 \"{}\"", _name))
+                    e.with_context(format!("struct \"{}\"", _name))
                 }
             })
     }
@@ -94,7 +94,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
             BinType::String => self.deserialize_string(visitor),
             BinType::Hash => visitor.visit_u32(self.parser.read_hash()?),
             BinType::Path => {
-                // Path 通常是 u64
+                // Path is typically u64
                 visitor.visit_u64(self.parser.read_u64()?)
             }
             BinType::List | BinType::List2 => {
@@ -191,7 +191,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
             })
             .ok_or_else(|| {
                 Error::UnknownVariant(format!(
-                    "未知的 Enum 变体哈希: 0x{:x}, 已有的变体: {:?}",
+                    "Unknown Enum variant hash: 0x{:x}, existing variants: {:?}",
                     variant_hash, variants
                 ))
             })?;
@@ -201,7 +201,7 @@ impl<'de, 'a> de::Deserializer<'de> for &'a mut BinDeserializer<'de> {
                 de: self,
                 variant_index: variant_index as u32,
             })
-            .map_err(|e| e.with_context(format!("枚举 \"{}\" (变体: {})", _name, _variant_name)))
+            .map_err(|e| e.with_context(format!("enum \"{}\" (variant: {})", _name, _variant_name)))
     }
 
     serde::forward_to_deserialize_any! {

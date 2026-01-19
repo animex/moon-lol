@@ -27,11 +27,11 @@ const tools: Tool[] = [
   {
     type: "function",
     function: {
-      description: "对目标普通攻击",
+      description: "Basic attack the target",
       name: "Attack",
       parameters: {
         type: "object",
-        properties: { entity: { type: "number", description: "目标实体ID" } },
+        properties: { entity: { type: "number", description: "Target entity ID" } },
         required: ["entity"],
       },
     },
@@ -39,12 +39,12 @@ const tools: Tool[] = [
   {
     type: "function",
     function: {
-      description: "移动到指定坐标",
+      description: "Move to specified coordinates",
       name: "Move",
       parameters: {
         type: "object",
         properties: {
-          position: { type: "array", items: { type: "number" }, description: "目标位置，格式为[x, y]" },
+          position: { type: "array", items: { type: "number" }, description: "Target position, format: [x, y]" },
         },
         required: ["position"],
       },
@@ -53,7 +53,7 @@ const tools: Tool[] = [
   {
     type: "function",
     function: {
-      description: "什么也不做",
+      description: "Do nothing",
       name: "Nothing",
     },
   },
@@ -114,17 +114,17 @@ export const useClientStore = defineStore(
     const observation = ref<Observe>();
     const action = ref<Action>();
     const prompt = ref<string>(
-      `你是剑姬，这是你观察到的游戏状态。
+      `You are Fiora, this is the game state you observed.
 
-游戏坐标：[x, y] 描述的是游戏物体在水平上的坐标。
+Game coordinates: [x, y] describes the horizontal position of game objects.
 
-你的攻击范围是 100
+Your attack range is 100
 
-你的被动技能：
-- 当你在敌人的破绽方向对敌人造成伤害时，敌人会受到额外的 5% 的真实伤害。
-- 破绽只在激活状态有效，也就是 active_timer 的 finish 为 true 时，才能打破破绽。
-说明：
-- 要判断是否处于破绽内，不能只根据 x 判断左右或者只根据 y 判断上下，而是参考下面这段代码：
+Your passive skill:
+- When you deal damage to an enemy from their Vital direction, the enemy takes an additional 5% true damage.
+- Vitals are only effective when active, meaning when the active_timer's finish is true, you can proc the Vital.
+Notes:
+- To determine if you're in a Vital's direction, you cannot just check x for left/right or y for up/down. Reference this code:
 pub fn is_in_direction(source: Vec2, target: Vec2, direction: &Direction) -> bool {
     let delta_x = source.x - target.x;
     let delta_y = source.y - target.y;
@@ -142,10 +142,10 @@ pub fn is_in_direction(source: Vec2, target: Vec2, direction: &Direction) -> boo
         Direction::Left => delta_x < 0.0 && abs_delta_x > abs_delta_y,
     }
 }
-- 当你处于攻击前摇时，最好不要采取行动，否则普通攻击可能会被取消。
-- 尽量移动到敌人的破绽方向的地方，并且是刚好能够攻击到敌人的地方再攻击敌人。
+- When you are in attack wind-up, it's best not to take action, otherwise the basic attack may be cancelled.
+- Try to move to the enemy's Vital direction, and attack only when you're just within attack range.
 
-请你尽快击杀目标。`,
+Please eliminate the target as quickly as possible.`,
     );
     const message = ref<string>();
 

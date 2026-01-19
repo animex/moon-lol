@@ -190,7 +190,7 @@ impl LeagueSkinnedMesh {
             (52, 0) => SkinnedMeshVertex::Basic,
             (56, 1) => SkinnedMeshVertex::Color,
             (72, 2) => SkinnedMeshVertex::Tangent,
-            _ => panic!("不支持的顶点格式: size={}, type={}", size, v_type),
+            _ => panic!("Unsupported vertex format: size={}, type={}", size, v_type),
         }
     }
 }

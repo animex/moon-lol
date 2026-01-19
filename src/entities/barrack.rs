@@ -36,25 +36,25 @@ impl Plugin for PluginBarrack {
     }
 }
 
-/// 兵营的动态状态，用于跟踪计时器和生成队列
+/// Barrack's dynamic state, used to track timers and spawn queue
 #[derive(Component)]
 pub struct Barrack {
     pub key_barracks_config: HashKey<BarracksConfig>,
-    /// 下一波兵的生成计时器
+    /// Timer for the next wave spawn
     pub wave_timer: Timer,
-    /// 属性升级计时器
+    /// Stats upgrade timer
     pub upgrade_timer: Timer,
-    /// 移动速度升级计时器
+    /// Movement speed upgrade timer
     pub move_speed_upgrade_timer: Timer,
-    /// 同一波兵中，每个小兵之间的生成间隔计时器
+    /// Timer for spawn interval between each minion within the same wave
     pub intra_spawn_timer: Timer,
-    /// 当前的生成队列
+    /// Current spawn queue
     pub spawn_queue: VecDeque<(usize, i32)>,
-    /// 已应用的属性升级次数
+    /// Number of stats upgrades applied
     pub upgrade_count: i32,
-    /// 已应用的移速升级次数
+    /// Number of movement speed upgrades applied
     pub move_speed_upgrade_count: i32,
-    /// 已生成的波数
+    /// Number of waves spawned
     pub wave_count: u32,
 }
 
@@ -114,7 +114,7 @@ fn update_spawn_barrack(
                         "MinionPath_Top" => Lane::Top,
                         "MinionPath_Mid" => Lane::Mid,
                         "MinionPath_Bot" => Lane::Bot,
-                        _ => panic!("未知的小兵路径: {}", unk0x3c995caf.name),
+                        _ => panic!("Unknown minion path: {}", unk0x3c995caf.name),
                     };
 
                     let translation = unk0x3c995caf.transform.to_scale_rotation_translation().2;
@@ -153,21 +153,21 @@ fn update_spawn_barrack(
                         Lane::from(unk0xba138ae3.definition.unk_0xdbde2288[0].lane),
                         Barrack {
                             key_barracks_config,
-                            // 第一波兵有初始延迟
+                            // First wave has initial delay
                             wave_timer: Timer::from_seconds(initial_delay, TimerMode::Repeating),
-                            // 属性升级从第一波兵生成后开始计算
+                            // Stats upgrade starts counting after first wave spawns
                             upgrade_timer: Timer::new(
                                 Duration::from_secs_f32(barracks_config.upgrade_interval_secs),
                                 TimerMode::Repeating,
                             ),
-                            // 移速升级有自己的独立延迟
+                            // Movement speed upgrade has its own independent delay
                             move_speed_upgrade_timer: Timer::new(
                                 Duration::from_secs_f32(
                                     barracks_config.move_speed_increase_initial_delay_secs,
                                 ),
                                 TimerMode::Repeating,
                             ),
-                            // 小兵间的生成间隔计时器
+                            // Timer for spawn interval between minions
                             intra_spawn_timer: Timer::from_seconds(
                                 barracks_config.minion_spawn_interval_secs,
                                 TimerMode::Repeating,
@@ -218,7 +218,7 @@ fn is_character_loaded(
     commands.set_state(BarrackState::Loaded);
 }
 
-/// 核心系统：处理兵营的计时、升级和生成逻辑
+/// Core system: handles barrack timing, upgrades, and spawning logic
 fn barracks_spawning_system(
     game_time: Res<Time<Virtual>>,
     inhibitor_state: Res<InhibitorState>,
@@ -234,16 +234,16 @@ fn barracks_spawning_system(
             .load_hash(barrack_state.key_barracks_config)
             .unwrap();
 
-        // --- 1. 更新所有计时器 ---
+        // --- 1. Update all timers ---
         barrack_state.wave_timer.tick(time.delta());
 
-        // 只有在第一波之后才开始计时升级
+        // Only start counting upgrades after the first wave
         if barrack_state.wave_count > 0 {
             barrack_state.upgrade_timer.tick(time.delta());
             barrack_state.move_speed_upgrade_timer.tick(time.delta());
         }
 
-        // --- 2. 处理属性和移速升级 ---
+        // --- 2. Handle stats and movement speed upgrades ---
         if barrack_state.upgrade_timer.just_finished() {
             barrack_state.upgrade_count += 1;
             debug!(
@@ -264,8 +264,8 @@ fn barracks_spawning_system(
             }
         }
 
-        // --- 3. 检查是否需要生成新一波小兵 ---
-        // 只有当上一波完全生成完后（队列为空），才开始准备新一波
+        // --- 3. Check if a new wave of minions needs to spawn ---
+        // Only start preparing a new wave when the previous one is fully spawned (queue is empty)
         if barrack_state.wave_timer.just_finished() && barrack_state.spawn_queue.is_empty() {
             barrack_state.wave_count += 1;
             barrack_state
@@ -274,7 +274,7 @@ fn barracks_spawning_system(
                     barracks_config.wave_spawn_interval_secs,
                 ));
 
-            // 遍历兵营配置中的所有小兵类型
+            // Iterate through all minion types in the barrack configuration
             for (index, minion_config) in barracks_config.units.iter().enumerate() {
                 let spawn_count = calculate_spawn_count(
                     &minion_config.wave_behavior,
@@ -289,7 +289,7 @@ fn barracks_spawning_system(
             }
         }
 
-        // --- 4. 处理生成队列，逐个生成小兵 ---
+        // --- 4. Process spawn queue, spawn minions one by one ---
         if barrack_state.spawn_queue.is_empty() {
             continue;
         }
@@ -303,7 +303,7 @@ fn barracks_spawning_system(
         let upgrade_count = barrack_state.upgrade_count;
         let move_speed_upgrade_count = barrack_state.move_speed_upgrade_count;
 
-        // 获取队列头部的待生成小兵信息
+        // Get the minion info at the head of the spawn queue
         let Some(current_spawn) = barrack_state.spawn_queue.front_mut() else {
             continue;
         };
@@ -312,7 +312,7 @@ fn barracks_spawning_system(
         let minion_config = &barracks_config.units[config_index];
         let upgrade_config = &minion_config.minion_upgrade_stats;
 
-        // --- 计算小兵最终属性 ---
+        // --- Calculate minion final stats ---
         let is_late_game = upgrade_count >= barracks_config.upgrades_before_late_game_scaling;
 
         let character = res_assets_unk_ad65d8c4
@@ -361,7 +361,7 @@ fn barracks_spawning_system(
             ))
             .id();
 
-        // 触发角色生成命令（创建基础组件并加载皮肤）
+        // Trigger character spawn command (create base components and load skin)
         commands.trigger(CommandCharacterSpawn {
             entity,
             character_record: (&character.definition.character_record).into(),
@@ -372,7 +372,7 @@ fn barracks_spawning_system(
             .entity(entity)
             .insert((health, damage, armor, movement));
 
-        // 更新队列
+        // Update queue
         current_spawn.1 -= 1;
         if current_spawn.1 <= 0 {
             barrack_state.spawn_queue.pop_front();
@@ -380,7 +380,7 @@ fn barracks_spawning_system(
     }
 }
 
-/// 辅助函数：根据不同的 WaveBehavior 计算应生成的数量
+/// Helper function: calculate spawn count based on different WaveBehavior types
 fn calculate_spawn_count(
     behavior: &EnumWaveBehavior,
     game_time_secs: f32,
@@ -407,7 +407,7 @@ fn calculate_spawn_count(
             behaviors,
             ..
         }) => {
-            // 寻找当前时间点最合适的行为
+            // Find the most appropriate behavior for the current time point
             let mut active_behavior = None;
             for timed_behavior in behaviors.iter().rev() {
                 if game_time_secs >= timed_behavior.start_time_secs as f32 {
@@ -417,7 +417,7 @@ fn calculate_spawn_count(
             }
 
             if let Some(active_behavior) = active_behavior {
-                // 递归调用
+                // Recursive call
                 calculate_spawn_count(active_behavior, game_time_secs, wave_count, inhibitor_state)
             } else {
                 0

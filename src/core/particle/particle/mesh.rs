@@ -83,7 +83,7 @@ pub struct ParticleMaterialKeyMesh {
     blend_mode: u8,
 }
 
-// 2. 为 Key 实现 From Trait
+// 2. Implement From Trait for Key
 impl From<&ParticleMaterialMesh> for ParticleMaterialKeyMesh {
     fn from(material: &ParticleMaterialMesh) -> Self {
         Self {

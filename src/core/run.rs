@@ -73,7 +73,7 @@ fn fixed_update(mut commands: Commands, q: Query<(Entity, &Run)>, q_transform: Q
                     return;
                 };
 
-                debug!("{} 寻路到 Vec3({})", entity, position);
+                debug!("{} pathfinding to Vec3({})", entity, position);
                 commands.trigger(CommandMovement {
                     entity,
                     priority: 0,
@@ -94,7 +94,7 @@ fn fixed_update(mut commands: Commands, q: Query<(Entity, &Run)>, q_transform: Q
                 };
 
                 debug!(
-                    "{} 寻路到实体 {} Vec3({})",
+                    "{} pathfinding to entity {} Vec3({})",
                     entity, target, transform.translation
                 );
                 commands.trigger(CommandMovement {

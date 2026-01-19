@@ -46,7 +46,7 @@ pub fn load_animation_file(value: AnimationFile) -> ConfigAnimationClip {
 
                 if joint_id >= joint_count {
                     panic!(
-                        "索引 {} 超出关节索引范围 [0, {}]",
+                        "Index {} exceeds joint index range [0, {}]",
                         joint_id,
                         joint_count - 1
                     )
@@ -181,7 +181,7 @@ pub fn load_animation_file(value: AnimationFile) -> ConfigAnimationClip {
                 assert_eq!(
                     joint_hashes.len(),
                     joint_count,
-                    "V5中关节哈希数量与轨道数量不匹配"
+                    "V5 joint hash count does not match track count"
                 );
 
                 let mut translates = vec![Vec::with_capacity(frame_count); joint_count];

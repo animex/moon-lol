@@ -3,18 +3,18 @@ use bevy::input::mouse::MouseWheel;
 use bevy::math::{Mat4, Vec3A, Vec4};
 use bevy::prelude::*;
 
-// 相机距离和位置配置
+// Camera distance and position configuration
 pub const CAMERA_FAR_Z: f32 = 22000.0;
 pub const CAMERA_MIN_X: f32 = 300.0;
 pub const CAMERA_MAX_X: f32 = 14400.0;
 pub const CAMERA_MIN_Y: f32 = -14765.0;
 pub const CAMERA_MAX_Y: f32 = -520.0;
 
-// 键盘轨道控制速度
+// Keyboard orbit control speed
 pub const CAMERA_KEYBOARD_ORBIT_SPEED_X: f32 = 100.0;
 pub const CAMERA_KEYBOARD_ORBIT_SPEED_Y: f32 = 50.0;
 
-// 相机地图约束偏移
+// Camera map constraint offset
 pub const CAMERA_MAP_CONSTRAIN_OFFSET_LEFT: f32 = -10000.0;
 pub const CAMERA_MAP_CONSTRAIN_OFFSET_RIGHT: f32 = 10000.0;
 pub const CAMERA_MAP_CONSTRAIN_OFFSET_TOP: f32 = 6000.0;
@@ -129,21 +129,21 @@ fn on_mouse_scroll(window: Query<&Window>, mut camera: Query<&mut CameraState, W
 
     let mut movement = Vec3::ZERO;
 
-    // 检测左右边缘
+    // Detect left and right edges
     if cursor_position.x < edge_margin {
         movement.x -= 1.0;
     } else if cursor_position.x > window_size.x - edge_margin {
         movement.x += 1.0;
     }
 
-    // 检测上下边缘
+    // Detect top and bottom edges
     if cursor_position.y < edge_margin {
         movement.z += 1.0;
     } else if cursor_position.y > window_size.y - edge_margin {
         movement.z -= 1.0;
     }
 
-    // 如果有移动，应用到相机
+    // If there is movement, apply to camera
     if movement == Vec3::ZERO {
         return;
     }

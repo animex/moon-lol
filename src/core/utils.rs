@@ -8,12 +8,12 @@ pub fn rotate_to_direction(transform: &mut Transform, direction: Vec2) {
     transform.rotation = Quat::from_rotation_y(direction_to_angle(direction));
 }
 
-/// 计算从Vec2方向到角度的转换
+/// Calculate angle from Vec2 direction
 pub fn direction_to_angle(direction: Vec2) -> f32 {
     -(direction.y.atan2(direction.x) - PI / 2.0)
 }
 
-/// 计算两个角度之间的最短角度差
+/// Calculate shortest angle difference between two angles
 pub fn angle_difference(from: f32, to: f32) -> f32 {
     let mut diff = to - from;
     while diff > PI {
@@ -25,7 +25,7 @@ pub fn angle_difference(from: f32, to: f32) -> f32 {
     diff
 }
 
-/// 使用角速度进行角度插值
+/// Interpolate angle using angular velocity
 pub fn lerp_angle_with_velocity(
     current: f32,
     target: f32,

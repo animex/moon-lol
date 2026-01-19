@@ -23,41 +23,41 @@ impl Plugin for PluginAttack {
     }
 }
 
-/// 攻击组件 - 包含攻击的基础属性
+/// Attack component - contains base attack properties
 #[derive(Debug, Component, Clone)]
 pub struct Attack {
     pub range: f32,
-    /// 基础攻击速度 (1级时的每秒攻击次数)
+    /// Base attack speed (attacks per second at level 1)
     pub base_attack_speed: f32,
-    /// 额外攻击速度加成 (来自装备/符文的攻击速度)
+    /// Bonus attack speed (from items/runes)
     pub bonus_attack_speed: f32,
-    /// 攻击速度上限 (默认 2.5)
+    /// Attack speed cap (default 2.5)
     pub attack_speed_cap: f32,
-    /// 前摇时间配置
+    /// Windup time configuration
     pub windup_config: WindupConfig,
-    /// 前摇修正系数 (默认 1.0，可以被技能修改)
+    /// Windup modifier coefficient (default 1.0, can be modified by skills)
     pub windup_modifier: f32,
-    /// 攻击导弹
+    /// Attack missile
     pub spell_key: Option<HashKey<SpellObject>>,
 }
 
-/// 前摇时间配置方式
+/// Windup time configuration method
 #[derive(Component, Clone, Debug)]
 pub enum WindupConfig {
-    /// 老英雄公式: 0.3 + attackOffset
+    /// Legacy champion formula: 0.3 + attackOffset
     Legacy { attack_offset: f32 },
-    /// 新英雄公式: attackCastTime / attackTotalTime
+    /// Modern champion formula: attackCastTime / attackTotalTime
     Modern {
         attack_cast_time: f32,
         attack_total_time: f32,
     },
 }
 
-/// 攻击状态机
+/// Attack state machine
 #[derive(Component, Clone, Serialize, Deserialize)]
 pub struct AttackState {
     pub status: AttackStatus,
-    /// 攻击目标
+    /// Attack target
     pub target: Option<Entity>,
 }
 
@@ -66,12 +66,12 @@ pub struct BuffAttack {
     pub bonus_attack_speed: f32,
 }
 
-/// 攻击状态 - 更详细的状态表示
+/// Attack status - detailed state representation
 #[derive(Debug, Clone, PartialEq, Serialize, Deserialize)]
 pub enum AttackStatus {
-    /// 前摇阶段 - 举起武器准备攻击
+    /// Windup phase - raising weapon to prepare attack
     Windup { target: Entity, end_time: f32 },
-    /// 后摇阶段 - 武器收回，等待下一次攻击
+    /// Cooldown phase - weapon recovery, waiting for next attack
     Cooldown { end_time: f32 },
 }
 
@@ -149,12 +149,12 @@ impl Attack {
         self
     }
 
-    /// 计算当前总攻击速度
+    /// Calculate current total attack speed
     pub fn current_attack_speed(&self) -> f32 {
         (self.base_attack_speed * (1.0 + self.bonus_attack_speed)).min(self.attack_speed_cap)
     }
 
-    /// 计算攻击间隔时间 (1 / attack_speed)
+    /// Calculate attack interval time (1 / attack_speed)
     pub fn total_duration_secs(&self) -> f32 {
         1.0 / self.current_attack_speed()
     }
@@ -168,7 +168,7 @@ impl Attack {
         }
     }
 
-    /// 计算前摇时间
+    /// Calculate windup time
     pub fn windup_duration_secs(&self) -> f32 {
         let total_time = self.total_duration_secs();
         let base_windup = match self.windup_config {
@@ -179,16 +179,16 @@ impl Attack {
             } => attack_cast_time / attack_total_time * total_time,
         };
 
-        // 应用前摇修正系数
+        // Apply windup modifier coefficient
         if self.windup_modifier == 1.0 {
             base_windup
         } else {
-            // 修复：直接对前摇时间应用修正系数
+            // Fix: Apply modifier coefficient directly to windup time
             base_windup * self.windup_modifier
         }
     }
 
-    /// 计算后摇时间
+    /// Calculate cooldown time
     pub fn cooldown_time(&self) -> f32 {
         self.total_duration_secs() - self.windup_duration_secs()
     }
@@ -216,7 +216,7 @@ fn update_attack_state(attack_state: &mut Attack, buffs: Vec<&BuffAttack>) {
         .unwrap_or(0.0);
 }
 
-// 观察者函数
+// Observer functions
 fn on_command_attack_start(
     trigger: On<CommandAttackStart>,
     mut commands: Commands,
@@ -286,12 +286,12 @@ fn on_command_attack_start(
                 return;
             }
 
-            debug!("{} 移除攻击状态：攻击目标改变", entity);
+            debug!("{} removing attack state: attack target changed", entity);
             commands.entity(entity).try_remove::<AttackState>();
             commands.trigger(CommandAttackStart { entity, target });
         }
         AttackStatus::Cooldown { .. } => {
-            // 冷却阶段也需要设置目标，因为下一次攻击要攻击这个目标
+            // Need to set target during cooldown phase for the next attack
             attack_state.target = Some(target);
         }
     }
@@ -308,7 +308,7 @@ fn on_command_attack_reset(
         return;
     };
 
-    debug!("{} 移除攻击状态：攻击重置", entity);
+    debug!("{} removing attack state: attack reset", entity);
     commands.entity(entity).try_remove::<AttackState>();
 
     let Some(target) = attack_state.target else {
@@ -331,11 +331,11 @@ fn on_command_attack_stop(
 
     match attack_state.status {
         AttackStatus::Windup { .. } => {
-            debug!("{} 移除攻击状态：停止攻击", entity);
+            debug!("{} removing attack state: stopping attack", entity);
             commands.entity(entity).try_remove::<AttackState>();
         }
         AttackStatus::Cooldown { .. } => {
-            debug!("{} 攻击冷却中，停止下一次攻击", entity);
+            debug!("{} attack on cooldown, canceling next attack", entity);
             attack_state.target = None;
         }
     };
@@ -351,7 +351,7 @@ fn on_event_dead(
     for (entity, attack_state) in q_attack_state.iter() {
         if let AttackStatus::Windup { target, .. } = &attack_state.status {
             if *target == dead_entity {
-                debug!("{} 移除攻击状态：攻击目标 {} 死亡", dead_entity, entity);
+                debug!("{} removing attack state: attack target {} died", dead_entity, entity);
                 commands.entity(entity).try_remove::<AttackState>();
             }
         }
@@ -369,7 +369,7 @@ fn fixed_update(
     for (entity, mut attack_state, attack, damage) in query.iter_mut() {
         match &attack_state.status.clone() {
             AttackStatus::Windup { target, end_time } => {
-                // 检查前摇是否完成
+                // Check if windup is complete
                 if *end_time <= now {
                     attack_state.status = AttackStatus::Cooldown {
                         end_time: now + attack.cooldown_time(),
@@ -410,15 +410,15 @@ fn fixed_update(
                 }
             }
             AttackStatus::Cooldown { end_time } => {
-                // 检查后摇是否完成
+                // Check if cooldown is complete
                 if *end_time <= now {
-                    debug!("{} 移除攻击状态：攻击冷却结束", entity);
+                    debug!("{} removing attack state: attack cooldown ended", entity);
                     commands.entity(entity).try_remove::<AttackState>();
                     commands.try_trigger(EventAttackReady { entity });
 
                     if let Some(target) = attack_state.target {
                         debug!(
-                            "{} 攻击冷却结束时依然存在攻击目标，继续攻击 {}",
+                            "{} attack target still exists after cooldown, continuing attack on {}",
                             entity, target
                         );
                         commands.try_trigger(CommandAttackStart { entity, target });

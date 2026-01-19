@@ -90,7 +90,7 @@ fn setup(
     let Some(grid) = assets_grid.get(&res_grid.0) else {
         return;
     };
-    // 启用 A* 可视化
+    // Enable A* visualization
     nav_debug.enabled = true;
 
     // Initialize to show all grid points
@@ -177,12 +177,12 @@ fn ui_system(
 
             ui.checkbox(&mut flag_filters.show_all, "Show All Grid Points");
 
-            // A* debug 开关
+            // A* debug toggle
             if ui
                 .checkbox(&mut nav_debug.enabled, "A* Visualization")
                 .changed()
             {
-                // 当状态改变时触发更新
+                // Trigger update when state changes
             }
 
             if !flag_filters.show_all {

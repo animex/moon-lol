@@ -28,22 +28,22 @@ const handleGlitchOver = () => {
 
 const posts = [
   {
-    title: "工程架构",
-    desc: "Moon LoL 的高层系统设计：Rust Core 与 Web Frontend.",
+    title: "Architecture",
+    desc: "High-level system design of Moon LoL: Rust Core and Web Frontend.",
     date: "2025.11.28",
     path: "/blog/architecture",
     tag: "ARCHITECTURE",
   },
   {
-    title: "数据流转",
-    desc: "从 Bevy ECS 到 Web 前端的数据管线。",
+    title: "Data Flow",
+    desc: "Data pipeline from Bevy ECS to Web Frontend.",
     date: "2025.11.28",
     path: "/blog/data-flow",
     tag: "DATA",
   },
   {
-    title: "ECS 组件与系统",
-    desc: "深入解析游戏核心逻辑：插件系统与实体组件设计。",
+    title: "ECS Components and Systems",
+    desc: "Deep dive into game core logic: plugin system and entity-component design.",
     date: "2025.11.28",
     path: "/blog/ecs",
     tag: "CORE",
@@ -233,7 +233,7 @@ const startSize = { x: 100, y: 100 };
     <div class="relative z-10 px-4 text-center">
       <div class="border-acid-blue/50 mb-4 inline-block rounded-full border bg-black/50 px-4 py-1 backdrop-blur-md">
         <p class="text-acid-blue reveal-on-scroll text-glow-blue font-mono text-sm tracking-[0.2em] md:text-base">
-          高性能游戏环境
+          HIGH-PERFORMANCE GAME ENVIRONMENT
         </p>
       </div>
       <h1
@@ -247,7 +247,7 @@ const startSize = { x: 100, y: 100 };
         <button
           class="glass-y2k hover:bg-acid-blue group relative overflow-hidden rounded-full px-8 py-3 font-mono font-bold text-white transition-all hover:scale-105 hover:text-black hover:shadow-[0_0_20px_var(--color-acid-blue)]"
         >
-          <span class="relative z-10">开始逗蛐蛐 -></span>
+          <span class="relative z-10">Start Playing -></span>
         </button>
       </div>
     </div>
@@ -304,8 +304,8 @@ const startSize = { x: 100, y: 100 };
 
     <div class="relative z-10 mx-auto max-w-7xl px-6">
       <h2 class="font-glitch text-outline mb-12 inline-block text-6xl drop-shadow-[0_0_10px_var(--color-acid-pink)]">
-        <span class="text-acid-pink">技术</span>
-        栈
+        <span class="text-acid-pink">Tech</span>
+        Stack
       </h2>
 
       <div class="grid grid-cols-1 gap-8 md:grid-cols-3">
@@ -316,21 +316,21 @@ const startSize = { x: 100, y: 100 };
             class="text-acid-blue mb-4 flex items-center gap-2 text-2xl font-bold transition-colors group-hover:text-white"
           >
             <span class="text-xl opacity-50">01.</span>
-            Rust 语言
+            Rust Language
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">追求极致的性能</p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">Pursuing ultimate performance</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              低内存占用
+              Low Memory Usage
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              高性能
+              High Performance
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-green h-1.5 w-1.5 rounded-full"></span>
-              稳定性
+              Stability
             </li>
           </ul>
         </div>
@@ -342,9 +342,9 @@ const startSize = { x: 100, y: 100 };
             class="text-acid-pink mb-4 flex items-center gap-2 text-2xl font-bold transition-colors group-hover:text-white"
           >
             <span class="text-xl opacity-50">02.</span>
-            Bevy 引擎
+            Bevy Engine
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">Rust 编写的 ECS 游戏引擎</p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">ECS game engine written in Rust</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
@@ -352,11 +352,11 @@ const startSize = { x: 100, y: 100 };
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
-              ECS 架构
+              ECS Architecture
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-pink h-1.5 w-1.5 rounded-full"></span>
-              WGPU 跨平台渲染
+              WGPU Cross-Platform Rendering
             </li>
           </ul>
         </div>
@@ -368,17 +368,17 @@ const startSize = { x: 100, y: 100 };
             class="text-acid-yellow mb-4 flex items-center gap-2 text-2xl font-bold transition-colors group-hover:text-white"
           >
             <span class="text-xl opacity-50">03.</span>
-            可视化
+            Visualization
           </h3>
-          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">AI 游戏过程实时可视化</p>
+          <p class="font-mono leading-relaxed text-gray-300 group-hover:text-white">Real-time visualization of AI gameplay</p>
           <ul class="mt-6 space-y-2 font-mono text-sm text-gray-400">
             <li class="flex items-center gap-2">
               <span class="bg-acid-yellow h-1.5 w-1.5 rounded-full"></span>
-              Vue 3 前端
+              Vue 3 Frontend
             </li>
             <li class="flex items-center gap-2">
               <span class="bg-acid-yellow h-1.5 w-1.5 rounded-full"></span>
-              实时指标
+              Real-time Metrics
             </li>
           </ul>
         </div>
@@ -398,9 +398,9 @@ const startSize = { x: 100, y: 100 };
       <h2
         class="font-glitch text-outline text-6xl text-white drop-shadow-[0_0_10px_var(--color-acid-blue)] md:text-8xl"
       >
-        开发
+        Dev
         <br />
-        <span class="text-acid-blue">日志</span>
+        <span class="text-acid-blue">Logs</span>
       </h2>
       <span class="text-acid-pink hidden animate-pulse font-mono md:block">/// LOGS</span>
     </div>

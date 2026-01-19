@@ -4,7 +4,7 @@ fn rotate(v: Vec2) -> Vec2 {
     vec2(v.y, v.x)
 }
 
-/// 将网格路径转换为传送门（portal）列表
+/// Convert grid path to a list of portals
 fn build_portals(points: &Vec<Vec2>) -> Vec<(Vec2, Vec2)> {
     let mut portals = Vec::new();
     if points.len() < 2 {
@@ -21,45 +21,45 @@ fn build_portals(points: &Vec<Vec2>) -> Vec<(Vec2, Vec2)> {
         let dx = (p2.y - p1.y) as i32;
 
         let (left, right) = match (dy, dx) {
-            // 水平和垂直移动 (逻辑不变)
+            // Horizontal and vertical movement (logic unchanged)
             (0, 1) => (
                 rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
                 rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
-            ), // 右
+            ), // Right
             (0, -1) => (
                 rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
                 rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
-            ), // 左
+            ), // Left
             (1, 0) => (
                 rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
                 rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
-            ), // 下
+            ), // Down
             (-1, 0) => (
                 rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
                 rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
-            ), // 上
+            ), // Up
 
-            // 对角线移动 (新增逻辑)
-            // 虚拟传送门的顶点是相邻“障碍”单元格的中心
+            // Diagonal movement (new logic)
+            // Virtual portal vertices are at the centers of adjacent "obstacle" cells
             (1, 1) => (
                 rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
                 rotate(vec2(p1f.y + 0.5, p1f.x + 0.5)),
-            ), // 右下
+            ), // Bottom-right
             (1, -1) => (
                 rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
                 rotate(vec2(p1f.y + 0.5, p1f.x - 0.5)),
-            ), // 左下
+            ), // Bottom-left
             (-1, -1) => (
                 rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
                 rotate(vec2(p1f.y - 0.5, p1f.x - 0.5)),
-            ), // 左上
+            ), // Top-left
             (-1, 1) => (
                 rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
                 rotate(vec2(p1f.y - 0.5, p1f.x + 0.5)),
-            ), // 右上
+            ), // Top-right
 
             _ => {
-                // 对于非连续路径（跳跃）或其他无效移动，此处会 panic
+                // For non-continuous paths (jumps) or other invalid movements, this will panic
                 panic!(
                     "Invalid or non-continuous movement detected in path: from {:?} to {:?}",
                     p1, p2
@@ -71,35 +71,35 @@ fn build_portals(points: &Vec<Vec2>) -> Vec<(Vec2, Vec2)> {
     portals
 }
 
-/// 使用漏斗算法简化在2D网格上生成的路径。
+/// Simplify the path generated on a 2D grid using the funnel algorithm.
 ///
 /// # Arguments
-/// * `points` - 一个表示路径的网格单元坐标 `(row, column)` 的向量。
-///              路径必须是连续的，且只包含水平和垂直移动。
+/// * `points` - A vector of grid cell coordinates `(row, column)` representing the path.
+///              The path must be continuous and contain only horizontal and vertical movements.
 ///
 /// # Returns
-/// 一个简化后的路径点向量 `(y, x)`。
+/// A vector of simplified path points `(y, x)`.
 pub fn simplify_path(points: &Vec<Vec2>) -> Vec<Vec2> {
-    // 1. 处理边缘情况
+    // 1. Handle edge cases
     if points.len() < 3 {
         return points.clone();
     }
 
     let mut simplified_points = Vec::new();
 
-    // 2. 将网格路径转换为传送门列表
+    // 2. Convert grid path to portal list
     let mut portals = build_portals(points);
 
-    // 3. 设置起点和终点
+    // 3. Set start and end points
     let start_pos = rotate(points.first().unwrap().clone());
     let end_pos = rotate(points.last().unwrap().clone());
 
-    // 添加一个零宽度的终点传送门，以确保算法能处理到路径末端
+    // Add a zero-width end portal to ensure the algorithm can process to the end of the path
     portals.push((end_pos, end_pos));
 
     simplified_points.push(start_pos);
 
-    // 4. 初始化漏斗
+    // 4. Initialize the funnel
     let mut apex = start_pos;
     let (mut left_tentacle, mut right_tentacle) = portals[0];
 
@@ -107,37 +107,37 @@ pub fn simplify_path(points: &Vec<Vec2>) -> Vec<Vec2> {
     while i < portals.len() {
         let (new_left, new_right) = portals[i];
 
-        // 5. 尝试更新右触手
-        // 向量：apex -> right_tentacle
+        // 5. Try to update right tentacle
+        // Vector: apex -> right_tentacle
         let vec_r = right_tentacle - apex;
-        // 向量：apex -> new_right
+        // Vector: apex -> new_right
         let vec_nr = new_right - apex;
 
-        // 如果 new_right 在 right_tentacle 的左侧或共线 (叉乘 <= 0),
-        // 表示漏斗在右侧没有变宽。
+        // If new_right is to the left of or collinear with right_tentacle (cross product <= 0),
+        // the funnel has not widened on the right side.
         if vec_r.perp_dot(vec_nr) <= 0.0 {
-            // 向量：apex -> left_tentacle
+            // Vector: apex -> left_tentacle
             let vec_l = left_tentacle - apex;
-            // 检查 new_right 是否仍在 left_tentacle 的右侧
+            // Check if new_right is still to the right of left_tentacle
             if vec_l.perp_dot(vec_nr) >= 0.0 {
-                // new_right 仍在漏斗内，收紧右触手
+                // new_right is still inside the funnel, tighten right tentacle
                 right_tentacle = new_right;
             } else {
-                // new_right 越过了左触手，说明我们找到了一个拐点 (left_tentacle)。
-                // 将 left_tentacle 添加到路径中。
+                // new_right crossed the left tentacle, meaning we found a turning point (left_tentacle).
+                // Add left_tentacle to the path.
                 simplified_points.push(left_tentacle);
-                // 更新 apex 为这个新的拐点
+                // Update apex to this new turning point
                 apex = left_tentacle;
 
-                // 从这个拐点所在的传送门之后重新开始
-                // 我们需要找到 left_tentacle 第一次出现为传送门顶点的索引
+                // Restart from after the portal containing this turning point
+                // We need to find the index where left_tentacle first appears as a portal vertex
                 let restart_idx = portals
                     .iter()
                     .position(|p| p.0 == left_tentacle || p.1 == left_tentacle)
                     .unwrap_or(i);
                 i = restart_idx + 1;
 
-                // 重置漏斗
+                // Reset the funnel
                 if i < portals.len() {
                     left_tentacle = portals[i].0;
                     right_tentacle = portals[i].1;
@@ -146,7 +146,7 @@ pub fn simplify_path(points: &Vec<Vec2>) -> Vec<Vec2> {
             }
         }
 
-        // 6. 尝试更新左触手（与右侧对称）
+        // 6. Try to update left tentacle (symmetric to right side)
         let vec_l = left_tentacle - apex;
         let vec_nl = new_left - apex;
 
@@ -174,9 +174,9 @@ pub fn simplify_path(points: &Vec<Vec2>) -> Vec<Vec2> {
         i += 1;
     }
 
-    // 7. 添加终点
+    // 7. Add end point
     simplified_points.push(end_pos);
 
-    // 8. 转换为用户期望的输出格式
+    // 8. Convert to user-expected output format
     simplified_points.into_iter().map(|v| rotate(v)).collect()
 }

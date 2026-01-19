@@ -1,5 +1,8 @@
 {
   "permissions": {
-    "allow": ["Bash(cargo:*)"]
+    "allow": [
+      "Bash(cargo:*)",
+      "Bash(dir /s /b *.rs *.js *.ts *.json *.toml *.md)"
+    ]
   }
 }

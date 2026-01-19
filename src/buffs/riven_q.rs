@@ -50,7 +50,7 @@ fn on_command_skill_start(
     };
 
     let (stage, buff_entity) = get_riven_q_stage(entity, &q_buffs, &q_buff_q2, &q_buff_q3);
-    debug!("{:?} 锐雯 Q 技能第 {} 段", entity, stage);
+    debug!("{:?} Riven Q skill stage {}", entity, stage);
 
     let effect_key: HashKey<SkillEffect> = match stage {
         1 => RIVEN_Q1_KEY.into(),
@@ -58,11 +58,11 @@ fn on_command_skill_start(
         _ => RIVEN_Q3_KEY.into(),
     };
 
-    debug!("{:?} 更新 Q 技能效果为: {:?}", entity, effect_key);
+    debug!("{:?} Updated Q skill effect to: {:?}", entity, effect_key);
     skill.key_skill_effect = effect_key;
 
     if let Some(buff) = buff_entity {
-        debug!("{:?} 移除旧的 Q 技能 Buff: {:?}", entity, buff);
+        debug!("{:?} Removing old Q skill buff: {:?}", entity, buff);
         commands.entity(buff).despawn();
     }
 }
